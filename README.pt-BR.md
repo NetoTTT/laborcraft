@@ -41,6 +41,13 @@ Esqueleto funcional (M0). Compila e gera `.jar`, com a espinha dorsal já desenh
 
 Ainda **não** existe: IA de trabalho do fazendeiro (e portanto o efeito de produção dos boosts/rank), cobrança automática de salário e ganho de maestria em jogo. A base de UI, o mercado, o contrato v2 e os comandos administrativos já funcionam (`/laborcraft ui`, `/laborcraft hire`, `/laborcraft profile`, `/laborcraft admin reload|status|market refresh|set balance`).
 
+## Download
+
+Baixe o jar mais recente em [**Releases**](https://github.com/NetoTTT/laborcraft/releases).
+
+As builds alpha são para **Minecraft 26.3** com **Fabric Loader 0.19.5+** e **Fabric API 0.164.0+26.3**
+(Java 25). Coloque o jar em `mods/` junto com a Fabric API — nenhuma outra dependência é necessária.
+
 ## Requisitos
 
 - JDK **25** (Minecraft 26.3 exige Java 25; o build roda o JVM 25).

@@ -1,5 +1,8 @@
 # LaborCraft
 
+[![GitHub release](https://img.shields.io/github/v/release/NetoTTT/laborcraft?include_prereleases&label=release)](https://github.com/NetoTTT/laborcraft/releases)
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+
 [Português (Brasil)](README.pt-BR.md) · English
 
 > Working title. The final name, `modid` and package may still change before the first public release.
@@ -39,6 +42,13 @@ Functional skeleton (M0): it builds, ships a `.jar`, and the backbone is in plac
 - Automatic wage billing and in-game mastery gain.
 - House claiming/registry, bed-based worker slots, and pathfinding to the house.
 - The weighted comfort system (designed in [`docs/12-CONFORTO.md`](docs/12-CONFORTO.md)).
+
+## Download
+
+Grab the latest jar from [**Releases**](https://github.com/NetoTTT/laborcraft/releases).
+
+Alpha builds target **Minecraft 26.3** with **Fabric Loader 0.19.5+** and **Fabric API 0.164.0+26.3**
+(Java 25). Drop the jar into `mods/` next to Fabric API — no other dependency required.
 
 ## Requirements
 

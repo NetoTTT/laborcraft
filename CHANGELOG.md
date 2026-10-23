@@ -3,7 +3,10 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
-## [0.1.0] — não lançado
+## [0.1.0-alpha.1] — 2026-10-23
+
+Primeira release alpha pública: mercado de trabalho do servidor, contrato v2 com rank/raridade/boosts,
+validação de casa e Planta de Casa.
 
 Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
 
