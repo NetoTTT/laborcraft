@@ -131,6 +131,7 @@ The design docs are currently in Portuguese and will be translated over time.
 | [docs/10-CONTRATACAO-E-PERFIL.md](docs/10-CONTRATACAO-E-PERFIL.md) | offers, limits, dismissal and profile |
 | [docs/11-CASA-VAGAS-E-PATHING.md](docs/11-CASA-VAGAS-E-PATHING.md) | house, bed slots and pathing (decision draft) |
 | [docs/12-CONFORTO.md](docs/12-CONFORTO.md) | comfort blocks list (mood/speed) |
+| [docs/13-TRABALHO-E-ATRIBUICAO.md](docs/13-TRABALHO-E-ATRIBUICAO.md) | work post, drawn work zone and worker assignment |
 | [docs/04-ROADMAP.md](docs/04-ROADMAP.md) | milestones M0–M5 and portability policy |
 | [docs/05-DECISOES.md](docs/05-DECISOES.md) | open decisions and ADRs |
 | [docs/06-COMPATIBILIDADE.md](docs/06-COMPATIBILIDADE.md) | currencies, tags, datapacks, third-party mods |

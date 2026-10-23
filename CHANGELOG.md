@@ -81,6 +81,7 @@ Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
 - O Perfil mostra os contratos ainda na mochila (`0 / 1 · 2 contrato(s)`) e a loja passou a rotular “Trabalhadores + contratos”, porque o limite conta os dois.
 - Licença trocada de CC0-1.0 para **GPL-3.0-or-later** (copyleft): forks e trabalhos derivados precisam continuar open source.
 - README principal em inglês; a versão em português ficou em `README.pt-BR.md`.
+- Novo documento de desenho do trabalho ([`docs/13-TRABALHO-E-ATRIBUICAO.md`](docs/13-TRABALHO-E-ATRIBUICAO.md)): posto como âncora, zona opcional desenhada com estaca e vínculo trabalhador↔posto; casa pausada.
 
 ### Corrigido
 

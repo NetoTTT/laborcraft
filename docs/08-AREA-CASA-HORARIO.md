@@ -2,6 +2,9 @@
 
 Escopo: como o trabalhador sabe **onde** trabalhar, **onde mora** e **quando** trabalha. Tudo configurável; o fazendeiro é o caso concreto, mas o modelo serve para qualquer emprego.
 
+> O fluxo de atribuição (posto, zona desenhada e vínculo com o trabalhador) está em
+> [`13-TRABALHO-E-ATRIBUICAO.md`](13-TRABALHO-E-ATRIBUICAO.md). A parte de casa está pausada.
+
 ## 1. Bloco âncora
 
 **Proposta:** um bloco próprio, `laborcraft:workstation` ("Posto de Trabalho"), colocado pelo dono.
