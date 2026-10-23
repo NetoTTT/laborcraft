@@ -12,9 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -23,7 +26,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
@@ -42,6 +44,11 @@ public class LaborCraftWorker extends PathfinderMob {
 	private int hunger = 20;
 	private int mood = 100;
 	private WorkerState state = WorkerState.ACTIVE;
+	/**
+	 * Jogador que esta com a tela deste trabalhador aberta. Enquanto isso o trabalhador fica parado,
+	 * olhando para ele, sem executar nenhuma acao. Nao e persistido.
+	 */
+	private ServerPlayer attendingPlayer;
 
 	public LaborCraftWorker(EntityType<? extends LaborCraftWorker> type, Level level) {
 		super(type, level);
@@ -58,10 +65,11 @@ public class LaborCraftWorker extends PathfinderMob {
 
 	@Override
 	protected void registerGoals() {
+		// O trabalhador fica parado no lugar ate existir a IA de trabalho (area/casa/pathing).
+		// Nada de passeio aleatorio: so flutuar na agua, olhar para quem esta perto e olhar em volta.
 		goalSelector.addGoal(0, new FloatGoal(this));
-		goalSelector.addGoal(1, new WaterAvoidingRandomStrollGoal(this, 0.6D));
-		goalSelector.addGoal(2, new LookAtPlayerGoal(this, Player.class, 8.0F));
-		goalSelector.addGoal(3, new RandomLookAroundGoal(this));
+		goalSelector.addGoal(1, new LookAtPlayerGoal(this, Player.class, 8.0F));
+		goalSelector.addGoal(2, new RandomLookAroundGoal(this));
 	}
 
 	public void setWorkerName(Component displayName) {
@@ -89,9 +97,64 @@ public class LaborCraftWorker extends PathfinderMob {
 	}
 
 	public void release() {
+		endAttending();
 		this.owner = null;
 		this.jobId = "";
 		this.state = WorkerState.ACTIVE;
+	}
+
+	public boolean isAttending() {
+		return attendingPlayer != null;
+	}
+
+	/** Congela o trabalhador: para a navegacao e faz ele olhar para o jogador da tela. */
+	public void beginAttending(ServerPlayer player) {
+		this.attendingPlayer = player;
+		if (getNavigation() != null) {
+			getNavigation().stop();
+		}
+
+		setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
+	}
+
+	public void endAttending() {
+		this.attendingPlayer = null;
+	}
+
+	public static LaborCraftWorker find(MinecraftServer server, UUID id) {
+		if (server == null || id == null) {
+			return null;
+		}
+
+		for (ServerLevel level : server.getAllLevels()) {
+			Entity entity = level.getEntity(id);
+			if (entity instanceof LaborCraftWorker worker) {
+				return worker;
+			}
+		}
+
+		return null;
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+
+		if (level().isClientSide() || attendingPlayer == null) {
+			return;
+		}
+
+		if (attendingPlayer.isRemoved()
+				|| attendingPlayer.level() != level()
+				|| attendingPlayer.distanceToSqr(this) > 64.0D) {
+			endAttending();
+			return;
+		}
+
+		getNavigation().stop();
+		getMoveControl().setWantedPosition(getX(), getY(), getZ(), 0.0D);
+		setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
+		getLookControl().setLookAt(attendingPlayer, 30.0F, 30.0F);
 	}
 
 	public String jobId() {

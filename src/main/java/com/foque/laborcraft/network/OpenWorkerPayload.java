@@ -120,6 +120,8 @@ public record OpenWorkerPayload(
 			return false;
 		}
 
+		// Congela já na abertura; o cliente confirma abre/fecha depois com WorkerScreenStatePayload.
+		worker.beginAttending(player);
 		ServerPlayNetworking.send(player, of(worker));
 		return true;
 	}

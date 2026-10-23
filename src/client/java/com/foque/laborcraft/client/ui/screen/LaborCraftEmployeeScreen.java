@@ -11,7 +11,10 @@ import com.foque.laborcraft.command.LaborCraftCommands;
 import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
 import com.foque.laborcraft.network.OpenWorkerPayload;
+import com.foque.laborcraft.network.WorkerScreenStatePayload;
 import java.util.List;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -23,6 +26,27 @@ public final class LaborCraftEmployeeScreen extends LaborCraftWorkerScreen {
 
 	public LaborCraftEmployeeScreen(OpenWorkerPayload worker) {
 		super(worker, Component.translatable("laborcraft.ui.employee.title"), 460, 360);
+	}
+
+	@Override
+	public void added() {
+		super.added();
+		sendScreenState(true);
+	}
+
+	@Override
+	public void removed() {
+		sendScreenState(false);
+		super.removed();
+	}
+
+	private void sendScreenState(boolean open) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.getConnection() == null || !ClientPlayNetworking.canSend(WorkerScreenStatePayload.TYPE)) {
+			return;
+		}
+
+		ClientPlayNetworking.send(new WorkerScreenStatePayload(worker.workerId(), open));
 	}
 
 	@Override

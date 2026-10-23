@@ -124,6 +124,10 @@ Para o fazendeiro:
 - Nunca abre portas de terceiros: só portas dentro da área autorizada.
 - Área pequena (raio 4–9) torna o pathfinding barato.
 
+Enquanto a tela do trabalhador está aberta, o NPC fica **congelado**: navegação parada, movimento zerado e olhar no jogador, até a tela fechar. Como `isPauseScreen()` é `false` (o mundo não pausa), o congelamento é feito no servidor: o cliente manda `laborcraft:worker_screen_state` ao abrir e ao fechar a tela. Se o jogador sumir/deslogar, o trabalhador se solta sozinho.
+
+Fora isso, hoje o trabalhador **não anda**: a IA de passeio (`WaterAvoidingRandomStrollGoal`) foi removida de propósito até a IA de trabalho (área, casa e pathfinding) existir. Só restam flutuar na água e olhar em volta.
+
 ## 8. Regras base (config) — resumo
 
 ```json

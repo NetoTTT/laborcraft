@@ -15,6 +15,7 @@ import com.foque.laborcraft.network.OpenPlayersPayload;
 import com.foque.laborcraft.network.OpenProfilePayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.network.SetLanguagePayload;
+import com.foque.laborcraft.network.WorkerScreenStatePayload;
 import com.foque.laborcraft.worker.WorkerMarket;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -42,6 +43,8 @@ public class LaborCraft implements ModInitializer {
 		OpenProfilePayload.bootstrap();
 		OpenWorkerPayload.bootstrap();
 		SetLanguagePayload.bootstrap();
+		WorkerScreenStatePayload.bootstrap();
+		WorkerScreenStatePayload.registerReceiver();
 		LaborCraftCommands.bootstrap();
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> WorkerMarket.clear());
 
