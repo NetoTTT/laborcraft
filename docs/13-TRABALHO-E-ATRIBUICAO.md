@@ -123,15 +123,20 @@ oferece uma **zoning tool** opcional ("clique um canto, clique o oposto") para r
 - [ ] Baú de saída: automático (baú encostado no posto) ou escolhido com clique?
 - [ ] Modo livre (raio) existe desde o começo ou só depois da zona?
 - [ ] Trabalhador precisa de ferramenta no inventário (enxada) ou é automático?
+- [ ] Mapa: ±48 blocos do posto é suficiente? Zoom 1–4 px/bloco?
+- [ ] Zona usa Y do posto ± `verticalRadius` (recomendado) ou Y desenhado?
+- [ ] Vagas: 1 por posto agora (recomendado) e upgrade no futuro?
 
 ## 9. Ordem de implementação
 
-1. `StationRegistry` + vínculo trabalhador↔posto + comando `station bind/list/remove`.
-2. Zona: estaca, seleção de dois cantos, preview e persistência.
-3. IA mínima do fazendeiro: SCAN → MOVE → WORK (colher e replantar).
-4. DEPOSIT no baú de saída + insumos.
-5. Expediente ligado à IA (parar/voltar).
-6. Casa: cama e rotina noturna (retomar o doc 11).
+1. `StationRegistry` + vínculo trabalhador↔posto + comandos `station bind/list/remove`.
+2. Zona: estaca, seleção de dois cantos, preview e persistência (sem UI).
+3. UI do Posto — aba Trabalho (lista, vagas, ações).
+4. UI do Posto — aba Config com o mapa de seleção.
+5. IA mínima do fazendeiro: SCAN → MOVE → WORK (colher e replantar).
+6. DEPOSIT no baú de saída + insumos.
+7. Expediente ligado à IA (parar/voltar).
+8. Casa: cama e rotina noturna (retomar o doc 11).
 
 ## 10. Impacto no que já existe
 
@@ -139,3 +144,83 @@ oferece uma **zoning tool** opcional ("clique um canto, clique o oposto") para r
 - `HousingValidator` não muda; casa fica pausada.
 - A tela de Empregado ganha a linha **Posto** e o botão de vínculo.
 - O `laborcraft:workstation` ganha um **block entity** (inventário, dono, vínculo) — hoje é só um bloco decorativo.
+
+## 11. UI do Posto
+
+Interagir com o posto abre `LaborCraftStationScreen` (mesmo tamanho das outras, 460x360), com duas abas.
+
+### Aba Trabalho (padrão)
+
+```
+┌ Posto de Trabalho ──────────────────────────────── X ┐
+│  Seus empregados (12)        │  Vagas do posto (1/1) │
+│  ┌────────────────────────┐  │  ┌─────────────────┐  │
+│  │ Bento Almeida   Pleno  │  │  │ Bento Almeida   │  │
+│  │ Fazendeiro · ativo     │  │  │ Fazendeiro      │  │
+│  │              [vincular]│  │  │ trabalhando     │  │
+│  ├────────────────────────┤  │  │ [chamar] [pausa]│  │
+│  │ Clara Souza     Comum  │  │  └─────────────────┘  │
+│  │ sem cargo · ocioso     │  │  ┌─────────────────┐  │
+│  └────────────────────────┘  │  │ vaga livre      │  │
+│                              │  │ [vincular...]   │  │
+│                              │  └─────────────────┘  │
+└──────────────────────────────────────────────────────┘
+```
+
+- **Esquerda**: todos os empregados do jogador (com scroll). Mostra nome, rank, cargo, estado e se já estão presos a outro posto.
+- **Direita**: as vagas do posto. Hoje 1 vaga; o modelo já nasce com lista para permitir upgrades futuros.
+- **Ações** (todas command-first):
+
+| Botão | Comando | Efeito |
+| --- | --- | --- |
+| Vincular | `laborcraft station bind <posto> <trabalhador>` | ocupa a vaga |
+| Desvincular | `laborcraft station unbind <posto> <trabalhador>` | libera a vaga |
+| Chamar (recall) | `laborcraft station recall <posto>` | para o que está fazendo e volta ao posto |
+| Pausar / Deixar ocioso | `laborcraft worker pause <id>` | fica no posto sem trabalhar |
+| Retomar | `laborcraft worker resume <id>` | volta ao trabalho |
+
+“Mandar para casa” fica para quando a casa existir (fase 2); por ora, pausar já deixa ocioso.
+
+### Aba Config
+
+- **Modo da área**: `Livre (raio do posto)` ou `Zona desenhada` (escolha única).
+- No modo livre: mostra o raio efetivo (tier/maestria) e o que ele cobre. Sem botão de “aumentar” por enquanto.
+- No modo zona: lista as zonas (hoje 1) com tamanho e botão **Desenhar área**.
+- **Baú de saída**: mostra o baú detectado ao redor do posto (ou “nenhum”) e um botão **Detectar**.
+- **Preview**: liga/desliga as partículas da área.
+
+### Mapa de seleção (`LcAreaMap`)
+
+Ao clicar em **Desenhar área**, a própria tela abre o mapa:
+
+- Recorte do mundo visto de cima, centrado no posto (padrão ±48 blocos), 1–4 px por bloco (scroll = zoom).
+- **Arrastar com o mouse** define o retângulo; a barra mostra `12x4 · 48 blocos` e o limite máximo.
+- Botões: **Confirmar** (envia `station zone set`), **Cancelar**, **Visualizar** (fecha a UI e marca a área com partículas por ~10 s).
+- Colunas fora dos chunks carregados aparecem como “?” e não podem ser selecionadas.
+
+**Como o mapa é desenhado (e por que funciona no cliente):**
+
+- Para cada coluna, pega o bloco do topo (heightmap `WORLD_SURFACE`) e a cor com
+  `state.getMapColor(level, pos).calculateARGBColor(...)` — a mesma paleta do mapa vanilla. Barato e sem textura.
+- O cliente **só tem chunks carregados**: o servidor manda o que está perto do jogador. Como ele está ao lado do
+  posto, a área que interessa está carregada. (O JourneyMap mostra áreas exploradas porque lê os arquivos de
+  região do mundo — isso funciona em single-player; em servidor multiplayer ele depende de dados próprios.
+  Não vamos por esse caminho.)
+- Cache por chunk; redesenha só o recorte visível e só quando algo muda (bloco alterado ou a cada N segundos).
+- **Y da zona** = Y do posto ± `area.verticalRadius` (mostrado como “de Y-2 a Y+2”). Não precisa desenhar em 3D;
+  fazenda em andares pode ganhar seletor de Y depois.
+
+### Acessibilidade e fallback
+
+- O mapa é **opcional**. A **Estaca de Demarcação** faz o mesmo: canto A, canto B, agachar + clique no posto.
+- Comandos puros cobrem tudo: `station zone set <posto> <from> <to>`, `station zone clear <posto>`,
+  `station zone show <posto>`.
+- Regra command-first: nenhuma tela altera estado direto; ela só monta o comando.
+
+### Validação no servidor
+
+- Só o **dono** do posto configura.
+- Zona máxima 32x32 na horizontal, dentro de `area.maxRadius` do posto, volume limitado.
+- Não pode sobrepor zona/posto de outro jogador (primeiro que registra leva).
+- Zona recusada = mensagem clara no chat, sem alterar nada.
+
