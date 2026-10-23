@@ -1,0 +1,28 @@
+{
+	"schemaVersion": 1,
+	"id": "laborcraft",
+	"version": "${version}",
+	"name": "LaborCraft",
+	"description": "Contrate aldeoes trabalhadores para automatizar fazendas e outros servicos. Nome provisorio.",
+	"authors": [
+		"foque"
+	],
+	"contact": {},
+	"license": "CC0-1.0",
+	"icon": "assets/laborcraft/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.foque.laborcraft.LaborCraft"
+		],
+		"client": [
+			"com.foque.laborcraft.client.LaborCraftClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

@@ -1,0 +1,65 @@
+# Changelog
+
+Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
+Versionamento semântico a partir da primeira release pública.
+
+## [0.1.0] — não lançado
+
+Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
+
+### Adicionado
+
+- Estrutura inicial do mod Fabric (Loom 1.19.3, Gradle 9.8.2, Java 25).
+- Projeto renomeado de `VillageJobs` para `LaborCraft` (modid `laborcraft`, pacote `com.foque.laborcraft`).
+- Bloco `laborcraft:workstation` (Posto de Trabalho) + item + assets + receita de 8 tábuas + baú.
+- Comandos `/laborcraft admin reload` e `/laborcraft admin status` (permissão de gamemaster).
+- UI nativa base: tema, painel, `LcButton` com variantes/foco/tooltip, `LaborCraftScreen` e tela Admin.
+- Comando `/laborcraft ui` (servidor envia payload; abre a tela Admin) e receiver clientbound.
+- Navegação Admin -> Config com `/laborcraft config`; tela Config com botão Voltar para Admin.
+- Alternância de idioma `pt_br`/`en_us` pela tela Config, via `/laborcraft language <code>` + payload clientbound; o cliente salva e recarrega os recursos.
+- `LcPagination<T>`: modelo reutilizável de paginação (página atual, tamanho, anterior/próxima).
+- `LcItemGrid<T>`: grade de itens com ícone, quantidade de domínio, badge total compacto e tooltip com valor exato/quebra em pilhas.
+- `/laborcraft test items` + `OpenItemTestPayload`: tela de teste em grade 10x5, com 50 itens, navegação e clique.
+- `LaborCraftItemActionScreen`: base da tela de ação do item, com opções por tipo, seletor de quantidade em `long` limitado ao estoque e retorno para a página anterior.
+- Ações de item (pegar/comprar/equipar/usar) tocam o som de coleta de XP; navegação e ações neutras mantêm o clique padrão.
+- `/laborcraft players` + `OpenPlayersPayload`: tela paginada de jogadores online com rosto, nick, latência e destaque do jogador local.
+- Botão **Jogadores online** na tela Admin.
+- E0 da entidade: `laborcraft:worker` genérica (`PathfinderMob`), render de aldeão, atributos, persistência, IA básica e nome visível.
+- Loja pública de **Contratação** (`/laborcraft hire`) com preço, saldo, trabalhadores ativos, contratos pendentes e limite; o botão **Comprar** desabilita no limite ou sem saldo.
+- Item `laborcraft:worker_contract` (Contrato de Trabalhador), com o componente `laborcraft:contract_owner`; só o comprador pode usar, e ao usar spawna um trabalhador já vinculado e abre a tela de Empregado.
+- Tela de **Empregado** com emprego atual, atribuição de emprego e dispensa com confirmação.
+- `OpenHiringPayload` e `OpenWorkerPayload`; atualização da loja após compra e da tela após atribuir/dispensar.
+- Comandos `/laborcraft hire`, `/laborcraft worker buy`, `spawn [nome]`, `assign`, `dismiss`, `info` e `remove`; `buy`/`assign`/`dismiss` validam limite/dono no servidor.
+- `/laborcraft admin set balance <valor>` para definir o saldo do jogador no provedor ativo (útil para testar a compra).
+- `LedgerCurrency` carrega `config/laborcraft-ledger.json` na inicialização.
+- Trabalhadores sem vínculo (spawn de admin) não abrem a loja; a interação informa que falta um contrato.
+- `LcValuePrompt`: valor inteiro/texto/escolha no chat; o jogador digita apenas o valor, com cancelar, sugestoes clicaveis e validacao.
+- Comandos `/laborcraft admin set wage <int>` e `/laborcraft admin set provider <id>`.
+- Regra command-first: toda ação da UI envia um comando equivalente; o servidor valida e executa.
+- Configuração em JSON com padrões de salário, período e multiplicadores.
+- SPI `CurrencyProvider` + registro + provedor interno `laborcraft:ledger`.
+- Registro de empregos com `JobType` do fazendeiro.
+- Modelo de `Contract` e `BillingPeriod` (diário/semanal/mensal).
+- Modelo de trabalhador: `WorkerProfile`, maestria por emprego, `WorkerState` e regras de aquisição/moradia/reatribuição na config.
+- Modelo de área (`WorkArea`, `AreaShape`), relatório de casa (`HousingReport`) e expediente (`WorkSchedule`) configuráveis.
+- Documentação de visão, arquitetura, empregos, configuração, trabalhador, área/casa/horário, roadmap, decisões e compatibilidade.
+- Script `build.cmd` para build confiável no Windows (JDK 25 + saída redirecionada + `--no-daemon`).
+
+- `LcScrollList`: componente reutilizável de lista com viewport recortado, roda do mouse, barra e clique por linha.
+- Loja de contratação com ofertas roláveis (`OpenHiringPayload.Offer`), preço, manutenção e seleção antes da compra; `/laborcraft worker buy <oferta>`.
+- Tela de **Perfil** (`/laborcraft profile`, `OpenProfilePayload`) com dinheiro, empregados/limite e lista rolável de trabalhadores com emprego, estado, tarefa, vida, fome e humor.
+- Contrato guarda dados do trabalhador (`laborcraft:contract_data`: oferta, nome, emprego, boost, manutenção, fome e humor).
+- Dispensar agora converte o trabalhador em Contrato de Trabalhador e remove a entidade; o contrato fica vinculado ou negociável conforme `acquisition.contractTradeable`.
+- `worker.maxWorkersPerPlayer` padrão agora é **1**, expansível no futuro por casas/upgrades.
+- Trabalhador ganhou `hunger` (0–20), `mood` (0–100) e tarefa derivada do emprego/estado, persistidos e enviados à UI.
+
+### Alterado
+
+- `housing.allowSharedHouse` agora é `false` por padrão; casa compartilhada fica para etapa futura.
+
+### Corrigido
+
+- Clique nos itens de `LcItemGrid` não abria a tela de ação no MC 26.3: o botão esquerdo agora é tratado por `onClick`/`isValidClickButton` (no 26.3 o esquema de botões é 1=esquerdo, 2=meio, 3=direito).
+- Build travando por causa do daemon do Gradle segurando o stdout; `build.cmd` agora usa `--no-daemon` além do redirecionamento.
+- Loom 1.19.3 exigindo Gradle 9.8+: wrapper atualizado para 9.8.2.
+- Chaves de estado, emprego, vida e situação do trabalhador apareciam cruas nas telas; o código e os arquivos de lang agora usam o mesmo prefixo `laborcraft.ui.worker.*`.

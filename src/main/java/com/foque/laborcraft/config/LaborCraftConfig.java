@@ -1,0 +1,180 @@
+package com.foque.laborcraft.config;
+
+import com.foque.laborcraft.LaborCraft;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+public final class LaborCraftConfig {
+	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+	private static final Path FILE = Path.of("config", "laborcraft.json");
+
+	private static LaborCraftConfig instance = new LaborCraftConfig();
+
+	public int schemaVersion = 1;
+	public String currencyProvider = "laborcraft:ledger";
+	public boolean allowOwnerOverrides = true;
+	public boolean requirePaymentToWork = true;
+	public int missedPaymentGracePeriods = 1;
+	public double wageMultiplierPerTier = 1.5D;
+	public double wageMultiplierPerWorker = 1.1D;
+
+	public WorkerSettings worker = new WorkerSettings();
+	public HousingSettings housing = new HousingSettings();
+	public AcquisitionSettings acquisition = new AcquisitionSettings();
+	public AreaSettings area = new AreaSettings();
+	public ScheduleSettings schedule = new ScheduleSettings();
+	public PathingSettings pathing = new PathingSettings();
+	public JobSettings farmer = JobSettings.farmer();
+
+	public static LaborCraftConfig get() {
+		return instance;
+	}
+
+	public static void load() {
+		if (Files.exists(FILE)) {
+			try (Reader reader = Files.newBufferedReader(FILE, StandardCharsets.UTF_8)) {
+				LaborCraftConfig loaded = GSON.fromJson(reader, LaborCraftConfig.class);
+				if (loaded != null) {
+					instance = loaded;
+				}
+			} catch (IOException | RuntimeException exception) {
+				LaborCraft.LOGGER.error("Falha ao ler {}, usando padroes", FILE, exception);
+			}
+		}
+
+		instance.save();
+	}
+
+	public void save() {
+		try {
+			Files.createDirectories(FILE.getParent());
+			try (Writer writer = Files.newBufferedWriter(FILE, StandardCharsets.UTF_8)) {
+				GSON.toJson(this, writer);
+			}
+		} catch (IOException exception) {
+			LaborCraft.LOGGER.error("Falha ao salvar {}", FILE, exception);
+		}
+	}
+
+	public static final class WorkerSettings {
+		public long[] masteryLevelThresholds = {0L, 100L, 300L, 700L, 1500L};
+		public int masteryXpPerHarvest = 1;
+		public boolean allowReassignment = true;
+		public long reassignmentFee = 0L;
+		public int reassignmentCooldownDays = 0;
+		public boolean allowPickup = true;
+		public boolean pickupRequiresEmptyInventory = true;
+		public int maxWorkersPerPlayer = 1;
+
+		public WorkerSettings() {
+		}
+	}
+
+	public static final class HousingSettings {
+		public boolean required = false;
+		public boolean requireBed = true;
+		public boolean requireRoof = true;
+		public boolean requireDoor = true;
+		public boolean requireEnclosure = true;
+		// Casas compartilhadas ficam para uma etapa futura; o primeiro build valida apenas casa separada.
+		public boolean allowSharedHouse = false;
+		public boolean oneWorkerPerBed = true;
+		public int maxDistanceFromAnchor = 32;
+		public int maxVolume = 512;
+		public int recheckSeconds = 60;
+		public int bonusRadius = 2;
+		public double bonusSpeed = 0.10D;
+		public int bonusMaxWorkers = 1;
+		public double speedPenaltyWithoutHome = 0.25D;
+		public List<String> comfortBlocks = new ArrayList<>(List.of(
+				"minecraft:chest",
+				"minecraft:crafting_table",
+				"minecraft:furnace",
+				"minecraft:bookshelf",
+				"minecraft:torch",
+				"minecraft:flower_pot"
+		));
+		public double comfortBonusPerBlock = 0.02D;
+		public double comfortBonusMax = 0.10D;
+
+		public HousingSettings() {
+		}
+	}
+
+	public static final class AcquisitionSettings {
+		public String mode = "purchase";
+		public long price = 64L;
+		public String revenueAccount = "server";
+		public boolean contractTradeable = false;
+		public boolean keepProfileBackup = true;
+
+		public AcquisitionSettings() {
+		}
+	}
+
+	public static final class AreaSettings {
+		public String shape = "square";
+		public int[] radiusByTier = {4, 6, 8, 9};
+		public int verticalRadius = 4;
+		public int maxRadius = 12;
+		public boolean useHouseBonus = true;
+		public boolean previewParticles = true;
+
+		public AreaSettings() {
+		}
+	}
+
+	public static final class ScheduleSettings {
+		public String mode = "daylight";
+		public int startTick = 0;
+		public int endTick = 12000;
+		public boolean workInRain = true;
+		public boolean pauseBillingOffDuty = false;
+		public int idleCheckTicks = 100;
+
+		public ScheduleSettings() {
+		}
+	}
+
+	public static final class PathingSettings {
+		public int maxPathLength = 64;
+		public int maxPathFailures = 5;
+		public boolean allowLadders = false;
+		public boolean allowDoors = true;
+
+		public PathingSettings() {
+		}
+	}
+
+	public static final class JobSettings {
+		public boolean enabled = true;
+		public int baseWage = 24;
+		public int maxTier = 4;
+		public int workRadius = 4;
+		public int billingPeriodDays = 1;
+		public boolean useBoneMeal = false;
+		public boolean useComposter = false;
+
+		public JobSettings() {
+		}
+
+		public static JobSettings farmer() {
+			JobSettings settings = new JobSettings();
+			settings.baseWage = 24;
+			settings.maxTier = 4;
+			settings.workRadius = 4;
+			settings.billingPeriodDays = 1;
+			settings.useBoneMeal = true;
+			settings.useComposter = true;
+			return settings;
+		}
+	}
+}

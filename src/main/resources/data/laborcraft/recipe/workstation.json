@@ -1,0 +1,17 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"key": {
+		"#": "#minecraft:planks",
+		"X": "minecraft:chest"
+	},
+	"pattern": [
+		"###",
+		"#X#",
+		"###"
+	],
+	"result": {
+		"count": 1,
+		"id": "laborcraft:workstation"
+	}
+}
