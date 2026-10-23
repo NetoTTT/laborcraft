@@ -58,7 +58,7 @@ public final class LaborCraftItems {
 		}
 
 		stack.set(CONTRACT_DATA, data);
-		if (!data.jobId().isBlank() || !data.name().isBlank() || !data.nameKey().isBlank()) {
+		if (!data.name().isBlank() || !data.legacyNameKey().isBlank()) {
 			stack.set(
 					DataComponents.CUSTOM_NAME,
 					Component.translatable("laborcraft.item.worker_contract.named", data.displayName())

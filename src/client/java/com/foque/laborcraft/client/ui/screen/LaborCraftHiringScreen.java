@@ -4,10 +4,14 @@ import com.foque.laborcraft.client.ui.LaborCraftUiActions;
 import com.foque.laborcraft.client.ui.LcRender;
 import com.foque.laborcraft.client.ui.LcTheme;
 import com.foque.laborcraft.client.ui.LcTooltips;
+import com.foque.laborcraft.client.ui.LcWorkerText;
 import com.foque.laborcraft.client.ui.widget.LcButton;
 import com.foque.laborcraft.client.ui.widget.LcScrollList;
 import com.foque.laborcraft.command.LaborCraftCommands;
+import com.foque.laborcraft.job.JobTypes;
 import com.foque.laborcraft.network.OpenHiringPayload;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -236,26 +240,39 @@ public final class LaborCraftHiringScreen extends LaborCraftScreen {
 		}
 
 		graphics.item(new ItemStack(Items.WHEAT), x + 9, y + 8);
+
+		int textX = x + 32;
+		int textWidth = Math.max(40, width - 32 - 96);
+		Component personName = Component.literal(font.plainSubstrByWidth(candidate.name(), textWidth / 2));
+		Component rankTitle = LcWorkerText.rankTitle(candidate.rankId());
+		graphics.text(font, personName, textX, y + 6, LcTheme.TITLE);
 		graphics.text(
 				font,
-				Component.translatable(candidate.nameKey()),
-				x + 32,
-				y + 7,
-				LcTheme.TITLE
+				rankTitle,
+				textX + font.width(personName) + 8,
+				y + 6,
+				LcWorkerText.rarityColor(candidate.rarityId())
 		);
+
+		List<Component> details = new ArrayList<>();
+		details.add(LcWorkerText.rarity(candidate.rarityId()));
+		details.add(LcWorkerText.job(""));
+		details.add(LcWorkerText.aptitude(candidate.aptitude(), JobTypes.FARMER.id()));
 		graphics.text(
 				font,
-				Component.translatable(candidate.descriptionKey()),
-				x + 32,
-				y + 22,
-				LcTheme.MUTED
+				LcWorkerText.join(details, LcWorkerText.SEPARATOR),
+				textX,
+				y + 20,
+				LcTheme.TEXT
 		);
-		if (candidate.hasBoost()) {
+
+		List<Component> boostLabels = LcWorkerText.boosts(candidate.boosts());
+		if (!boostLabels.isEmpty()) {
 			graphics.text(
 					font,
-					Component.translatable(candidate.boostKey()),
-					x + 32,
-					y + 36,
+					LcWorkerText.join(boostLabels, LcWorkerText.SEPARATOR),
+					textX,
+					y + 34,
 					LcTheme.ACCENT
 			);
 		}

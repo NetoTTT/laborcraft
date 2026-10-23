@@ -15,7 +15,9 @@ import com.foque.laborcraft.network.OpenPlayersPayload;
 import com.foque.laborcraft.network.OpenProfilePayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.network.SetLanguagePayload;
+import com.foque.laborcraft.worker.WorkerMarket;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +43,7 @@ public class LaborCraft implements ModInitializer {
 		OpenWorkerPayload.bootstrap();
 		SetLanguagePayload.bootstrap();
 		LaborCraftCommands.bootstrap();
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> WorkerMarket.clear());
 
 		LOGGER.info(
 				"LaborCraft carregado: {} empregos, {} provedores de dinheiro, provedor ativo '{}'",

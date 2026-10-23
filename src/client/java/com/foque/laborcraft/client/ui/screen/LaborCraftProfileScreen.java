@@ -2,11 +2,13 @@ package com.foque.laborcraft.client.ui.screen;
 
 import com.foque.laborcraft.client.ui.LcRender;
 import com.foque.laborcraft.client.ui.LcTheme;
+import com.foque.laborcraft.client.ui.LcWorkerText;
 import com.foque.laborcraft.client.ui.widget.LcButton;
 import com.foque.laborcraft.client.ui.widget.LcScrollList;
 import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
 import com.foque.laborcraft.network.OpenProfilePayload;
+import java.util.List;
 import java.util.Locale;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
@@ -141,12 +143,19 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 
 		graphics.item(jobIcon(summary.jobId()), x + 9, y + 8);
 		String name = font.plainSubstrByWidth(summary.name(), Math.max(0, width - 124));
-		graphics.text(font, Component.literal(name), x + 32, y + 7, LcTheme.TITLE);
-		Component job = jobLabel(summary.jobId())
-				.copy()
-				.append(Component.literal(" · "))
-				.append(stateLabel(summary.state()));
-		graphics.text(font, job, x + 32, y + 22, LcTheme.TEXT);
+		graphics.text(
+				font,
+				Component.literal(name),
+				x + 32,
+				y + 7,
+				LcWorkerText.rarityColor(summary.rarityId())
+		);
+		List<Component> status = List.of(
+				LcWorkerText.rank(summary.rankId()),
+				jobLabel(summary.jobId()),
+				stateLabel(summary.state())
+		);
+		graphics.text(font, LcWorkerText.join(status, LcWorkerText.SEPARATOR), x + 32, y + 22, LcTheme.TEXT);
 		graphics.text(
 				font,
 				Component.translatable(summary.taskKey()),

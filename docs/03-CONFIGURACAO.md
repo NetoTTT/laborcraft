@@ -69,6 +69,10 @@ Campos atuais de `config/laborcraft.json`:
     "pickupRequiresEmptyInventory": true,
     "maxWorkersPerPlayer": 1
   },
+  "offers": {
+    "offerCount": 5,
+    "rotationDays": 1
+  },
   "housing": {
     "required": false,
     "requireBed": true,
@@ -142,6 +146,8 @@ Campos atuais de `config/laborcraft.json`:
 | `worker.allowPickup` | permite guardar o trabalhador de volta no Contrato ("ovo") |
 | `worker.pickupRequiresEmptyInventory` | só guarda com inventário vazio |
 | `worker.maxWorkersPerPlayer` | limite de trabalhadores ativos + contratos ainda não usados por jogador; padrão 1, expansível no futuro por casas/upgrades |
+| `offers.offerCount` | quantas pessoas o mercado do servidor oferece por rotação (padrão 5, máx. 20) |
+| `offers.rotationDays` | de quantos em quantos dias do mundo o mercado troca o estoque (padrão 1) |
 | `housing.required` | exige moradia para trabalhar |
 | `housing.requireBed` / `requireRoof` / `requireDoor` / `requireEnclosure` | validação mínima da casa |
 | `housing.allowSharedHouse` / `oneWorkerPerBed` | cama compartilhada (adiada; default desliga a casa compartilhada) |

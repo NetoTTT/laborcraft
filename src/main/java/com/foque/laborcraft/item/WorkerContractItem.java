@@ -63,7 +63,7 @@ public class WorkerContractItem extends Item {
 		worker.setWorkerName(data.displayName());
 		worker.setJobId(data.jobId());
 		worker.setOfferId(data.offerId());
-		worker.setBoostId(data.boostKey());
+		worker.applyTraits(data.rank(), data.rarity(), data.boosts(), data.aptitudes(), data.mastery());
 		worker.setUpkeep(data.upkeep());
 		worker.setHunger(data.hunger());
 		worker.setMood(data.mood());

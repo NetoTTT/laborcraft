@@ -34,6 +34,8 @@ public record OpenProfilePayload(
 				for (WorkerSummary summary : payload.summaries()) {
 					buffer.writeUUID(summary.id());
 					buffer.writeUtf(summary.name(), 256);
+					buffer.writeUtf(summary.rankId(), 32);
+					buffer.writeUtf(summary.rarityId(), 32);
 					buffer.writeUtf(summary.jobId(), 128);
 					buffer.writeUtf(summary.state(), 32);
 					buffer.writeUtf(summary.taskKey(), 128);
@@ -54,6 +56,8 @@ public record OpenProfilePayload(
 					summaries.add(new WorkerSummary(
 							buffer.readUUID(),
 							buffer.readUtf(256),
+							buffer.readUtf(32),
+							buffer.readUtf(32),
 							buffer.readUtf(128),
 							buffer.readUtf(32),
 							buffer.readUtf(128),
@@ -74,6 +78,8 @@ public record OpenProfilePayload(
 			summaries.add(new WorkerSummary(
 					worker.getUUID(),
 					worker.getName().getString(),
+					worker.rank().id(),
+					worker.rarity().id(),
 					worker.jobId(),
 					worker.workerState().name(),
 					worker.taskKey(),
@@ -114,6 +120,8 @@ public record OpenProfilePayload(
 	public record WorkerSummary(
 			UUID id,
 			String name,
+			String rankId,
+			String rarityId,
 			String jobId,
 			String state,
 			String taskKey,

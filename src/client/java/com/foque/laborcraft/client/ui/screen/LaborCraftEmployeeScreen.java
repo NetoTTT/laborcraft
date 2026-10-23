@@ -4,12 +4,14 @@ import com.foque.laborcraft.client.ui.LaborCraftUiActions;
 import com.foque.laborcraft.client.ui.LcRender;
 import com.foque.laborcraft.client.ui.LcTheme;
 import com.foque.laborcraft.client.ui.LcTooltips;
+import com.foque.laborcraft.client.ui.LcWorkerText;
 import com.foque.laborcraft.client.ui.widget.LcButton;
 import com.foque.laborcraft.client.ui.widget.LcJobOption;
 import com.foque.laborcraft.command.LaborCraftCommands;
 import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
 import com.foque.laborcraft.network.OpenWorkerPayload;
+import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -72,7 +74,7 @@ public final class LaborCraftEmployeeScreen extends LaborCraftWorkerScreen {
 		String command = LaborCraftCommands.WORKER_ASSIGN + " " + workerId() + " " + job.id();
 		LcJobOption option = new LcJobOption(
 				x,
-				panelY + 246,
+				panelY + 252,
 				width,
 				48,
 				Component.translatable(job.translationKey()),
@@ -117,11 +119,27 @@ public final class LaborCraftEmployeeScreen extends LaborCraftWorkerScreen {
 		Component state = Component.translatable("laborcraft.ui.employee.state", stateLabel());
 		graphics.text(font, state, x + width - 12 - font.width(state), jobY + 25, LcTheme.TEXT);
 
+		Component detail = worker.jobId() == null || worker.jobId().isBlank()
+				? Component.translatable("laborcraft.ui.employee.no_cargo")
+				: LcWorkerText.join(List.of(aptitudeLabel(), masteryLabel()), LcWorkerText.SEPARATOR);
+		graphics.text(font, detail, x + 12, jobY + 41, LcTheme.MUTED);
+
+		List<Component> boostLabels = LcWorkerText.boosts(worker.boosts());
+		if (!boostLabels.isEmpty()) {
+			graphics.text(
+					font,
+					LcWorkerText.join(boostLabels, LcWorkerText.SEPARATOR),
+					x,
+					panelY + 226,
+					LcTheme.ACCENT
+			);
+		}
+
 		graphics.text(
 				font,
 				Component.translatable("laborcraft.ui.employee.assign"),
 				x,
-				panelY + 232,
+				panelY + 240,
 				LcTheme.TEXT
 		);
 	}

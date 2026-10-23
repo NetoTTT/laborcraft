@@ -175,6 +175,22 @@ Formato curto de ADR. Cada item: contexto → decisão (ou opções) → consequ
 
 **Consequência:** uma implementação só, auditável e testável por comando; UI e automação usam o mesmo caminho. O feedback ainda é chat; payload estruturado fica para depois, sem mudar a regra.
 
+## ADR-021 — Mercado de trabalho é do servidor, não do jogador
+
+**Status:** aceita em 2026-10-22.
+
+**Decisão:** a loja de contratação é um **mercado global do servidor**: uma lista só, igual para todos, com estoque compartilhado (quem compra primeiro leva) e rotação automática a cada `offers.rotationDays` dias do mundo. O estoque é reproduzível a partir de `seed do mundo + rotação` e fica persistido em `<mundo>/data/laborcraft/market.json` apenas com o que já foi vendido.
+
+**Consequência:** a economia é a mesma para todos e o servidor controla oferta, preço e giro; não existe "loja por jogador". Como o estoque é compartilhado, dois jogadores não podem comprar a mesma pessoa: a segunda compra falha com mensagem clara. Forçar nova rotação é possível por `/laborcraft admin market refresh`.
+
+## ADR-022 — Rank sorteado, raridade separada e cargo depois da contratação
+
+**Status:** aceita em 2026-10-22.
+
+**Decisão:** a oferta vende **a pessoa**, não o cargo. A pessoa tem rank (`Comum`, `Júnior`, `Pleno`, `Sênior`) sorteado na loja e **fixo** no contrato; raridade (`Comum`, `Incomum`, `Raro`, `Épico`) separada do rank e responsável por 0–3 boosts inatos; aptidão de 1–5 estrelas por emprego; e maestria por cargo, ganha trabalhando. O cargo é escolhido **depois** da contratação, na tela de Empregado, e pode ser trocado sem perder a maestria antiga. Rank não é promoção.
+
+**Consequência:** a loja tem variedade real ("Sênior comum" vs "Comum épico") sem power creep, porque os multiplicadores de rank são modestos e os boosts entram de forma aditiva. O contrato v2 precisa carregar o perfil completo para sobreviver a baú, troca e dispensa. Contratos antigos (`farmer_standard`) migram para Comum/comum com cargo de fazendeiro e maestria 0.
+
 ## Questões abertas
 
 1. **Nome definitivo / modid.** `LaborCraft` fica até o M1; renomear depois quebra saves/configs. Decidir antes da publicação.

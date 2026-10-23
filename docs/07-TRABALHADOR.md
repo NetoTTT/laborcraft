@@ -14,7 +14,9 @@ Alternativa segura: nome de exibição `LaborCraft` e nome interno neutro `labor
 
 ## 2. Como o jogador obtém o trabalhador
 
-O "ovo" funciona, mas não como spawn egg de criatura: é um **Contrato de Trabalhador** (`laborcraft:worker_contract`). Nesta etapa o item guarda o UUID do comprador no componente `laborcraft:contract_owner`; ao ser usado, spawna um trabalhador já vinculado a ele. Guardar um perfil completo dentro do item (nome, maestria, histórico) é uma etapa futura.
+O "ovo" funciona, mas não como spawn egg de criatura: é um **Contrato de Trabalhador** (`laborcraft:worker_contract`). O item guarda o UUID do comprador no componente `laborcraft:contract_owner` e, desde o contrato v2, também o **perfil da pessoa**: nome, rank, raridade, boosts, aptidões, cargo atual, fome, humor e maestria por cargo. Ao ser usado, spawna um trabalhador já vinculado ao comprador com todos esses dados.
+
+A oferta vende **a pessoa, não o cargo**. A pessoa chega "sem cargo" e o emprego é escolhido depois, na tela de Empregado.
 
 Modos configuráveis (`acquisition.mode`):
 
@@ -173,9 +175,11 @@ Para o fazendeiro:
 
 ## 11. Fluxo de contratação e comandos
 
-O fluxo público é uma **loja de contratação**. O jogador abre `/laborcraft hire`, vê o preço, o saldo e o limite, e compra um **Contrato de Trabalhador**. O contrato vai para a mochila; ao ser usado, gera um trabalhador **já vinculado ao comprador** e abre a tela de Empregado. O limite `worker.maxWorkersPerPlayer` conta trabalhadores ativos e contratos ainda não usados, então a loja desabilita a compra ao atingir o teto.
+O fluxo público é uma **loja de contratação** com mercado **do servidor** (não por jogador). O jogador abre `/laborcraft hire`, vê o estoque atual, o preço, o saldo e o limite, e compra uma pessoa. O contrato vai para a mochila; ao ser usado, gera um trabalhador **já vinculado ao comprador** (sem cargo) e abre a tela de Empregado. O limite `worker.maxWorkersPerPlayer` conta trabalhadores ativos e contratos ainda não usados, então a loja desabilita a compra ao atingir o teto.
 
-Na etapa atual a loja lista ofertas roláveis (padrão: fazendeiro; futuramente variantes com boost, preço inicial e manutenção maiores). Dispensar não deixa o trabalhador solto: ele volta a ser um Contrato de Trabalhador com nome, emprego, fome e humor preservados. O contrato devolvido fica vinculado a quem dispensou quando `acquisition.contractTradeable = false`; com `true`, pode ser negociado. O perfil do jogador abre por `/laborcraft profile` e mostra dinheiro, empregados e a lista rolável de trabalhadores com tarefa, vida, fome e humor.
+O mercado é global: todos veem as mesmas ofertas, o estoque é compartilhado (quem compra primeiro leva) e gira sozinho a cada `offers.rotationDays` dias do mundo. O estoque fica em `<mundo>/data/laborcraft/market.json`; as ofertas são reproduzíveis a partir de `seed do mundo + rotação`, então o arquivo guarda principalmente o que já foi vendido. `/laborcraft admin market refresh` força uma nova rotação.
+
+Dispensar não deixa o trabalhador solto: ele volta a ser um Contrato de Trabalhador com nome, rank, raridade, boosts, aptidões, cargo, maestria, fome e humor preservados. O contrato devolvido fica vinculado a quem dispensou quando `acquisition.contractTradeable = false`; com `true`, pode ser negociado. O perfil do jogador abre por `/laborcraft profile` e mostra dinheiro, empregados e a lista rolável de trabalhadores com rank, cargo, tarefa, vida, fome e humor.
 
 O comando de admin `/laborcraft worker spawn [nome]` continua criando um trabalhador sem vínculo para testes; interagir com ele apenas informa que não há contrato.
 
@@ -189,6 +193,7 @@ O comando de admin `/laborcraft worker spawn [nome]` continua criando um trabalh
 /laborcraft worker spawn [nome]
 /laborcraft worker remove
 /laborcraft admin set balance <valor>
+/laborcraft admin market refresh
 ```
 
 - `spawn` e `remove` exigem `COMMANDS_GAMEMASTER`; `buy`, `assign` e `dismiss` são validados no servidor.
@@ -198,3 +203,66 @@ O comando de admin `/laborcraft worker spawn [nome]` continua criando um trabalh
 - `info` procura o trabalhador do jogador mais próximo; `remove` aceita qualquer trabalhador num raio de 16 blocos.
 - `admin set balance` define o saldo do jogador no provedor ativo e serve para testar a compra.
 - A entidade é persistente e não despawna; `remove` usa descarte definitivo, não morte.
+
+## 12. Rank, raridade, boosts e aptidão (contrato v2)
+
+Três camadas separadas:
+
+1. **Pessoa** — nome, rank, raridade, boosts, aptidões, fome, humor, maestria.
+2. **Cargo** — fazendeiro, minerador etc. Escolhido **depois** da contratação e trocável; a maestria fica por cargo.
+3. **Oferta** — uma pessoa disponível no mercado naquele momento. Mostra rank, raridade, boosts, aptidão e custo; nunca "fazendeiro padrão".
+
+### Rank (competência, sorteado e fixo)
+
+| Rank | Velocidade | Aprendizado | Fôlego | Manutenção | Preço | Sorteio |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Comum | 1,00 | 1,00 | 1,00 | 1,00 | 1,00 | 65% |
+| Júnior | 1,02 | 1,10 | 1,05 | 1,10 | 1,25 | 25% |
+| Pleno | 1,05 | 1,25 | 1,12 | 1,25 | 1,60 | 8% |
+| Sênior | 1,10 | 1,50 | 1,20 | 1,50 | 2,00 | 2% |
+
+Rank não é promoção: é característica da pessoa, decidida na loja e preservada no contrato.
+
+### Raridade (quantidade e qualidade dos boosts)
+
+| Raridade | Boosts | Fortes | Preço | Sorteio |
+| --- | ---: | ---: | ---: | ---: |
+| Comum | 0 | 0 | 1,00 | 60% |
+| Incomum | 1 | 0 | 1,15 | 25% |
+| Raro | 2 | 1 | 1,40 | 12% |
+| Épico | 3 | 1 | 1,80 | 3% |
+
+Existem, portanto, "Sênior comum" (base melhor, sem boost) e "Comum épico" (base fraca, três boosts). O segundo é o prêmio da loja.
+
+### Boosts
+
+| Tipo | Fraco | Forte |
+| --- | ---: | ---: |
+| Velocidade | +5% | +10% |
+| Fôlego | +10% | +20% |
+| Aprendizado | +15% | +25% |
+| Rendimento | +5% | +10% |
+| Manutenção | −10% | −20% |
+| Aptidão | +1 estrela | +2 estrelas |
+
+Soma aditiva por tipo, aplicada em cima do multiplicador do rank. O rank é a base; o boost é o tempero.
+
+### Aptidão e maestria
+
+- **Aptidão** é a natureza interna (1–5 estrelas por emprego), sorteada na oferta e visível na UI. Influencia o ganho de maestria.
+- **Maestria** é o que a pessoa aprendeu no cargo (`Map<cargo, xp>`), com os limiares de `worker.masteryLevelThresholds`.
+- Um Comum com aptidão alta pode virar um fazendeiro excelente; um Sênior chega lá mais rápido.
+
+### Contrato v2
+
+O componente `laborcraft:contract_data` passou a guardar `rank`, `rarity`, `boosts`, `aptitudes`, `mastery`, `job` (vazio = sem cargo), nome, manutenção, fome e humor. Contratos antigos (`laborcraft:farmer_standard`) são lidos como **Comum/comum, sem boosts, com cargo de fazendeiro e maestria 0**.
+
+### UI
+
+- Oferta: `Bento Almeida — Trabalhador pleno` / `Raro · Sem cargo · Aptidão: ★★★☆☆` / boosts / preço e manutenção.
+- Empregado: nome, situação, `Rank · Raridade`, vida, fome/humor, cargo atual com aptidão e maestria, e a lista de empregos para atribuir.
+- Perfil: nome colorido pela raridade e linha `Rank · Cargo · Estado`.
+
+### Ainda não implementado
+
+O efeito de produção dos multiplicadores (velocidade de trabalho, rendimento, fôlego) depende da IA do fazendeiro, que ainda não existe. Hoje rank/raridade/boosts/aptidão são dados persistidos, exibidos e usados no cálculo de preço/manutenção e no ganho de maestria.

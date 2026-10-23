@@ -26,15 +26,18 @@ Esqueleto funcional (M0). Compila e gera `.jar`, com a espinha dorsal já desenh
 - registro de empregos (fazendeiro),
 - bloco `laborcraft:workstation` (Posto de Trabalho) + item + receita de 8 tábuas + baú,
 - entidade `laborcraft:worker`, contrato de trabalhador e loja pública de contratação,
-- telas de Contratação (loja) e Empregado, com atribuição de emprego e dispensa,
+- mercado de trabalho **do servidor** (global, com estoque compartilhado e rotação por dia), salvo em `<mundo>/data/laborcraft/market.json`,
+- contrato v2 com rank, raridade, boosts, aptidões, maestria por cargo, cargo atual, fome e humor,
+- ranks `Comum → Júnior → Pleno → Sênior`, raridade separada (`Comum/Incomum/Raro/Épico`) e boosts aleatórios por oferta,
+- oferta vende a **pessoa** (sem cargo); o emprego é escolhido depois, na tela de Empregado,
+- telas de Contratação (loja), Empregado e Perfil com rank/raridade/aptidão/maestria,
 - loja com lista rolável de ofertas (`LcScrollList`) e tela de Perfil do jogador (`/laborcraft profile`),
-- contrato com dados do trabalhador (nome, emprego, fome, humor e manutenção); dispensar devolve o contrato em vez de deixar o NPC solto,
 - modelo de contrato e período de cobrança,
 - modelo do trabalhador: perfil, maestria por emprego, estados e regras base de aquisição/moradia,
 - modelo de área (posto + raio por tier + andares), validação de casa e expediente de trabalho,
 - docs de arquitetura, empregos, configuração, trabalhador, área/casa/horário, compatibilidade e UI.
 
-Ainda **não** existe: IA de trabalho do fazendeiro, cobrança automática de salário e o perfil completo dentro do contrato. A base de UI, a loja e os comandos administrativos já funcionam (`/laborcraft ui`, `/laborcraft hire`, `/laborcraft profile`, `/laborcraft admin reload|status|set balance`).
+Ainda **não** existe: IA de trabalho do fazendeiro (e portanto o efeito de produção dos boosts/rank), cobrança automática de salário e ganho de maestria em jogo. A base de UI, o mercado, o contrato v2 e os comandos administrativos já funcionam (`/laborcraft ui`, `/laborcraft hire`, `/laborcraft profile`, `/laborcraft admin reload|status|market refresh|set balance`).
 
 ## Requisitos
 

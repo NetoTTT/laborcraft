@@ -5,14 +5,14 @@ Este documento registra as regras pedidas para a próxima etapa. A implementaç�
 ## 1. Loja de contratação
 
 - A contratação **não é infinita**: a loja mostra uma lista de ofertas disponíveis **naquele momento**.
+- O mercado é **do servidor**, não do jogador: todos veem a mesma lista, com **estoque compartilhado** (quem compra primeiro leva). Regra de arquitetura: nada de oferta por jogador.
+- O estoque gira sozinho a cada `offers.rotationDays` dias do mundo, com `offers.offerCount` pessoas por rotação (padrão 5 por dia).
+- O estoque é reproduzível a partir de `seed do mundo + rotação` e só o que foi vendido precisa ser persistido; fica em `<mundo>/data/laborcraft/market.json`.
 - A lista fica no rodapé da tela e usa **scroll** (roda do mouse + barra), no estilo da lista de receitas/ingredientes do Minecraft.
-- Cada oferta representa um trabalhador/emprego disponível. O padrão são os empregos comuns; no futuro podem existir:
-  - trabalhadores com boost aleatório;
-  - trabalhadores definidos por admin;
-  - ofertas melhores, com **compra inicial mais cara** e **manutenção maior**.
-- Cada oferta deve mostrar, no mínimo: emprego, nome/variação, boost (quando houver), preço inicial e custo de manutenção.
-- O jogador compra uma oferta e recebe um **Contrato de Trabalhador**. O contrato é o item que spawna o trabalhador.
-- A loja não deve vender “um contrato genérico” sem contexto de emprego/oferta; a compra é sempre de uma oferta da lista.
+- Cada oferta representa **uma pessoa**, não um cargo. A pessoa vem sem cargo; o emprego é escolhido depois, na tela de Empregado.
+- Cada oferta deve mostrar, no mínimo: nome, rank, raridade, boosts, aptidão, preço inicial e custo de manutenção.
+- O jogador compra uma oferta e recebe um **Contrato de Trabalhador** com o perfil da pessoa (contrato v2).
+- A loja não deve vender “um contrato genérico” sem contexto de pessoa; a compra é sempre de uma oferta da lista.
 
 ## 2. Limite de trabalhadores
 
@@ -75,5 +75,5 @@ Este documento registra as regras pedidas para a próxima etapa. A implementaç�
 
 ## 8. Status da implementação
 
-- Implementado: `LcScrollList`, loja com ofertas, compra por oferta, contrato com dados, dispensa devolvendo contrato, limite padrão 1, perfil por `/laborcraft profile`, fome/humor/tarefa no trabalhador e nas telas.
-- Ainda não implementado: simulação de fome/humor, efeito real dos boosts, maestria/histórico no contrato e mais ofertas além do fazendeiro padrão.
+- Implementado: `LcScrollList`, mercado global com rotação e estoque compartilhado, compra por oferta, contrato v2 com perfil (rank, raridade, boosts, aptidões, maestria, cargo), dispensa devolvendo contrato, limite padrão 1, perfil por `/laborcraft profile`, fome/humor/tarefa no trabalhador e nas telas, cargo escolhido depois da contratação.
+- Ainda não implementado: simulação de fome/humor, efeito de produção dos boosts/rank (depende da IA do fazendeiro), maestria sendo ganha em jogo, e ofertas geradas por admin/datapack.

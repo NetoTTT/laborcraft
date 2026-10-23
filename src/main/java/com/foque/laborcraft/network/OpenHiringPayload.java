@@ -4,8 +4,9 @@ import com.foque.laborcraft.LaborCraft;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
+import com.foque.laborcraft.worker.WorkerBoost;
+import com.foque.laborcraft.worker.WorkerMarket;
 import com.foque.laborcraft.worker.WorkerOffer;
-import com.foque.laborcraft.worker.WorkerOffers;
 import com.foque.laborcraft.worker.WorkerOwnership;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,10 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 
+/**
+ * Loja publica de contratacao. As ofertas vem do mercado do servidor (global e compartilhado),
+ * nao do jogador.
+ */
 public record OpenHiringPayload(
 		List<Offer> offers,
 		long balance,
@@ -30,11 +35,15 @@ public record OpenHiringPayload(
 			(buffer, payload) -> {
 				buffer.writeVarInt(payload.offers().size());
 				for (Offer offer : payload.offers()) {
-					buffer.writeUtf(offer.id(), 128);
-					buffer.writeUtf(offer.jobId(), 128);
-					buffer.writeUtf(offer.nameKey(), 128);
-					buffer.writeUtf(offer.descriptionKey(), 128);
-					buffer.writeUtf(offer.boostKey(), 128);
+					buffer.writeUtf(offer.id(), 160);
+					buffer.writeUtf(offer.name(), 96);
+					buffer.writeUtf(offer.rankId(), 32);
+					buffer.writeUtf(offer.rarityId(), 32);
+					buffer.writeVarInt(offer.boosts().size());
+					for (String boost : offer.boosts()) {
+						buffer.writeUtf(boost, 64);
+					}
+					buffer.writeVarInt(offer.aptitude());
 					buffer.writeLong(offer.price());
 					buffer.writeUtf(offer.priceText(), 64);
 					buffer.writeLong(offer.upkeep());
@@ -51,12 +60,22 @@ public record OpenHiringPayload(
 				int offerCount = buffer.readVarInt();
 				List<Offer> offers = new ArrayList<>(offerCount);
 				for (int index = 0; index < offerCount; index++) {
+					String id = buffer.readUtf(160);
+					String name = buffer.readUtf(96);
+					String rankId = buffer.readUtf(32);
+					String rarityId = buffer.readUtf(32);
+					int boostCount = buffer.readVarInt();
+					List<String> boosts = new ArrayList<>(boostCount);
+					for (int boostIndex = 0; boostIndex < boostCount; boostIndex++) {
+						boosts.add(buffer.readUtf(64));
+					}
 					offers.add(new Offer(
-							buffer.readUtf(128),
-							buffer.readUtf(128),
-							buffer.readUtf(128),
-							buffer.readUtf(128),
-							buffer.readUtf(128),
+							id,
+							name,
+							rankId,
+							rarityId,
+							List.copyOf(boosts),
+							buffer.readVarInt(),
 							buffer.readLong(),
 							buffer.readUtf(64),
 							buffer.readLong(),
@@ -79,13 +98,14 @@ public record OpenHiringPayload(
 		LaborCraftConfig config = LaborCraftConfig.get();
 		CurrencyProvider provider = CurrencyProviders.active();
 		List<Offer> offers = new ArrayList<>();
-		for (WorkerOffer offer : WorkerOffers.available()) {
+		for (WorkerOffer offer : WorkerMarket.offers(player.level().getServer())) {
 			offers.add(new Offer(
 					offer.id(),
-					offer.jobId(),
-					offer.nameKey(),
-					offer.descriptionKey(),
-					offer.boostKey(),
+					offer.name(),
+					offer.rank().id(),
+					offer.rarity().id(),
+					offer.boosts().stream().map(WorkerBoost::serialize).toList(),
+					offer.aptitudeFor(com.foque.laborcraft.job.JobTypes.FARMER.id()),
 					offer.price(),
 					offer.free() ? "" : provider.format(offer.price()),
 					offer.upkeep(),
@@ -133,10 +153,11 @@ public record OpenHiringPayload(
 
 	public record Offer(
 			String id,
-			String jobId,
-			String nameKey,
-			String descriptionKey,
-			String boostKey,
+			String name,
+			String rankId,
+			String rarityId,
+			List<String> boosts,
+			int aptitude,
 			long price,
 			String priceText,
 			long upkeep,
@@ -147,7 +168,7 @@ public record OpenHiringPayload(
 		}
 
 		public boolean hasBoost() {
-			return boostKey != null && !boostKey.isBlank();
+			return !boosts.isEmpty();
 		}
 	}
 }

@@ -27,6 +27,7 @@ public final class LaborCraftConfig {
 	public double wageMultiplierPerWorker = 1.1D;
 
 	public WorkerSettings worker = new WorkerSettings();
+	public OfferSettings offers = new OfferSettings();
 	public HousingSettings housing = new HousingSettings();
 	public AcquisitionSettings acquisition = new AcquisitionSettings();
 	public AreaSettings area = new AreaSettings();
@@ -75,6 +76,16 @@ public final class LaborCraftConfig {
 		public int maxWorkersPerPlayer = 1;
 
 		public WorkerSettings() {
+		}
+	}
+
+	public static final class OfferSettings {
+		/** Quantas pessoas ficam disponiveis por rotacao na loja do servidor. */
+		public int offerCount = 5;
+		/** De quantos em quantos dias do mundo a loja troca o estoque. */
+		public int rotationDays = 1;
+
+		public OfferSettings() {
 		}
 	}
 

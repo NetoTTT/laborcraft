@@ -18,8 +18,8 @@ import com.foque.laborcraft.network.OpenPlayersPayload;
 import com.foque.laborcraft.network.OpenProfilePayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.network.SetLanguagePayload;
+import com.foque.laborcraft.worker.WorkerMarket;
 import com.foque.laborcraft.worker.WorkerOffer;
-import com.foque.laborcraft.worker.WorkerOffers;
 import com.foque.laborcraft.worker.WorkerOwnership;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
@@ -95,13 +95,10 @@ public final class LaborCraftCommands {
 										.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
 										.executes(context -> removeWorker(context.getSource())))
 								.then(Commands.literal("buy")
-										.executes(context -> buyWorker(
-												context.getSource(),
-												WorkerOffers.standard().id()
-										))
+										.executes(context -> buyWorker(context.getSource(), null))
 										.then(Commands.argument("offer", StringArgumentType.word())
 												.suggests((context, builder) -> {
-													WorkerOffers.available()
+													WorkerMarket.offers(context.getSource().getServer())
 															.forEach(offer -> builder.suggest(offer.id()));
 													return builder.buildFuture();
 												})
@@ -142,6 +139,9 @@ public final class LaborCraftCommands {
 								.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
 								.then(Commands.literal("reload").executes(context -> reload(context.getSource())))
 								.then(Commands.literal("status").executes(context -> status(context.getSource())))
+								.then(Commands.literal("market")
+										.then(Commands.literal("refresh")
+												.executes(context -> refreshMarket(context.getSource()))))
 								.then(Commands.literal("set")
 										.then(Commands.literal("wage")
 												.then(Commands.argument("value", IntegerArgumentType.integer(0, 100000))
@@ -271,9 +271,22 @@ public final class LaborCraftCommands {
 	private static int buyWorker(CommandSourceStack source, String offerId)
 			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();
-		WorkerOffer offer = WorkerOffers.get(offerId);
+		if (player.level().getServer() == null) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.buy.no_market"));
+			return 0;
+		}
+
+		List<WorkerOffer> offers = WorkerMarket.offers(player.level().getServer());
+		if (offers.isEmpty()) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.buy.no_offers"));
+			return 0;
+		}
+
+		WorkerOffer offer = offerId == null || offerId.isBlank()
+				? offers.getFirst()
+				: offers.stream().filter(candidate -> candidate.id().equals(offerId)).findFirst().orElse(null);
 		if (offer == null) {
-			source.sendFailure(Component.translatable("laborcraft.command.worker.buy.unknown_offer", offerId));
+			source.sendFailure(Component.translatable("laborcraft.command.worker.buy.unknown_offer", String.valueOf(offerId)));
 			return 0;
 		}
 
@@ -297,11 +310,21 @@ public final class LaborCraftCommands {
 			return 0;
 		}
 
+		WorkerOffer taken = WorkerMarket.take(player.level().getServer(), offer.id());
+		if (taken == null) {
+			if (price > 0L) {
+				provider.deposit(player.getUUID(), price);
+			}
+			source.sendFailure(Component.translatable("laborcraft.command.worker.buy.sold_out", offer.name()));
+			return 0;
+		}
+
 		ItemStack contract = LaborCraftItems.newContract(
 				player.getUUID(),
-				WorkerContractData.fromOffer(offer)
+				WorkerContractData.fromOffer(taken)
 		);
 		if (!player.getInventory().add(contract)) {
+			WorkerMarket.restore(player.level().getServer(), taken);
 			if (price > 0L) {
 				provider.deposit(player.getUUID(), price);
 			}
@@ -317,13 +340,27 @@ public final class LaborCraftCommands {
 		Component priceLabel = price <= 0L
 				? Component.translatable("laborcraft.ui.hire.free")
 				: Component.literal(provider.format(price));
+		Component workerName = Component.literal(taken.name());
 		source.sendSuccess(
 				() -> Component.translatable(
 						"laborcraft.command.worker.buy.contract",
-						Component.translatable(offer.nameKey()),
+						workerName,
 						priceLabel
 				),
 				false
+		);
+		return 1;
+	}
+
+	private static int refreshMarket(CommandSourceStack source) {
+		if (source.getServer() == null) {
+			return 0;
+		}
+
+		WorkerMarket.refresh(source.getServer());
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.command.admin.market.refresh", WorkerMarket.remaining(source.getServer())),
+				true
 		);
 		return 1;
 	}
@@ -458,10 +495,12 @@ public final class LaborCraftCommands {
 		Component stateLabel = Component.translatable(
 				"laborcraft.ui.worker.state." + worker.workerState().name().toLowerCase(Locale.ROOT)
 		);
+		Component rankLabel = Component.translatable(worker.rank().translationKey());
 		source.sendSuccess(
 				() -> Component.translatable(
 						"laborcraft.command.worker.info",
 						worker.getName(),
+						rankLabel,
 						jobLabel,
 						stateLabel,
 						(int) worker.getHealth(),

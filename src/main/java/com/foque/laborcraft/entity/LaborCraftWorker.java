@@ -1,7 +1,15 @@
 package com.foque.laborcraft.entity;
 
 import com.foque.laborcraft.network.OpenWorkerPayload;
+import com.foque.laborcraft.worker.WorkerAptitudes;
+import com.foque.laborcraft.worker.WorkerBoost;
+import com.foque.laborcraft.worker.WorkerMastery;
+import com.foque.laborcraft.worker.WorkerRank;
+import com.foque.laborcraft.worker.WorkerRarity;
 import com.foque.laborcraft.worker.WorkerState;
+import com.foque.laborcraft.worker.WorkerTraits;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -25,7 +33,11 @@ public class LaborCraftWorker extends PathfinderMob {
 	private UUID owner;
 	private String jobId = "";
 	private String offerId = "";
-	private String boostId = "";
+	private WorkerRank rank = WorkerRank.COMUM;
+	private WorkerRarity rarity = WorkerRarity.COMUM;
+	private List<WorkerBoost> boosts = List.of();
+	private Map<String, Integer> aptitudes = Map.of();
+	private Map<String, Long> mastery = Map.of();
 	private long upkeep = 0L;
 	private int hunger = 20;
 	private int mood = 100;
@@ -103,11 +115,68 @@ public class LaborCraftWorker extends PathfinderMob {
 	}
 
 	public String boostId() {
-		return boostId;
+		return WorkerBoost.join(boosts);
 	}
 
-	public void setBoostId(String boostId) {
-		this.boostId = boostId == null ? "" : boostId;
+	public WorkerRank rank() {
+		return rank;
+	}
+
+	public WorkerRarity rarity() {
+		return rarity;
+	}
+
+	public List<WorkerBoost> boosts() {
+		return boosts;
+	}
+
+	public Map<String, Integer> aptitudes() {
+		return aptitudes;
+	}
+
+	public Map<String, Long> mastery() {
+		return mastery;
+	}
+
+	public int aptitudeFor(String jobId) {
+		return WorkerAptitudes.starsWithBoosts(aptitudes, jobId, WorkerTraits.aptitudeBonus(boosts));
+	}
+
+	public long masteryFor(String jobId) {
+		return mastery.getOrDefault(jobId, 0L);
+	}
+
+	public void addMastery(String jobId, long xp) {
+		if (jobId == null || jobId.isBlank() || xp <= 0L) {
+			return;
+		}
+
+		Map<String, Long> updated = new java.util.LinkedHashMap<>(mastery);
+		updated.put(jobId, Math.max(0L, masteryFor(jobId) + Math.round(xp * WorkerTraits.learning(rank, boosts))));
+		mastery = Map.copyOf(updated);
+	}
+
+	public void applyTraits(
+			WorkerRank rank,
+			WorkerRarity rarity,
+			List<WorkerBoost> boosts,
+			Map<String, Integer> aptitudes,
+			Map<String, Long> mastery
+	) {
+		this.rank = rank == null ? WorkerRank.COMUM : rank;
+		this.rarity = rarity == null ? WorkerRarity.COMUM : rarity;
+		this.boosts = List.copyOf(boosts);
+		this.aptitudes = Map.copyOf(aptitudes);
+		this.mastery = Map.copyOf(mastery);
+		applyMovementSpeed();
+	}
+
+	private void applyMovementSpeed() {
+		if (getAttribute(Attributes.MOVEMENT_SPEED) == null) {
+			return;
+		}
+
+		getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(0.30D * WorkerTraits.speed(rank, boosts));
 	}
 
 	public long upkeep() {
@@ -208,7 +277,11 @@ public class LaborCraftWorker extends PathfinderMob {
 
 		output.putString("JobId", jobId);
 		output.putString("OfferId", offerId);
-		output.putString("BoostId", boostId);
+		output.putString("Rank", rank.id());
+		output.putString("Rarity", rarity.id());
+		output.putString("Boosts", WorkerBoost.join(boosts));
+		output.putString("Aptitudes", WorkerAptitudes.serialize(aptitudes));
+		output.putString("Mastery", WorkerMastery.join(mastery));
 		output.putLong("Upkeep", upkeep);
 		output.putInt("Hunger", hunger);
 		output.putInt("Mood", mood);
@@ -231,7 +304,11 @@ public class LaborCraftWorker extends PathfinderMob {
 
 		jobId = input.getStringOr("JobId", "");
 		offerId = input.getStringOr("OfferId", "");
-		boostId = input.getStringOr("BoostId", "");
+		rank = WorkerRank.of(input.getStringOr("Rank", "comum"));
+		rarity = WorkerRarity.of(input.getStringOr("Rarity", "comum"));
+		boosts = WorkerBoost.split(input.getStringOr("Boosts", ""));
+		aptitudes = WorkerAptitudes.parse(input.getStringOr("Aptitudes", ""));
+		mastery = WorkerMastery.parse(input.getStringOr("Mastery", ""));
 		upkeep = input.getLongOr("Upkeep", 0L);
 		hunger = Math.clamp(input.getIntOr("Hunger", 20), 0, 20);
 		mood = Math.clamp(input.getIntOr("Mood", 100), 0, 100);
@@ -242,5 +319,7 @@ public class LaborCraftWorker extends PathfinderMob {
 		} catch (IllegalArgumentException exception) {
 			state = WorkerState.ACTIVE;
 		}
+
+		applyMovementSpeed();
 	}
 }

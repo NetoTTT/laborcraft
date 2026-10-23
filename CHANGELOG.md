@@ -52,10 +52,21 @@ Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
 - Dispensar agora converte o trabalhador em Contrato de Trabalhador e remove a entidade; o contrato fica vinculado ou negociável conforme `acquisition.contractTradeable`.
 - `worker.maxWorkersPerPlayer` padrão agora é **1**, expansível no futuro por casas/upgrades.
 - Trabalhador ganhou `hunger` (0–20), `mood` (0–100) e tarefa derivada do emprego/estado, persistidos e enviados à UI.
+- Mercado de trabalho **do servidor** (`WorkerMarket`): loja global, estoque compartilhado e rotação automática; persistido em `<mundo>/data/laborcraft/market.json`.
+- Ofertas determinísticas a partir de `seed do mundo + rotação` (`WorkerOffers`): mesmo mundo e mesmo dia = mesmas pessoas, com nome próprio sorteado.
+- `WorkerRank` (Comum/Júnior/Pleno/Sênior) com multiplicadores de velocidade, aprendizado, fôlego, manutenção e preço; rank sorteado na oferta e fixo no contrato.
+- `WorkerRarity` (Comum/Incomum/Raro/Épico) separada do rank, controlando a quantidade e a força dos boosts.
+- `WorkerBoost`/`WorkerBoostType` (velocidade, fôlego, aprendizado, rendimento, manutenção, aptidão) e `WorkerAptitudes` (1–5 estrelas por emprego).
+- Contrato v2 (`laborcraft:contract_data`) com rank, raridade, boosts, aptidões, maestria por cargo, cargo atual, nome, fome e humor; contratos antigos migram para Comum/comum com cargo de fazendeiro.
+- Comando `/laborcraft admin market refresh` para forçar nova rotação do mercado.
+- Tela de Contratação mostra pessoa, rank, raridade, aptidão, boosts, preço e manutenção; tela de Empregado mostra rank/raridade, aptidão e maestria; Perfil colore o nome pela raridade e mostra `Rank · Cargo · Estado`.
 
 ### Alterado
 
 - `housing.allowSharedHouse` agora é `false` por padrão; casa compartilhada fica para etapa futura.
+- A oferta passou a vender **a pessoa**, não o cargo: contrato novo entra “sem cargo” e o emprego é escolhido na tela de Empregado.
+- `worker buy` retira a pessoa do estoque do servidor; se a mochila estiver cheia, a oferta volta ao estoque e o dinheiro é devolvido.
+- A loja deixou de ser por jogador: estoque, preço e rotação são do servidor, iguais para todos.
 
 ### Corrigido
 
