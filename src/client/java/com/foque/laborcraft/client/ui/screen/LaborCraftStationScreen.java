@@ -87,6 +87,8 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 				this::drawWorker,
 				(summary, index) -> {
 					selectedIndex = index;
+					// A tela nao se reconstroi sozinha: o clique precisa atualizar os botoes na hora.
+					updateButtons();
 				}
 		);
 		workers.replaceItems(station.workers());
@@ -228,6 +230,16 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		int cardX = x + 222;
 		int cardY = panelY + 96;
 		int cardWidth = width - 222;
+
+		if (station.workers().isEmpty()) {
+			graphics.centeredText(
+					font,
+					Component.translatable("laborcraft.ui.station.workers.empty"),
+					x + 104,
+					panelY + 180,
+					LcTheme.MUTED
+			);
+		}
 
 		graphics.fill(cardX, cardY, cardX + cardWidth, cardY + 190, 0x401B232D);
 		LcRender.border(graphics, cardX, cardY, cardWidth, 190,

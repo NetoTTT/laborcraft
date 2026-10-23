@@ -272,5 +272,6 @@
 	"laborcraft.station.paused": "%s ficou ocioso no posto.",
 	"laborcraft.station.resumed": "%s voltou ao trabalho.",
 	"laborcraft.station.vacant": "vaga livre",
-	"laborcraft.station.info": "Posto em %s, %s, %s · modo: %s · zona: %s · trabalhador: %s"
+	"laborcraft.station.info": "Posto em %s, %s, %s · modo: %s · zona: %s · trabalhador: %s",
+	"laborcraft.ui.station.workers.empty": "Nenhum empregado. Contrate em /laborcraft hire."
 }

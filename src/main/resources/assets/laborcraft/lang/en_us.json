@@ -272,5 +272,6 @@
 	"laborcraft.station.paused": "%s is now idle at the post.",
 	"laborcraft.station.resumed": "%s is back to work.",
 	"laborcraft.station.vacant": "free slot",
-	"laborcraft.station.info": "Post at %s, %s, %s · mode: %s · zone: %s · worker: %s"
+	"laborcraft.station.info": "Post at %s, %s, %s · mode: %s · zone: %s · worker: %s",
+	"laborcraft.ui.station.workers.empty": "No employees yet. Hire one at /laborcraft hire."
 }
