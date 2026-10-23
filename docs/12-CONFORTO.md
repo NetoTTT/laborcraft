@@ -263,11 +263,13 @@ O `HousingReport` passaria a carregar `comfortPoints` e o total por categoria, p
   (`data/pc/<versão>/blocks.json`).
 - [Minecraft Wiki — Block](https://minecraft.wiki/w/Block) — categorias, obtenção e raridade.
 
-## 7. Ideias futuras
+## 7. Ideias e decisões
 
-- **Quadros:** `minecraft:painting` é entidade, não bloco; contar exigiria varrer entidades da casa.
-- **Conforto negativo:** teia de aranha, magma, areia das almas (reduz humor) — “casa mal-assombrada”.
-- **Exigir luz:** sem pelo menos 1 ponto de Luz, o humor não sobe à noite.
-- **Categoria favorita por emprego:** fazendeiro gosta de Natureza, minerador de Luz.
-- **Qualidade por variante:** mesa de encantamento vale mais cercada de estantes.
-- **Conforto visível:** ícone/partículas no posto mostrando o nível atual.
+| Ideia | Status | Observação |
+| --- | --- | --- |
+| Quadros (`minecraft:painting`) | **aceita** | é entidade, não bloco: contar exige varrer entidades dentro do volume |
+| Exigir pelo menos 1 ponto de Luz para o humor subir à noite | **aceita** | vira regra de validação, não só de pontuação |
+| Categoria favorita por emprego | **aceita** | fazendeiro → Natureza, minerador → Luz, etc. |
+| Conforto visível (ícone/partículas no posto) | **aceita, para depois** | primeiro o número no relatório/UI |
+| Conforto negativo (teia, magma) | **rejeitada por ora** | só volta se o bloco “ruim” também trouxer um benefício claro que justifique colocar na casa |
+| Qualidade por variante (mesa de encantamento + estantes) | ideia | depende de checagem extra por bloco |

@@ -1,52 +1,53 @@
 # LaborCraft
 
-> Nome provisório (codinome). O nome final, o `modid` e o `group` ainda podem mudar.
+[Português (Brasil)](README.pt-BR.md) · English
 
-Mod Fabric para Minecraft **26.3** de automação de trabalho: você **contrata aldeões** (e, no futuro, outros NPCs) para executar empregos repetitivos — colher e replantar plantações, usar composteira e farinha de osso, guardar em baús — e **paga um salário** por dia, semana ou mês.
+> Working title. The final name, `modid` and package may still change before the first public release.
 
-A ideia central: o trabalhador não é uma máquina burra, é um funcionário. Existe contrato, existe salário, existe risco de não receber e parar de trabalhar.
+A Fabric mod for Minecraft **26.3** about **automated labor**: you hire workers (villager-like NPCs) and pay them a wage to run repetitive jobs — harvest and replant crops, use composters and bone meal, store the output in chests — while the server decides the rules.
 
-## Premissa
+The core idea: a worker is not a dumb machine, it is an **employee**. There is a contract, a wage, a house, a rank, and consequences for not paying.
 
-1. **Trabalho, não magia.** O NPC trabalha dentro de uma área de serviço definida pelo dono, seguindo regras de colheita/replantio/depósito como um jogador faria.
-2. **Contrato e salário.** Todo trabalhador tem um contrato com período de cobrança (diário/semanal/mensal), valor, escalonamento e consequências por falta de pagamento.
-3. **Modular por princípio.** O mod não sabe o que é "dinheiro": ele fala com um *provedor de moeda*. Funciona com moeda própria, com scoreboard, com itens (esmeralda) ou com qualquer mod de economia do server/modpack.
-4. **Modular por princípio (2).** O mod não sabe só fazer fazenda: empregos são registrados por tipo. Fazendeiro é o primeiro; minerador e outros vêm depois, sem reescrever o núcleo.
-5. **Compatibilidade primeiro.** Sem dependência obrigatória de outros mods, sem mixin em código de terceiros se der para evitar, tags para plantações/baús, e tudo que der para ser *data-driven* via datapack.
-6. **Servidor manda.** Preços, períodos e regras são decididos pelo dono do servidor ou pelo modpack; o jogador só decide os detalhes que o servidor permitir.
+## Premises
 
-Detalhes completos em [`docs/00-VISAO.md`](docs/00-VISAO.md).
+1. **Work, not magic.** The NPC works inside a service area defined by its owner, following harvest/replant/deposit rules like a player would.
+2. **Contract and wage.** Every worker has a contract with a billing period (daily/weekly/monthly), price, escalation and consequences for missed payments.
+3. **Currency-agnostic.** The mod does not know what "money" is: it talks to a *currency provider*. It works with its own ledger, scoreboard, items (emeralds) or any economy mod in the pack.
+4. **Job-agnostic.** Jobs are registered by type. Farmer ships first; miner and others come later without rewriting the core.
+5. **Compatibility first.** No hard dependency on other mods, no mixins into third-party code when avoidable, tags for crops/chests, and as much as possible data-driven through datapacks.
+6. **The server rules.** Prices, periods and limits are decided by the server owner or modpack author; the player decides only what the server allows.
 
 ## Status
 
-Esqueleto funcional (M0). Compila e gera `.jar`, com a espinha dorsal já desenhada:
+Functional skeleton (M0): it builds, ships a `.jar`, and the backbone is in place.
 
-- configuração em JSON (`config/laborcraft.json`),
-- registro de provedores de moeda + provedor interno (`config/laborcraft-ledger.json`),
-- registro de empregos (fazendeiro),
-- bloco `laborcraft:workstation` (Posto de Trabalho) + item + receita de 8 tábuas + baú,
-- entidade `laborcraft:worker`, contrato de trabalhador e loja pública de contratação,
-- mercado de trabalho **do servidor** (global, com estoque compartilhado e rotação por dia), salvo em `<mundo>/data/laborcraft/market.json`,
-- contrato v2 com rank, raridade, boosts, aptidões, maestria por cargo, cargo atual, fome e humor,
-- ranks `Comum → Júnior → Pleno → Sênior`, raridade separada (`Comum/Incomum/Raro/Épico`) e boosts aleatórios por oferta,
-- oferta vende a **pessoa** (sem cargo); o emprego é escolhido depois, na tela de Empregado,
-- telas de Contratação (loja), Empregado e Perfil com rank/raridade/aptidão/maestria,
-- loja com lista rolável de ofertas (`LcScrollList`) e tela de Perfil do jogador (`/laborcraft profile`),
-- modelo de contrato e período de cobrança,
-- modelo do trabalhador: perfil, maestria por emprego, estados e regras base de aquisição/moradia,
-- modelo de área (posto + raio por tier + andares), validação de casa e expediente de trabalho,
-- docs de arquitetura, empregos, configuração, trabalhador, área/casa/horário, compatibilidade e UI.
+**Working today**
 
-Ainda **não** existe: IA de trabalho do fazendeiro (e portanto o efeito de produção dos boosts/rank), cobrança automática de salário e ganho de maestria em jogo. A base de UI, o mercado, o contrato v2 e os comandos administrativos já funcionam (`/laborcraft ui`, `/laborcraft hire`, `/laborcraft profile`, `/laborcraft admin reload|status|market refresh|set balance`).
+- JSON config (`config/laborcraft.json`) and a pluggable currency SPI with a built-in ledger provider (`config/laborcraft-ledger.json`).
+- `laborcraft:workstation` block (Work Post) + item + recipe, plus the `laborcraft:worker` entity and the `laborcraft:worker_contract` item.
+- **Server-wide labor market** (`/laborcraft hire`): one shop per world, shared stock, daily rotation, persisted at `<world>/data/laborcraft/market.json`. Offers are deterministic from the world seed, so they can be replayed.
+- **Workers are people, not jobs**: rank (`Common`, `Junior`, `Adept`, `Senior`), rarity (`Common`, `Uncommon`, `Rare`, `Epic`) with 0–3 innate boosts, per-job aptitude (1–5 stars) and per-job mastery. The job is chosen *after* hiring, on the Employee screen.
+- **Contract v2** carrying the whole profile (rank, rarity, boosts, aptitudes, mastery, current job, hunger, mood). Old contracts migrate to Common with a farmer job.
+- Native UI: Admin, Config, Hiring (scrollable shop), Employee, Profile, Online players, Item test; shared components (`LcScrollList`, `LcItemGrid`, `LcPagination`, `LcButton`, chat value prompt).
+- **House validation** by flood fill (`HousingValidator`): sealed interior, roof, door, minimum 5×5, and a computed bed capacity (5×5 = 2, 6×6 = 3, 7×7 = 4).
+- **House Plan** item (`laborcraft:house_plan`): right-click the ground to measure a room as if a bed were there and get a chat report.
+- pt-BR and en-US translations, command-first UI (every action runs a server command).
 
-## Requisitos
+**Not implemented yet**
 
-- JDK **25** (Minecraft 26.3 exige Java 25; o build roda o JVM 25).
-- Nada de Gradle instalado: o wrapper cuida disso (Gradle 9.8.2, Loom 1.19.3).
+- Farmer work AI (scan/harvest/replant/deposit), and therefore the real production effect of rank/boosts.
+- Automatic wage billing and in-game mastery gain.
+- House claiming/registry, bed-based worker slots, and pathfinding to the house.
+- The weighted comfort system (designed in [`docs/12-CONFORTO.md`](docs/12-CONFORTO.md)).
 
-## Como compilar
+## Requirements
 
-No Windows, use o script (ele acha o JDK 25, roda o wrapper e evita o console "travado"):
+- **JDK 25** (Minecraft 26.3 requires Java 25; the build runs on JVM 25).
+- No local Gradle needed: the wrapper handles it (Gradle 9.8.2, Loom 1.19.3).
+
+## Building
+
+On Windows, use the script (it finds JDK 25, runs the wrapper, and avoids the "hung console"):
 
 ```bat
 build.cmd build
@@ -54,26 +55,26 @@ build.cmd runClient
 build.cmd runServer
 ```
 
-O script redireciona a saída para `build-out.log`, usa `--no-daemon` e imprime no fim. Isso é necessário porque o **daemon do Gradle herda o stdout**, então um pipe direto (`gradlew.bat build | ...`) nunca recebe EOF e parece travado para sempre.
+The script redirects output to `build-out.log`, uses `--no-daemon`, and prints the result at the end. This is needed because the **Gradle daemon inherits stdout**, so a plain pipe (`gradlew.bat build | ...`) never sees EOF and looks stuck forever.
 
-Se `JAVA_HOME` não for um JDK 25+, passe explicitamente:
+If `JAVA_HOME` is not JDK 25+, pass it explicitly:
 
 ```bat
 set VJ_JAVA_HOME=C:\Program Files\Java\jdk-25
 build.cmd build
 ```
 
-Ou direto pelo wrapper, redirecionando você mesmo:
+Or use the wrapper directly and redirect yourself:
 
 ```bat
 gradlew.bat build --console=plain --no-daemon > build-out.log 2>&1
 ```
 
-O `.jar` sai em `build/libs/laborcraft-<versao>.jar`.
+The `.jar` is written to `build/libs/laborcraft-<version>.jar`.
 
-## Versões alvo
+## Target versions
 
-| Item | Versão |
+| Item | Version |
 | --- | --- |
 | Minecraft | 26.3 |
 | Fabric Loader | 0.19.5 |
@@ -82,46 +83,55 @@ O `.jar` sai em `build/libs/laborcraft-<versao>.jar`.
 | Gradle | 9.8.2 |
 | Java | 25 |
 
-Tudo isso vive em `gradle.properties`. Política de atualização em [`docs/04-ROADMAP.md`](docs/04-ROADMAP.md).
+All of that lives in `gradle.properties`. The update policy is in [`docs/04-ROADMAP.md`](docs/04-ROADMAP.md).
 
-## Estrutura
+## Structure
 
 ```
 src/main/java/com/foque/laborcraft/
-  LaborCraft.java            entrada do mod
-  block/                      posto de trabalho (bloco + item)
-  config/                     config do servidor/modpack
-  economy/                    SPI de moeda + registros + ledger interno
-  job/                        tipos de emprego e registro
-  contract/                   contrato e período de cobrança
-  worker/                     perfil do trabalhador, maestria e estados
-  area/                       posto, área de serviço e formas
-  housing/                    relatório de validação de moradia
-  schedule/                   expediente (dia/noite/custom)
-  command/                    comandos do servidor (admin, contrato)
+  LaborCraft.java            mod entrypoint
+  block/                      work post (block + item)
+  config/                     server/modpack config
+  economy/                    currency SPI + registry + built-in ledger
+  job/                        job types and registry
+  contract/                   contract and billing period
+  worker/                     worker profile, market, ranks, boosts, mastery, states
+  area/                       work post area and shapes
+  housing/                    house validation (flood fill) and report
+  schedule/                   shift (day/night/custom)
+  command/                    server commands (admin, contract, house)
 src/client/java/com/foque/laborcraft/client/
-  ui/                         tema, componentes e telas nativas
-docs/                         desenho, decisões e roadmap
+  ui/                         theme, components and native screens
+docs/                         design, decisions and roadmap (mostly pt-BR for now)
 ```
 
-## Documentação
+## Documentation
 
-| Documento | Conteúdo |
+The design docs are currently in Portuguese and will be translated over time.
+
+| Document | Content |
 | --- | --- |
-| [docs/00-VISAO.md](docs/00-VISAO.md) | premissa, o que o mod é e não é, loop de jogo |
-| [docs/01-ARQUITETURA.md](docs/01-ARQUITETURA.md) | camadas, SPI de moeda, empregos, contratos, dados |
-| [docs/02-EMPREGOS.md](docs/02-EMPREGOS.md) | fazendeiro em detalhe, minerador depois, tiers |
-| [docs/03-CONFIGURACAO.md](docs/03-CONFIGURACAO.md) | salário, período, escalonamento, permissões |
-| [docs/07-TRABALHADOR.md](docs/07-TRABALHADOR.md) | entidade, ovo/contrato, maestria, moradia, pathfinding |
-| [docs/08-AREA-CASA-HORARIO.md](docs/08-AREA-CASA-HORARIO.md) | posto, área por tier, validação de casa, andares, expediente |
-| [docs/09-UI.md](docs/09-UI.md) | API de GUI do 26.3, componentes e regra command-first |
-| [docs/10-CONTRATACAO-E-PERFIL.md](docs/10-CONTRATACAO-E-PERFIL.md) | ofertas roláveis, limite, dispensa com contrato e perfil |
-| [docs/11-CASA-VAGAS-E-PATHING.md](docs/11-CASA-VAGAS-E-PATHING.md) | casa, vagas por cama e pathing (rascunho de decisões) |
-| [docs/12-CONFORTO.md](docs/12-CONFORTO.md) | lista de blocos de decoração que dão conforto (humor/velocidade) |
-| [docs/04-ROADMAP.md](docs/04-ROADMAP.md) | marcos M0–M5 e política de portabilidade |
-| [docs/05-DECISOES.md](docs/05-DECISOES.md) | decisões abertas e ADRs |
-| [docs/06-COMPATIBILIDADE.md](docs/06-COMPATIBILIDADE.md) | moedas, tags, datapacks, mods de terceiros |
+| [docs/00-VISAO.md](docs/00-VISAO.md) | premise, what the mod is and is not, game loop |
+| [docs/01-ARQUITETURA.md](docs/01-ARQUITETURA.md) | layers, currency SPI, jobs, contracts, data |
+| [docs/02-EMPREGOS.md](docs/02-EMPREGOS.md) | farmer in detail, miner later, tiers |
+| [docs/03-CONFIGURACAO.md](docs/03-CONFIGURACAO.md) | wage, period, escalation, permissions |
+| [docs/07-TRABALHADOR.md](docs/07-TRABALHADOR.md) | entity, contract/egg, mastery, housing, pathfinding |
+| [docs/08-AREA-CASA-HORARIO.md](docs/08-AREA-CASA-HORARIO.md) | post, area by tier, house validation, floors, shift |
+| [docs/09-UI.md](docs/09-UI.md) | 26.3 GUI API, components and command-first rule |
+| [docs/10-CONTRATACAO-E-PERFIL.md](docs/10-CONTRATACAO-E-PERFIL.md) | offers, limits, dismissal and profile |
+| [docs/11-CASA-VAGAS-E-PATHING.md](docs/11-CASA-VAGAS-E-PATHING.md) | house, bed slots and pathing (decision draft) |
+| [docs/12-CONFORTO.md](docs/12-CONFORTO.md) | comfort blocks list (mood/speed) |
+| [docs/04-ROADMAP.md](docs/04-ROADMAP.md) | milestones M0–M5 and portability policy |
+| [docs/05-DECISOES.md](docs/05-DECISOES.md) | open decisions and ADRs |
+| [docs/06-COMPATIBILIDADE.md](docs/06-COMPATIBILIDADE.md) | currencies, tags, datapacks, third-party mods |
 
-## Licença
+## License
 
-CC0-1.0 (herdada do template do Fabric). Pode ser trocada antes da primeira release pública.
+**GNU General Public License v3.0 or later** (`GPL-3.0-or-later`), see [LICENSE](LICENSE).
+
+You may use, study, modify and redistribute the mod, including forks, as long as derivative works stay
+open source under the same license and keep the copyright notices. That is deliberate: the project should
+stay open for everyone, including server packs and forks.
+
+The license applies to the source code. Minecraft itself is not distributed here and remains subject to
+Mojang's terms.

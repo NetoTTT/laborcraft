@@ -3,12 +3,12 @@
 	"id": "laborcraft",
 	"version": "${version}",
 	"name": "LaborCraft",
-	"description": "Contrate aldeoes trabalhadores para automatizar fazendas e outros servicos. Nome provisorio.",
+	"description": "Hire worker villagers to automate farms and other jobs. Modular, server-driven, currency-agnostic. Working title.",
 	"authors": [
 		"foque"
 	],
 	"contact": {},
-	"license": "CC0-1.0",
+	"license": "GPL-3.0-or-later",
 	"icon": "assets/laborcraft/icon.png",
 	"environment": "*",
 	"entrypoints": {

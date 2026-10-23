@@ -76,6 +76,8 @@ Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
 - Ao abrir a tela do trabalhador, ele **para tudo** (navegação, movimento) e olha para o jogador; ao fechar, é liberado. O estado abre/fecha vem do cliente por `worker_screen_state`, então funciona em servidor.
 - Dispensar não reabre mais a loja de contratação: apenas fecha a tela de Empregado (`close_screen`).
 - O Perfil mostra os contratos ainda na mochila (`0 / 1 · 2 contrato(s)`) e a loja passou a rotular “Trabalhadores + contratos”, porque o limite conta os dois.
+- Licença trocada de CC0-1.0 para **GPL-3.0-or-later** (copyleft): forks e trabalhos derivados precisam continuar open source.
+- README principal em inglês; a versão em português ficou em `README.pt-BR.md`.
 
 ### Corrigido
 
