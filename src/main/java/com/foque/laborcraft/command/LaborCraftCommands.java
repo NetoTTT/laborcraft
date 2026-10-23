@@ -96,7 +96,7 @@ public final class LaborCraftCommands {
 										.executes(context -> removeWorker(context.getSource())))
 								.then(Commands.literal("buy")
 										.executes(context -> buyWorker(context.getSource(), null))
-										.then(Commands.argument("offer", StringArgumentType.word())
+										.then(Commands.argument("offer", IdentifierArgument.id())
 												.suggests((context, builder) -> {
 													WorkerMarket.offers(context.getSource().getServer())
 															.forEach(offer -> builder.suggest(offer.id()));
@@ -104,7 +104,7 @@ public final class LaborCraftCommands {
 												})
 												.executes(context -> buyWorker(
 														context.getSource(),
-														StringArgumentType.getString(context, "offer")
+														IdentifierArgument.getId(context, "offer").toString()
 												))))
 								.then(Commands.literal("assign")
 										.then(Commands.argument("worker", StringArgumentType.word())
