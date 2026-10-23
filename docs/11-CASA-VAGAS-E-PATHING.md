@@ -49,8 +49,8 @@ Regra: `capacidade = area / 12`, entre 2 e `housing.maxBedsPerHouse` (4), exigin
 2. Propaga em 6 direções, atravessando **só ar**. Parede, teto, vidro, porta fechada e trapdoor fechada são fronteira.
 3. Se o fill alcançar uma célula que **vê o céu** (heightmap `MOTION_BLOCKING`) → casa aberta.
 4. Limites: volume `housing.maxVolume` (512) e raio `housing.maxDistanceFromAnchor` (32).
-5. O tamanho é medido **no andar da cama** (células em `y = cama + 1`), não no volume 3D.
-6. Conta portas e camas encostadas no volume aéreo; conforto = blocos da lista `comfortBlocks`.
+5. O tamanho é medido **no andar da cama**, usando as duas camadas do piso (chão + altura da cabeça), para que móvel encostado na parede não encolha o interior.
+6. Conta portas e camas encostadas no volume aéreo; conforto = blocos únicos da lista `comfortBlocks` (não conta a mesma face três vezes).
 
 ## 4. Sobrado: conta como casão?
 
@@ -68,6 +68,7 @@ Prós: intuitivo ("cama no andar X vale pelo andar X"), não infla com torre 1x1
 | 7x7 com buraco no teto | — | — | — | — | — | inválida: vê o céu |
 | 9x9 com a porta removida | 7x7 | 97 | 0 | 1 | 0 | inválida: sem porta |
 | 5x5 externo | 3x3 (9) | 17 | 1 | 1 | 0 | inválida: pequena |
+| 7x7 externo **com baú no canto** | 5x5 (25) | 48 | 1 | 1 | 2 | válida: decoração não encolhe |
 | Sobrado (2 andares, escada no teto) | 5x5 por andar | 100 | 2 | 2 | 2 + 2 | válida por andar |
 
 Comando usado: `/laborcraft home scan <x> <y> <z>` (gamemaster/console), apontando para a cama.

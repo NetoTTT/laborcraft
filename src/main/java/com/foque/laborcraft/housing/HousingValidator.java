@@ -84,9 +84,11 @@ public final class HousingValidator {
 		int minZ = Integer.MAX_VALUE;
 		int maxZ = Integer.MIN_VALUE;
 		int floorY = bedPos.getY() + 1;
+		// Duas camadas (piso + altura da cabeca): um bau no canto nao pode encolher o interior.
+		int ceilingY = floorY + 1;
 
 		for (BlockPos cell : visited) {
-			if (cell.getY() != floorY) {
+			if (cell.getY() < floorY || cell.getY() > ceilingY) {
 				continue;
 			}
 
@@ -106,7 +108,7 @@ public final class HousingValidator {
 
 		Set<BlockPos> doorPositions = new HashSet<>();
 		Set<BlockPos> bedPositions = new HashSet<>();
-		int comfort = 0;
+		Set<BlockPos> comfortPositions = new HashSet<>();
 
 		for (BlockPos cell : visited) {
 			for (Direction direction : DIRECTIONS) {
@@ -117,7 +119,7 @@ public final class HousingValidator {
 				} else if (state.is(BlockTags.BEDS)) {
 					bedPositions.add(neighbor);
 				} else if (isComfort(state, config)) {
-					comfort++;
+					comfortPositions.add(neighbor);
 				}
 			}
 		}
@@ -126,6 +128,7 @@ public final class HousingValidator {
 
 		int doors = doorPositions.size();
 		int beds = bedPositions.size();
+		int comfort = comfortPositions.size();
 		int minSize = Math.max(3, config.housing.minInteriorSize);
 		int maxBeds = Math.max(1, config.housing.maxBedsPerHouse);
 
