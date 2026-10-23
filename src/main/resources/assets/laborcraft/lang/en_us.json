@@ -221,5 +221,6 @@
 	"laborcraft.command.worker.buy.no_offers": "The hiring shop is empty right now. Wait for the next rotation.",
 	"laborcraft.command.worker.buy.sold_out": "%s is no longer available (hired by someone else or the shop rotated).",
 	"laborcraft.command.admin.market.refresh": "Labor market refreshed: %s person(s) available.",
-	"laborcraft.ui.profile.pending": "· %s contract(s)"
+	"laborcraft.ui.profile.pending": "· %s contract(s)",
+	"laborcraft.command.worker.dismiss.dropped": "Inventory full: the contract was dropped on the ground."
 }

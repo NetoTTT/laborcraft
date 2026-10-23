@@ -221,5 +221,6 @@
 	"laborcraft.command.worker.buy.no_offers": "A loja de contratação está vazia agora. Aguarde a próxima rotação.",
 	"laborcraft.command.worker.buy.sold_out": "%s não está mais disponível (foi contratado ou a loja girou).",
 	"laborcraft.command.admin.market.refresh": "Mercado de trabalho renovado: %s pessoa(s) disponível(is).",
-	"laborcraft.ui.profile.pending": "· %s contrato(s)"
+	"laborcraft.ui.profile.pending": "· %s contrato(s)",
+	"laborcraft.command.worker.dismiss.dropped": "Mochila cheia: o contrato ficou no chão."
 }

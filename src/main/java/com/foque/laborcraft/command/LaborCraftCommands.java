@@ -40,9 +40,9 @@ import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
-import net.minecraft.util.Prediction;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.ItemStack;
 
@@ -299,6 +299,12 @@ public final class LaborCraftCommands {
 			return 0;
 		}
 
+		// No criativo o Inventory.add() descarta o que nao couber; checar antes evita perder o contrato.
+		if (player.getInventory().getFreeSlot() < 0) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.buy.inventory_full"));
+			return 0;
+		}
+
 		CurrencyProvider provider = CurrencyProviders.active();
 		long price = offer.price();
 		long balance = provider.balance(player.getUUID());
@@ -433,12 +439,22 @@ public final class LaborCraftCommands {
 		LaborCraftConfig config = LaborCraftConfig.get();
 		WorkerContractData data = WorkerContractData.fromWorker(worker);
 		Component workerName = worker.getName();
-		worker.discard();
 
 		UUID contractOwner = config.acquisition.contractTradeable ? null : player.getUUID();
 		ItemStack contract = LaborCraftItems.newContract(contractOwner, data);
-		if (!player.getInventory().add(contract)) {
-			player.drop(contract, false, Prediction.SERVER_ONLY);
+		// Copia intacta: no criativo o Inventory.add() descarta o que nao couber e ainda devolve true.
+		ItemStack fallback = contract.copy();
+		boolean hasRoom = player.getInventory().getFreeSlot() >= 0;
+
+		worker.discard();
+		boolean stored = hasRoom && player.getInventory().add(contract);
+
+		if (!stored) {
+			if (player.level() instanceof ServerLevel serverLevel) {
+				player.spawnAtLocation(serverLevel, fallback);
+			}
+
+			source.sendSystemMessage(Component.translatable("laborcraft.command.worker.dismiss.dropped"));
 		}
 
 		// Nada de reabrir a loja: a dispensa só fecha a tela de Empregado.
