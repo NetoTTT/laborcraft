@@ -116,6 +116,7 @@ docs/                         desenho, decisões e roadmap
 | [docs/08-AREA-CASA-HORARIO.md](docs/08-AREA-CASA-HORARIO.md) | posto, área por tier, validação de casa, andares, expediente |
 | [docs/09-UI.md](docs/09-UI.md) | API de GUI do 26.3, componentes e regra command-first |
 | [docs/10-CONTRATACAO-E-PERFIL.md](docs/10-CONTRATACAO-E-PERFIL.md) | ofertas roláveis, limite, dispensa com contrato e perfil |
+| [docs/11-CASA-VAGAS-E-PATHING.md](docs/11-CASA-VAGAS-E-PATHING.md) | casa, vagas por cama e pathing (rascunho de decisões) |
 | [docs/04-ROADMAP.md](docs/04-ROADMAP.md) | marcos M0–M5 e política de portabilidade |
 | [docs/05-DECISOES.md](docs/05-DECISOES.md) | decisões abertas e ADRs |
 | [docs/06-COMPATIBILIDADE.md](docs/06-COMPATIBILIDADE.md) | moedas, tags, datapacks, mods de terceiros |

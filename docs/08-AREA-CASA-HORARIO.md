@@ -242,7 +242,7 @@ Tempo real cria diferença entre servidores e fuso horário, e permite "trabalha
 
 1. **Nome/visual do posto**: `laborcraft:workstation` está registrado, com receita de 8 tábuas + baú. Falta decidir o visual definitivo e se também será vendido pronto na Agência.
 2. **Casa compartilhada**: várias camas valem para vários trabalhadores do mesmo dono? Adiado; default é casa separada (`allowSharedHouse = false`).
-3. **Crescimento por casa**: +1 trabalhador por casa ou só bônus de raio/velocidade? (default os três)
+3. **Crescimento por casa**: quantas vagas a casa dá e como o jogador registra — ver o rascunho de decisões em [`11-CASA-VAGAS-E-PATHING.md`](11-CASA-VAGAS-E-PATHING.md).
 4. **Cobrança fora do expediente**: manter fixa (default) ou pausar? Decide o balanceamento do servidor.
 5. **Ladders**: fora do MVP (`allowLadders = false`); navegação customizada só se houver demanda.
 6. **Área circular vs. quadrada**: quadrado é default, mas fazenda circular com casa pode pedir círculo.
