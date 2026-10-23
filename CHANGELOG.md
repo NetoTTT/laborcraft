@@ -63,6 +63,8 @@ Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
 - `HousingValidator`: valida a área interna da casa por flood fill a partir da cama (só ar atravessa; porta fechada e vidro selam; interior que vê o céu invalida; limites de volume e raio). O tamanho é medido no **andar da cama**, e a capacidade de camas sai de `área / 12` (mín. 2, máx. `maxBedsPerHouse`), exigindo 5x5 interno.
 - Comando `/laborcraft home scan <x> <y> <z>` (gamemaster/console) devolve o relatório da casa: válida/inválida, motivo, interno, volume, portas, camas e vagas.
 - Config `housing.minInteriorSize` (5) e `housing.maxBedsPerHouse` (4).
+- Item `laborcraft:house_plan` (**Planta de Casa**): clique direito no chão mede o cômodo como se houvesse uma cama ali e responde no chat com válido/inválido, motivo, tamanho interno, volume, portas, camas e vagas. Receita de 3 papel + 1 graveto; textura provisória (papel).
+- Comando `/laborcraft home measure <x> <y> <z>` (gamemaster/console): mesma medição da Planta, sem exigir cama real.
 
 ### Alterado
 

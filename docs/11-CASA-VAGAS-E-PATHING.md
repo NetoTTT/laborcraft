@@ -73,6 +73,14 @@ Prós: intuitivo ("cama no andar X vale pelo andar X"), não infla com torre 1x1
 
 Comando usado: `/laborcraft home scan <x> <y> <z>` (gamemaster/console), apontando para a cama.
 
+### Planta de Casa (item de medição)
+
+`laborcraft:house_plan` — clique direito no chão: o item mede o cômodo **como se houvesse uma cama no bloco clicado** e responde no chat (válida/inválida, motivo, interno, volume, portas, camas e vagas). Não registra nada, não consome o item.
+
+- Receita: 3 papel + 1 graveto (placeholder).
+- Textura provisória: `minecraft:item/paper` (troca depois, junto com os outros itens).
+- Para administração/console existe o equivalente `/laborcraft home measure <x> <y> <z>`.
+
 ## 6. Como registrar a casa (ainda não implementado)
 
 1. Constrói o quarto (paredes, teto, porta) e coloca a cama.

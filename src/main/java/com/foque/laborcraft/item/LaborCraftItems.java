@@ -44,6 +44,15 @@ public final class LaborCraftItems {
 			.stacksTo(1)
 			.rarity(Rarity.UNCOMMON));
 
+	public static final ResourceKey<Item> HOUSE_PLAN_KEY = ResourceKey.create(
+			Registries.ITEM,
+			LaborCraft.id("house_plan")
+	);
+
+	public static final Item HOUSE_PLAN = new HousePlanItem(new Item.Properties()
+			.setId(HOUSE_PLAN_KEY)
+			.stacksTo(1));
+
 	private LaborCraftItems() {
 	}
 
@@ -70,5 +79,6 @@ public final class LaborCraftItems {
 
 	public static void bootstrap() {
 		Registry.register(BuiltInRegistries.ITEM, LaborCraft.id("worker_contract"), WORKER_CONTRACT);
+		Registry.register(BuiltInRegistries.ITEM, LaborCraft.id("house_plan"), HOUSE_PLAN);
 	}
 }

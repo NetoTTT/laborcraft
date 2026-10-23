@@ -6,6 +6,7 @@ import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.entity.LaborCraftWorker;
+import com.foque.laborcraft.housing.HousingMessages;
 import com.foque.laborcraft.housing.HousingReport;
 import com.foque.laborcraft.housing.HousingValidator;
 import com.foque.laborcraft.item.LaborCraftItems;
@@ -133,6 +134,12 @@ public final class LaborCraftCommands {
 								.then(Commands.literal("scan")
 										.then(Commands.argument("pos", BlockPosArgument.blockPos())
 												.executes(context -> scanHome(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos")
+												))))
+								.then(Commands.literal("measure")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.executes(context -> measureHome(
 														context.getSource(),
 														BlockPosArgument.getLoadedBlockPos(context, "pos")
 												)))))
@@ -479,54 +486,20 @@ public final class LaborCraftCommands {
 
 	private static int scanHome(CommandSourceStack source, BlockPos pos) {
 		HousingReport report = HousingValidator.validate(source.getLevel(), pos, LaborCraftConfig.get());
+		sendHousingReport(source, pos, report);
+		return report.valid() ? 1 : 0;
+	}
 
-		if (report.valid()) {
-			source.sendSuccess(
-					() -> Component.translatable("laborcraft.command.home.scan.valid", pos.getX(), pos.getY(), pos.getZ()),
-					false
-			);
-		} else {
-			source.sendSuccess(
-					() -> Component.translatable(
-							"laborcraft.command.home.scan.invalid",
-							pos.getX(),
-							pos.getY(),
-							pos.getZ(),
-							Component.translatable("laborcraft.housing.reason." + report.failureReason())
-					),
-					false
-			);
+	private static int measureHome(CommandSourceStack source, BlockPos pos) {
+		HousingReport report = HousingValidator.measure(source.getLevel(), pos, LaborCraftConfig.get());
+		sendHousingReport(source, pos, report);
+		return report.valid() ? 1 : 0;
+	}
+
+	private static void sendHousingReport(CommandSourceStack source, BlockPos pos, HousingReport report) {
+		for (Component line : HousingMessages.describe(pos, report)) {
+			source.sendSuccess(() -> line, false);
 		}
-
-		if (report.width() > 0 || report.volume() > 0) {
-			source.sendSuccess(
-					() -> Component.translatable(
-							"laborcraft.command.home.scan.size",
-							report.width(),
-							report.depth(),
-							report.width() * report.depth(),
-							report.volume(),
-							report.doors(),
-							report.beds(),
-							report.capacity()
-					),
-					false
-			);
-		}
-
-		if (!report.valid()) {
-			return 0;
-		}
-
-		source.sendSuccess(
-				() -> Component.translatable(
-						"laborcraft.command.home.scan.comfort",
-						report.comfortBlocks(),
-						Math.round(report.comfortBonus() * 100.0D)
-				),
-				false
-		);
-		return 1;
 	}
 
 	private static String normalizeJobId(Identifier jobArgument) {

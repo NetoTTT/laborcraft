@@ -32,10 +32,24 @@ public final class HousingValidator {
 	}
 
 	public static HousingReport validate(ServerLevel level, BlockPos bedPos, LaborCraftConfig config) {
+		return measure(level, bedPos, config, true);
+	}
+
+	/**
+	 * Mede a regiao como se houvesse uma cama em {@code bedPos}, sem exigir a cama real. E o que a
+	 * Planta de Casa usa: o jogador aponta para o chao e recebe o relatorio do comodo.
+	 */
+	public static HousingReport measure(ServerLevel level, BlockPos bedPos, LaborCraftConfig config) {
+		return measure(level, bedPos, config, false);
+	}
+
+	private static HousingReport measure(ServerLevel level, BlockPos bedPos, LaborCraftConfig config, boolean requireBed) {
 		long tick = level.getGameTime();
-		BlockState bedState = level.getBlockState(bedPos);
-		if (!bedState.is(BlockTags.BEDS)) {
-			return HousingReport.invalid("not_a_bed", tick);
+		if (requireBed) {
+			BlockState bedState = level.getBlockState(bedPos);
+			if (!bedState.is(BlockTags.BEDS)) {
+				return HousingReport.invalid("not_a_bed", tick);
+			}
 		}
 
 		BlockPos seed = bedPos.above();
