@@ -9,7 +9,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.Heightmap;
 
 /**
@@ -129,7 +131,11 @@ public final class HousingValidator {
 				BlockPos neighbor = cell.relative(direction);
 				BlockState state = level.getBlockState(neighbor);
 				if (state.is(BlockTags.DOORS)) {
-					doorPositions.add(neighbor);
+					// Porta ocupa dois blocos: conta so a metade de baixo.
+					if (state.hasProperty(DoorBlock.HALF)
+							&& state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
+						doorPositions.add(neighbor);
+					}
 				} else if (state.is(BlockTags.BEDS)) {
 					bedPositions.add(neighbor);
 				} else if (isComfort(state, config)) {

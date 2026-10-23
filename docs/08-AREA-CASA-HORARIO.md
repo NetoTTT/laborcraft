@@ -102,7 +102,8 @@ A capacidade de camas sai da **área interna medida no andar da cama** (`area / 
 
 ### Itens de conforto (opcional, bônus)
 
-Lista configurável; cada bloco encontrado dentro da casa dá um pequeno bônus de velocidade, com teto:
+A lista de blocos que valem conforto (com peso por custo/dificuldade) está em
+[`12-CONFORTO.md`](12-CONFORTO.md). O modelo atual da config é o simples:
 
 ```json
 "comfortBlocks": [
