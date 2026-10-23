@@ -138,14 +138,7 @@ oferece uma **zoning tool** opcional ("clique um canto, clique o oposto") para r
 7. Expediente ligado à IA (parar/voltar).
 8. Casa: cama e rotina noturna (retomar o doc 11).
 
-## 10. Impacto no que já existe
-
-- `WorkArea`/`AreaShape` continuam válidos como fallback de raio.
-- `HousingValidator` não muda; casa fica pausada.
-- A tela de Empregado ganha a linha **Posto** e o botão de vínculo.
-- O `laborcraft:workstation` ganha um **block entity** (inventário, dono, vínculo) — hoje é só um bloco decorativo.
-
-## 11. UI do Posto
+## 10. UI do Posto
 
 Interagir com o posto abre `LaborCraftStationScreen` (mesmo tamanho das outras, 460x360), com duas abas.
 
@@ -224,3 +217,27 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
 - Não pode sobrepor zona/posto de outro jogador (primeiro que registra leva).
 - Zona recusada = mensagem clara no chat, sem alterar nada.
 
+## 11. Status da implementação
+
+| Peça | Estado |
+| --- | --- |
+| `StationRegistry` (JSON em `<mundo>/data/laborcraft/stations.json`) | ✅ |
+| Posto registra dono ao ser colocado; posto sem dono é reivindicado no primeiro uso | ✅ |
+| Interagir com o posto abre a tela (payload `open_station`) | ✅ |
+| Aba Trabalho: lista de empregados, vaga do posto, vincular/desvincular/chamar/retomar | ✅ |
+| Aba Config: modo de área (livre/zona) e tamanho da zona | ✅ (leitura) |
+| Comandos `station bind/unbind/recall/pause/resume/open/info` | ✅ |
+| Desenho da zona (estaca e mapa) | ⏳ próxima etapa |
+| Baú de saída e insumos | ⏳ |
+| IA do fazendeiro (SCAN/MOVE/WORK/DEPOSIT) | ⏳ |
+
+O que já dá para testar em jogo: colocar o posto, abrir a tela, vincular um empregado, chamar/retomar e ver
+o estado na tela. O vínculo já aparece no `/laborcraft station info`.
+
+## 12. Impacto no que já existe
+
+- `WorkArea`/`AreaShape` continuam válidos como fallback de raio.
+- `HousingValidator` não muda; casa fica pausada.
+- O posto **não usa block entity**: o estado vive no `StationRegistry` (JSON no mundo), então quebrar o bloco
+  não apaga o vínculo — recolocar na mesma posição reata.
+- A tela de Empregado ainda não mostra o posto; isso entra quando o vínculo estiver estável.

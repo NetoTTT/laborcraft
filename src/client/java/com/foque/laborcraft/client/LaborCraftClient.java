@@ -9,6 +9,7 @@ import com.foque.laborcraft.client.ui.screen.LaborCraftHiringScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftItemTestScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftPlayersScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftProfileScreen;
+import com.foque.laborcraft.client.ui.screen.LaborCraftStationScreen;
 import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.network.OpenConfigPayload;
@@ -17,6 +18,7 @@ import com.foque.laborcraft.network.OpenItemTestPayload;
 import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.network.OpenPlayersPayload;
 import com.foque.laborcraft.network.OpenProfilePayload;
+import com.foque.laborcraft.network.OpenStationPayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.network.SetLanguagePayload;
 import net.fabricmc.api.ClientModInitializer;
@@ -103,6 +105,14 @@ public class LaborCraftClient implements ClientModInitializer {
 			client.execute(() -> {
 				LcValuePrompt.cancelActive();
 				client.setScreenAndShow(new LaborCraftEmployeeScreen(payload));
+			});
+		});
+
+		ClientPlayNetworking.registerGlobalReceiver(OpenStationPayload.TYPE, (payload, context) -> {
+			Minecraft client = context.client();
+			client.execute(() -> {
+				LcValuePrompt.cancelActive();
+				client.setScreenAndShow(new LaborCraftStationScreen(payload));
 			});
 		});
 	}

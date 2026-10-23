@@ -67,6 +67,9 @@ Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
 - Comando `/laborcraft home scan <x> <y> <z>` (gamemaster/console) devolve o relatório da casa: válida/inválida, motivo, interno, volume, portas, camas e vagas.
 - Config `housing.minInteriorSize` (5) e `housing.maxBedsPerHouse` (4).
 - Item `laborcraft:house_plan` (**Planta de Casa**): clique direito no chão mede o cômodo como se houvesse uma cama ali e responde no chat com válido/inválido, motivo, tamanho interno, volume, portas, camas e vagas. Receita de 3 papel + 1 graveto; textura provisória (papel).
+- **Posto de Trabalho com estado**: `StationRegistry` salvo em `<mundo>/data/laborcraft/stations.json`, com dono, trabalhador vinculado, modo de área e zona. O posto registra o dono ao ser colocado e um posto sem dono é reivindicado no primeiro uso.
+- Interagir com o posto abre a **tela do Posto** (payload `open_station`): aba Trabalho com a lista de empregados, a vaga do posto e as ações vincular/desvincular/chamar/retomar; aba Config com o modo de área (leitura).
+- Comandos `/laborcraft station bind|unbind|recall|pause|resume|open|info`.
 - Comando `/laborcraft home measure <x> <y> <z>` (gamemaster/console): mesma medição da Planta, sem exigir cama real.
 
 ### Alterado

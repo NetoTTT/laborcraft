@@ -22,7 +22,7 @@ public final class LaborCraftBlocks {
 			LaborCraft.id("workstation")
 	);
 
-	public static final Block WORKSTATION = new Block(BlockBehaviour.Properties.of()
+	public static final Block WORKSTATION = new WorkstationBlock(BlockBehaviour.Properties.of()
 			.setId(WORKSTATION_KEY)
 			.mapColor(MapColor.WOOD)
 			.strength(2.5F)

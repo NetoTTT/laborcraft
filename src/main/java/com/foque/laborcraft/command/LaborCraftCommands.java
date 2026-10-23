@@ -20,11 +20,14 @@ import com.foque.laborcraft.network.OpenHiringPayload;
 import com.foque.laborcraft.network.OpenItemTestPayload;
 import com.foque.laborcraft.network.OpenPlayersPayload;
 import com.foque.laborcraft.network.OpenProfilePayload;
+import com.foque.laborcraft.network.OpenStationPayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.network.SetLanguagePayload;
+import com.foque.laborcraft.worker.StationRegistry;
 import com.foque.laborcraft.worker.WorkerMarket;
 import com.foque.laborcraft.worker.WorkerOffer;
 import com.foque.laborcraft.worker.WorkerOwnership;
+import com.foque.laborcraft.worker.WorkerState;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -64,6 +67,11 @@ public final class LaborCraftCommands {
 	public static final String WORKER_BUY = WORKER + " buy";
 	public static final String WORKER_ASSIGN = WORKER + " assign";
 	public static final String WORKER_DISMISS = WORKER + " dismiss";
+	public static final String STATION = "laborcraft station";
+	public static final String STATION_BIND = STATION + " bind";
+	public static final String STATION_UNBIND = STATION + " unbind";
+	public static final String STATION_RECALL = STATION + " recall";
+	public static final String STATION_RESUME = STATION + " resume";
 	public static final String LANGUAGE = "laborcraft language";
 	public static final String LANGUAGE_PT_BR = LANGUAGE + " pt_br";
 	public static final String LANGUAGE_EN_US = LANGUAGE + " en_us";
@@ -128,6 +136,61 @@ public final class LaborCraftCommands {
 												.executes(context -> dismissWorker(
 														context.getSource(),
 														StringArgumentType.getString(context, "worker")
+												)))))
+						.then(Commands.literal("station")
+								.then(Commands.literal("bind")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.then(Commands.argument("worker", StringArgumentType.word())
+														.suggests((context, builder) -> {
+															ServerPlayer player = context.getSource().getPlayer();
+															if (player != null) {
+																WorkerOwnership.ownedWorkerList(player)
+																		.forEach(worker -> builder.suggest(worker.getUUID().toString()));
+															}
+															return builder.buildFuture();
+														})
+														.executes(context -> stationBind(
+																context.getSource(),
+																BlockPosArgument.getLoadedBlockPos(context, "pos"),
+																StringArgumentType.getString(context, "worker")
+														)))))
+								.then(Commands.literal("unbind")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.executes(context -> stationUnbind(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos")
+												))))
+								.then(Commands.literal("recall")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.executes(context -> stationRecall(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos"),
+														true
+												))))
+								.then(Commands.literal("pause")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.executes(context -> stationRecall(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos"),
+														false
+												))))
+								.then(Commands.literal("resume")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.executes(context -> stationResume(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos")
+												))))
+								.then(Commands.literal("open")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.executes(context -> stationOpen(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos")
+												))))
+								.then(Commands.literal("info")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.executes(context -> stationInfo(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos")
 												)))))
 						.then(Commands.literal("home")
 								.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
@@ -475,7 +538,7 @@ public final class LaborCraftCommands {
 			source.sendSystemMessage(Component.translatable("laborcraft.command.worker.dismiss.dropped"));
 		}
 
-		// Nada de reabrir a loja: a dispensa só fecha a tela de Empregado.
+		// Nada de reabrir a loja: a dispensa sÃ³ fecha a tela de Empregado.
 		CloseScreenPayload.open(player);
 		source.sendSuccess(
 				() -> Component.translatable("laborcraft.command.worker.dismiss.contract", workerName),
@@ -500,6 +563,216 @@ public final class LaborCraftCommands {
 		for (Component line : HousingMessages.describe(pos, report)) {
 			source.sendSuccess(() -> line, false);
 		}
+	}
+
+	private static StationRegistry.Station stationAt(CommandSourceStack source, BlockPos pos) {
+		return StationRegistry.get(
+				source.getServer(),
+				source.getLevel().dimension().identifier().toString(),
+				pos
+		);
+	}
+
+	private static LaborCraftWorker ownedWorker(ServerPlayer player, UUID workerId) {
+		return WorkerOwnership.ownedWorkerList(player).stream()
+				.filter(worker -> worker.getUUID().equals(workerId))
+				.findFirst()
+				.orElse(null);
+	}
+
+	private static UUID parseUuid(String raw) {
+		try {
+			return UUID.fromString(raw);
+		} catch (IllegalArgumentException exception) {
+			return null;
+		}
+	}
+
+	private static int stationBind(CommandSourceStack source, BlockPos pos, String rawWorker)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		UUID workerId = parseUuid(rawWorker);
+		LaborCraftWorker worker = workerId == null ? null : ownedWorker(player, workerId);
+		if (worker == null) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.not_found"));
+			return 0;
+		}
+
+		if (station.worker() != null) {
+			source.sendFailure(Component.translatable("laborcraft.station.full"));
+			return 0;
+		}
+
+		if (StationRegistry.byWorker(source.getServer(), workerId) != null) {
+			source.sendFailure(Component.translatable("laborcraft.station.worker_bound"));
+			return 0;
+		}
+
+		if (!StationRegistry.bind(source.getServer(), station, workerId)) {
+			source.sendFailure(Component.translatable("laborcraft.station.bind_failed"));
+			return 0;
+		}
+
+		OpenStationPayload.open(player, stationAt(source, pos));
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.station.bound", worker.getName()),
+				false
+		);
+		return 1;
+	}
+
+	private static int stationUnbind(CommandSourceStack source, BlockPos pos)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		if (!StationRegistry.unbind(source.getServer(), station)) {
+			source.sendFailure(Component.translatable("laborcraft.station.empty"));
+			return 0;
+		}
+
+		OpenStationPayload.open(player, stationAt(source, pos));
+		source.sendSuccess(() -> Component.translatable("laborcraft.station.unbound"), false);
+		return 1;
+	}
+
+	private static int stationRecall(CommandSourceStack source, BlockPos pos, boolean walk)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null || station.worker() == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.empty"));
+			return 0;
+		}
+
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		LaborCraftWorker worker = LaborCraftWorker.find(source.getServer(), station.worker());
+		if (worker == null) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.not_found"));
+			return 0;
+		}
+
+		worker.setWorkerState(WorkerState.PAUSED);
+		if (walk) {
+			worker.getNavigation().moveTo(pos.getX() + 0.5D, pos.getY() + 1.0D, pos.getZ() + 0.5D, 1.0D);
+		}
+
+		OpenStationPayload.open(player, station);
+		source.sendSuccess(
+				() -> Component.translatable(
+						walk ? "laborcraft.station.recalled" : "laborcraft.station.paused",
+						worker.getName()
+				),
+				false
+		);
+		return 1;
+	}
+
+	private static int stationResume(CommandSourceStack source, BlockPos pos)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null || station.worker() == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.empty"));
+			return 0;
+		}
+
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		LaborCraftWorker worker = LaborCraftWorker.find(source.getServer(), station.worker());
+		if (worker == null) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.not_found"));
+			return 0;
+		}
+
+		worker.setWorkerState(WorkerState.ACTIVE);
+		OpenStationPayload.open(player, station);
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.station.resumed", worker.getName()),
+				false
+		);
+		return 1;
+	}
+
+	private static int stationOpen(CommandSourceStack source, BlockPos pos)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		if (!OpenStationPayload.open(player, station)) {
+			source.sendFailure(Component.translatable("laborcraft.command.ui.unavailable"));
+			return 0;
+		}
+
+		return 1;
+	}
+
+	private static int stationInfo(CommandSourceStack source, BlockPos pos) {
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+
+		LaborCraftWorker worker = station.worker() == null
+				? null
+				: LaborCraftWorker.find(source.getServer(), station.worker());
+		Component workerLabel = worker == null
+				? Component.translatable("laborcraft.station.vacant")
+				: worker.getName();
+		String zone = station.zones().isEmpty()
+				? "-"
+				: station.zones().getFirst().width() + "x" + station.zones().getFirst().depth();
+
+		source.sendSuccess(
+				() -> Component.translatable(
+						"laborcraft.station.info",
+						pos.getX(),
+						pos.getY(),
+						pos.getZ(),
+						station.mode().name().toLowerCase(Locale.ROOT),
+						zone,
+						workerLabel
+				),
+				false
+		);
+		return 1;
 	}
 
 	private static String normalizeJobId(Identifier jobArgument) {
