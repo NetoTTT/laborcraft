@@ -100,6 +100,10 @@ public final class LaborCraftConfig {
 		public boolean oneWorkerPerBed = true;
 		public int maxDistanceFromAnchor = 32;
 		public int maxVolume = 512;
+		/** Lado minimo do interior (5 = casa externa 7x7 com parede de 1 bloco). */
+		public int minInteriorSize = 5;
+		/** Teto de camas por casa; a capacidade real sai da area interna. */
+		public int maxBedsPerHouse = 4;
 		public int recheckSeconds = 60;
 		public int bonusRadius = 2;
 		public double bonusSpeed = 0.10D;

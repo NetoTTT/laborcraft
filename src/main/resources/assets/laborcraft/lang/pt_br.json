@@ -222,5 +222,15 @@
 	"laborcraft.command.worker.buy.sold_out": "%s não está mais disponível (foi contratado ou a loja girou).",
 	"laborcraft.command.admin.market.refresh": "Mercado de trabalho renovado: %s pessoa(s) disponível(is).",
 	"laborcraft.ui.profile.pending": "· %s contrato(s)",
-	"laborcraft.command.worker.dismiss.dropped": "Mochila cheia: o contrato ficou no chão."
+	"laborcraft.command.worker.dismiss.dropped": "Mochila cheia: o contrato ficou no chão.",
+	"laborcraft.command.home.scan.valid": "Casa na cama %s, %s, %s: VÁLIDA",
+	"laborcraft.command.home.scan.invalid": "Casa na cama %s, %s, %s: INVÁLIDA — %s",
+	"laborcraft.command.home.scan.size": "interno %sx%s (%s blocos) · volume %s · portas %s · camas %s · vagas %s",
+	"laborcraft.command.home.scan.comfort": "conforto: %s bloco(s) (+%s%%)",
+	"laborcraft.housing.reason.not_a_bed": "não é uma cama",
+	"laborcraft.housing.reason.no_space": "sem espaço livre acima da cama",
+	"laborcraft.housing.reason.open_sky": "casa aberta: o interior vê o céu",
+	"laborcraft.housing.reason.too_large": "casa grande demais (ou aberta) para validar",
+	"laborcraft.housing.reason.too_small": "interior menor que o mínimo (5x5)",
+	"laborcraft.housing.reason.no_door": "sem porta"
 }

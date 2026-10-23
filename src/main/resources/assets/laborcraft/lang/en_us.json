@@ -222,5 +222,15 @@
 	"laborcraft.command.worker.buy.sold_out": "%s is no longer available (hired by someone else or the shop rotated).",
 	"laborcraft.command.admin.market.refresh": "Labor market refreshed: %s person(s) available.",
 	"laborcraft.ui.profile.pending": "· %s contract(s)",
-	"laborcraft.command.worker.dismiss.dropped": "Inventory full: the contract was dropped on the ground."
+	"laborcraft.command.worker.dismiss.dropped": "Inventory full: the contract was dropped on the ground.",
+	"laborcraft.command.home.scan.valid": "House at bed %s, %s, %s: VALID",
+	"laborcraft.command.home.scan.invalid": "House at bed %s, %s, %s: INVALID — %s",
+	"laborcraft.command.home.scan.size": "interior %sx%s (%s blocks) · volume %s · doors %s · beds %s · slots %s",
+	"laborcraft.command.home.scan.comfort": "comfort: %s block(s) (+%s%%)",
+	"laborcraft.housing.reason.not_a_bed": "not a bed",
+	"laborcraft.housing.reason.no_space": "no free space above the bed",
+	"laborcraft.housing.reason.open_sky": "open house: the interior sees the sky",
+	"laborcraft.housing.reason.too_large": "house too large (or open) to validate",
+	"laborcraft.housing.reason.too_small": "interior smaller than the minimum (5x5)",
+	"laborcraft.housing.reason.no_door": "no door"
 }

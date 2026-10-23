@@ -6,6 +6,8 @@ import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.entity.LaborCraftWorker;
+import com.foque.laborcraft.housing.HousingReport;
+import com.foque.laborcraft.housing.HousingValidator;
 import com.foque.laborcraft.item.LaborCraftItems;
 import com.foque.laborcraft.item.WorkerContractData;
 import com.foque.laborcraft.job.JobType;
@@ -37,6 +39,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -124,6 +127,14 @@ public final class LaborCraftCommands {
 												.executes(context -> dismissWorker(
 														context.getSource(),
 														StringArgumentType.getString(context, "worker")
+												)))))
+						.then(Commands.literal("home")
+								.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+								.then(Commands.literal("scan")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+												.executes(context -> scanHome(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos")
 												)))))
 						.then(Commands.literal("language")
 								.then(Commands.argument("code", StringArgumentType.word())
@@ -461,6 +472,58 @@ public final class LaborCraftCommands {
 		CloseScreenPayload.open(player);
 		source.sendSuccess(
 				() -> Component.translatable("laborcraft.command.worker.dismiss.contract", workerName),
+				false
+		);
+		return 1;
+	}
+
+	private static int scanHome(CommandSourceStack source, BlockPos pos) {
+		HousingReport report = HousingValidator.validate(source.getLevel(), pos, LaborCraftConfig.get());
+
+		if (report.valid()) {
+			source.sendSuccess(
+					() -> Component.translatable("laborcraft.command.home.scan.valid", pos.getX(), pos.getY(), pos.getZ()),
+					false
+			);
+		} else {
+			source.sendSuccess(
+					() -> Component.translatable(
+							"laborcraft.command.home.scan.invalid",
+							pos.getX(),
+							pos.getY(),
+							pos.getZ(),
+							Component.translatable("laborcraft.housing.reason." + report.failureReason())
+					),
+					false
+			);
+		}
+
+		if (report.width() > 0 || report.volume() > 0) {
+			source.sendSuccess(
+					() -> Component.translatable(
+							"laborcraft.command.home.scan.size",
+							report.width(),
+							report.depth(),
+							report.width() * report.depth(),
+							report.volume(),
+							report.doors(),
+							report.beds(),
+							report.capacity()
+					),
+					false
+			);
+		}
+
+		if (!report.valid()) {
+			return 0;
+		}
+
+		source.sendSuccess(
+				() -> Component.translatable(
+						"laborcraft.command.home.scan.comfort",
+						report.comfortBlocks(),
+						Math.round(report.comfortBonus() * 100.0D)
+				),
 				false
 		);
 		return 1;

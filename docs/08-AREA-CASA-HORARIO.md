@@ -83,6 +83,8 @@ Só `canSeeSky` não detecta parede furada. Para validar:
 
 Custo: O(volume) e roda **raro** — ao contratar, ao trocar de casa, ao revalidar (`/laborcraft revalidate`), ou a cada `housing.recheckSeconds` (default 60). Nunca por tick.
 
+A capacidade de camas sai da **área interna medida no andar da cama** (`area / 12`, entre 2 e `maxBedsPerHouse`), não do volume 3D: assim um sobrado rende por andar e uma torre 1x1 não infla a conta. Detalhes e resultados de teste em [`11-CASA-VAGAS-E-PATHING.md`](11-CASA-VAGAS-E-PATHING.md).
+
 ### Requisitos
 
 | Regra | Default | Config |
@@ -95,6 +97,8 @@ Custo: O(volume) e roda **raro** — ao contratar, ao trocar de casa, ao revalid
 | casa compartilhada (várias camas) | desligada (adiada) | `allowSharedHouse` |
 | distância máxima do posto | 32 | `maxDistanceFromAnchor` |
 | volume máximo validado | 512 | `maxVolume` |
+| lado mínimo do interior | 5 | `minInteriorSize` |
+| camas por casa (teto) | 4 | `maxBedsPerHouse` |
 
 ### Itens de conforto (opcional, bônus)
 
@@ -213,6 +217,8 @@ Tempo real cria diferença entre servidores e fuso horário, e permite "trabalha
   "oneWorkerPerBed": true,
   "maxDistanceFromAnchor": 32,
   "maxVolume": 512,
+  "minInteriorSize": 5,
+  "maxBedsPerHouse": 4,
   "recheckSeconds": 60,
   "bonusRadius": 2,
   "bonusSpeed": 0.10,

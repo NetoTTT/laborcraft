@@ -60,6 +60,9 @@ Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
 - Contrato v2 (`laborcraft:contract_data`) com rank, raridade, boosts, aptidões, maestria por cargo, cargo atual, nome, fome e humor; contratos antigos migram para Comum/comum com cargo de fazendeiro.
 - Comando `/laborcraft admin market refresh` para forçar nova rotação do mercado.
 - Tela de Contratação mostra pessoa, rank, raridade, aptidão, boosts, preço e manutenção; tela de Empregado mostra rank/raridade, aptidão e maestria; Perfil colore o nome pela raridade e mostra `Rank · Cargo · Estado`.
+- `HousingValidator`: valida a área interna da casa por flood fill a partir da cama (só ar atravessa; porta fechada e vidro selam; interior que vê o céu invalida; limites de volume e raio). O tamanho é medido no **andar da cama**, e a capacidade de camas sai de `área / 12` (mín. 2, máx. `maxBedsPerHouse`), exigindo 5x5 interno.
+- Comando `/laborcraft home scan <x> <y> <z>` (gamemaster/console) devolve o relatório da casa: válida/inválida, motivo, interno, volume, portas, camas e vagas.
+- Config `housing.minInteriorSize` (5) e `housing.maxBedsPerHouse` (4).
 
 ### Alterado
 
