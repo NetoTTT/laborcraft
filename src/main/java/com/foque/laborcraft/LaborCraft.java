@@ -7,6 +7,7 @@ import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.item.LaborCraftItems;
 import com.foque.laborcraft.job.JobTypes;
+import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.network.OpenConfigPayload;
 import com.foque.laborcraft.network.OpenHiringPayload;
@@ -43,6 +44,7 @@ public class LaborCraft implements ModInitializer {
 		OpenProfilePayload.bootstrap();
 		OpenWorkerPayload.bootstrap();
 		SetLanguagePayload.bootstrap();
+		CloseScreenPayload.bootstrap();
 		WorkerScreenStatePayload.bootstrap();
 		WorkerScreenStatePayload.registerReceiver();
 		LaborCraftCommands.bootstrap();

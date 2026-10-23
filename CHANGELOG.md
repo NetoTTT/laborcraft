@@ -69,11 +69,14 @@ Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
 - A loja deixou de ser por jogador: estoque, preço e rotação são do servidor, iguais para todos.
 - Trabalhador ficou **parado por enquanto**: a IA de passeio (`WaterAvoidingRandomStrollGoal`) foi removida até existir a IA de trabalho (área/casa/pathing).
 - Ao abrir a tela do trabalhador, ele **para tudo** (navegação, movimento) e olha para o jogador; ao fechar, é liberado. O estado abre/fecha vem do cliente por `worker_screen_state`, então funciona em servidor.
+- Dispensar não reabre mais a loja de contratação: apenas fecha a tela de Empregado (`close_screen`).
+- O Perfil mostra os contratos ainda na mochila (`0 / 1 · 2 contrato(s)`) e a loja passou a rotular “Trabalhadores + contratos”, porque o limite conta os dois.
 
 ### Corrigido
 
 - Trabalhador continuava andando com a interface aberta (e o `isPauseScreen()` falso não pausa o mundo em single-player): agora o congelamento é do servidor, não do cliente.
 - `/laborcraft worker buy <oferta>` rejeitava `laborcraft:offer/7/3`: o id é um `ResourceLocation` e o argumento era `word()` (sem `:` nem `/`). Agora usa `IdentifierArgument`, como o `<job>` do `assign`.
+- No modo criativo o Contrato de Trabalhador não era consumido: cada uso gerava um trabalhador e cada dispensa devolvia outro contrato, então a contagem estourava (`2/1` com 0 empregados) e a compra ficava bloqueada. Agora o contrato é consumido sempre.
 - Clique nos itens de `LcItemGrid` não abria a tela de ação no MC 26.3: o botão esquerdo agora é tratado por `onClick`/`isValidClickButton` (no 26.3 o esquema de botões é 1=esquerdo, 2=meio, 3=direito).
 - Build travando por causa do daemon do Gradle segurando o stdout; `build.cmd` agora usa `--no-daemon` além do redirecionamento.
 - Loom 1.19.3 exigindo Gradle 9.8+: wrapper atualizado para 9.8.2.

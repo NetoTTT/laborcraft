@@ -9,6 +9,7 @@ import com.foque.laborcraft.client.ui.screen.LaborCraftHiringScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftItemTestScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftPlayersScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftProfileScreen;
+import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.network.OpenConfigPayload;
 import com.foque.laborcraft.network.OpenHiringPayload;
@@ -53,6 +54,16 @@ public class LaborCraftClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(SetLanguagePayload.TYPE, (payload, context) -> {
 			Minecraft client = context.client();
 			client.execute(() -> applyLanguage(client, payload.languageCode()));
+		});
+
+		ClientPlayNetworking.registerGlobalReceiver(CloseScreenPayload.TYPE, (payload, context) -> {
+			Minecraft client = context.client();
+			client.execute(() -> {
+				// Só fecha a tela do trabalhador: o servidor não deve fechar inventário/chat do jogador.
+				if (client.gui.screen() instanceof LaborCraftEmployeeScreen) {
+					client.setScreenAndShow(null);
+				}
+			});
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(OpenItemTestPayload.TYPE, (payload, context) -> {

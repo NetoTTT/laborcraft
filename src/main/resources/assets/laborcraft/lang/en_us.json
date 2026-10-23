@@ -35,7 +35,7 @@
 	"laborcraft.ui.hire.title": "Hiring",
 	"laborcraft.ui.hire.subtitle": "People available in this server's market.",
 	"laborcraft.ui.hire.balance": "Your balance",
-	"laborcraft.ui.hire.workers": "Workers",
+	"laborcraft.ui.hire.workers": "Workers + contracts",
 	"laborcraft.ui.hire.workers.value": "%s / %s",
 	"laborcraft.ui.hire.workers.unlimited": "%s / unlimited",
 	"laborcraft.ui.hire.free": "Free",
@@ -220,5 +220,6 @@
 	"laborcraft.command.worker.buy.no_market": "The labor market is unavailable on this server.",
 	"laborcraft.command.worker.buy.no_offers": "The hiring shop is empty right now. Wait for the next rotation.",
 	"laborcraft.command.worker.buy.sold_out": "%s is no longer available (hired by someone else or the shop rotated).",
-	"laborcraft.command.admin.market.refresh": "Labor market refreshed: %s person(s) available."
+	"laborcraft.command.admin.market.refresh": "Labor market refreshed: %s person(s) available.",
+	"laborcraft.ui.profile.pending": "· %s contract(s)"
 }

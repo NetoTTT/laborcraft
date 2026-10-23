@@ -35,7 +35,7 @@
 	"laborcraft.ui.hire.title": "Contratação",
 	"laborcraft.ui.hire.subtitle": "Pessoas disponíveis no mercado deste servidor.",
 	"laborcraft.ui.hire.balance": "Seu saldo",
-	"laborcraft.ui.hire.workers": "Trabalhadores",
+	"laborcraft.ui.hire.workers": "Trabalhadores + contratos",
 	"laborcraft.ui.hire.workers.value": "%s / %s",
 	"laborcraft.ui.hire.workers.unlimited": "%s / ilimitado",
 	"laborcraft.ui.hire.free": "Grátis",
@@ -220,5 +220,6 @@
 	"laborcraft.command.worker.buy.no_market": "Mercado de trabalho indisponível neste servidor.",
 	"laborcraft.command.worker.buy.no_offers": "A loja de contratação está vazia agora. Aguarde a próxima rotação.",
 	"laborcraft.command.worker.buy.sold_out": "%s não está mais disponível (foi contratado ou a loja girou).",
-	"laborcraft.command.admin.market.refresh": "Mercado de trabalho renovado: %s pessoa(s) disponível(is)."
+	"laborcraft.command.admin.market.refresh": "Mercado de trabalho renovado: %s pessoa(s) disponível(is).",
+	"laborcraft.ui.profile.pending": "· %s contrato(s)"
 }

@@ -10,6 +10,7 @@ import com.foque.laborcraft.item.LaborCraftItems;
 import com.foque.laborcraft.item.WorkerContractData;
 import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
+import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.network.OpenConfigPayload;
 import com.foque.laborcraft.network.OpenHiringPayload;
@@ -440,7 +441,8 @@ public final class LaborCraftCommands {
 			player.drop(contract, false, Prediction.SERVER_ONLY);
 		}
 
-		OpenHiringPayload.open(player);
+		// Nada de reabrir a loja: a dispensa só fecha a tela de Empregado.
+		CloseScreenPayload.open(player);
 		source.sendSuccess(
 				() -> Component.translatable("laborcraft.command.worker.dismiss.contract", workerName),
 				false

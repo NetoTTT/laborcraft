@@ -68,9 +68,9 @@ public class WorkerContractItem extends Item {
 		worker.setHunger(data.hunger());
 		worker.setMood(data.mood());
 
-		if (!player.hasInfiniteMaterials()) {
-			stack.shrink(1);
-		}
+		// O contrato gera uma entidade: consumir sempre evita duplicar trabalhador no criativo,
+		// onde itens nao sao gastos por padrao (e o limite de trabalhadores seria furado).
+		stack.shrink(1);
 
 		OpenWorkerPayload.open(serverPlayer, worker);
 		serverPlayer.sendSystemMessage(Component.translatable(

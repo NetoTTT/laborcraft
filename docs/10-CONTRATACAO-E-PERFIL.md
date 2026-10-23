@@ -25,6 +25,7 @@ Este documento registra as regras pedidas para a próxima etapa. A implementaç�
 
 - Dispensar **não apaga** o trabalhador nem seus dados. No futuro, maestria, histórico e boosts devem ser preservados.
 - Dispensar transforma o trabalhador de volta em um **Contrato de Trabalhador** com os dados do trabalhador.
+- Dispensar **não** reabre a loja de contratação: a tela de Empregado apenas fecha.
 - A entidade não deve ficar largada no mundo “sem rumo pedindo outro contrato”.
 - O contrato devolvido:
   - preserva nome, emprego, boost e (futuramente) maestria/histórico;

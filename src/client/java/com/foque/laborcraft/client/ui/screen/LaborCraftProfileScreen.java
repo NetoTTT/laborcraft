@@ -95,15 +95,24 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 	}
 
 	private Component employeesValue() {
+		Component value;
 		if (profile.limit() <= 0) {
-			return Component.translatable("laborcraft.ui.profile.employees.unlimited", profile.workers());
+			value = Component.translatable("laborcraft.ui.profile.employees.unlimited", profile.workers());
+		} else {
+			value = Component.translatable(
+					"laborcraft.ui.profile.employees.value",
+					profile.workers(),
+					profile.limit()
+			);
 		}
 
-		return Component.translatable(
-				"laborcraft.ui.profile.employees.value",
-				profile.workers(),
-				profile.limit()
-		);
+		if (profile.pending() <= 0) {
+			return value;
+		}
+
+		return value.copy()
+				.append(Component.literal(" "))
+				.append(Component.translatable("laborcraft.ui.profile.pending", profile.pending()));
 	}
 
 	private void drawStat(

@@ -20,6 +20,7 @@ public record OpenProfilePayload(
 		String playerName,
 		String balanceText,
 		int workers,
+		int pending,
 		int limit,
 		List<WorkerSummary> summaries
 ) implements CustomPacketPayload {
@@ -29,6 +30,7 @@ public record OpenProfilePayload(
 				buffer.writeUtf(payload.playerName(), 128);
 				buffer.writeUtf(payload.balanceText(), 64);
 				buffer.writeVarInt(payload.workers());
+				buffer.writeVarInt(payload.pending());
 				buffer.writeVarInt(payload.limit());
 				buffer.writeVarInt(payload.summaries().size());
 				for (WorkerSummary summary : payload.summaries()) {
@@ -49,6 +51,7 @@ public record OpenProfilePayload(
 				String playerName = buffer.readUtf(128);
 				String balanceText = buffer.readUtf(64);
 				int workers = buffer.readVarInt();
+				int pending = buffer.readVarInt();
 				int limit = buffer.readVarInt();
 				int summaryCount = buffer.readVarInt();
 				List<WorkerSummary> summaries = new ArrayList<>(summaryCount);
@@ -67,7 +70,7 @@ public record OpenProfilePayload(
 							buffer.readVarInt()
 					));
 				}
-				return new OpenProfilePayload(playerName, balanceText, workers, limit, List.copyOf(summaries));
+				return new OpenProfilePayload(playerName, balanceText, workers, pending, limit, List.copyOf(summaries));
 			}
 	);
 
@@ -94,6 +97,7 @@ public record OpenProfilePayload(
 				player.getName().getString(),
 				provider.format(provider.balance(player.getUUID())),
 				summaries.size(),
+				WorkerOwnership.pendingContracts(player),
 				LaborCraftConfig.get().worker.maxWorkersPerPlayer,
 				List.copyOf(summaries)
 		);
