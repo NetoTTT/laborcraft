@@ -1,5 +1,6 @@
 package com.foque.laborcraft.worker;
 
+import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -62,6 +63,9 @@ public final class FarmerStorage {
 		int keptSeeds = 0;
 		int keptMeal = 0;
 		int moved = 0;
+		int seedKeep = LaborCraftConfig.get().farmer.useComposter
+				? Math.max(SEED_RESERVE, LaborCraftConfig.get().farmer.seedSurplusForCompost)
+				: SEED_RESERVE;
 
 		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {
 			ItemStack stack = worker.inventoryItem(slot);
@@ -71,7 +75,7 @@ public final class FarmerStorage {
 
 			int keep = 0;
 			if (isSeed(stack)) {
-				keep = Math.min(stack.getCount(), Math.max(0, SEED_RESERVE - keptSeeds));
+				keep = Math.min(stack.getCount(), Math.max(0, seedKeep - keptSeeds));
 				keptSeeds += keep;
 			} else if (isSupply(stack)) {
 				keep = Math.min(stack.getCount(), Math.max(0, BONE_MEAL_TARGET - keptMeal));

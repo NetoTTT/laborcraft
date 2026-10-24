@@ -376,10 +376,12 @@
 	"laborcraft.notification.worker": "%s: %s",
 	"laborcraft.ui.station.action": "Works only inside the drawn zone · Y-%s to Y+%s",
 	"laborcraft.ui.help.title": "Help — Workstation",
-	"laborcraft.ui.help.body": "The work area is the drawn zone; the post radius is only the maximum limit and does not make the worker act. Without a zone he stays idle until you draw one (or use \"Use max area\"). Inside the zone he can till, plant and harvest, take seeds and deposit into the linked chest. The backpack has 9 slots + a tool slot; click or drag to transfer and use the quantity popup. The eye highlights chests and workers in the world; the HUD points the direction when they are off-screen. Every action on this screen has an equivalent command.",
+	"laborcraft.ui.help.body": "The work area is the drawn zone and is mandatory; the post radius is only the maximum limit. Without a zone he stays idle until you draw one (or use \"Use max area\"). Inside the zone he can till, plant and harvest, take seeds and deposit into the linked chest. Water is validated by proximity (4 blocks, 9x9, same level or 1 above): by default he plants even on dry soil and warns; in require mode (config farmer.waterPolicy) he only plants with water. With bone meal he speeds up crops; with a composter he turns surplus seeds into bone meal. The backpack has 9 slots + a tool slot; click or drag to transfer and use the quantity popup. The eye highlights chests and workers in the world; the HUD points the direction when they are off-screen. Every action on this screen has an equivalent command.",
 	"laborcraft.ui.help.close": "Close help",
 	"laborcraft.ui.help.tip": "Open this screen's help.",
 	"laborcraft.ui.station.map.max_area": "Use max area",
 	"laborcraft.ui.station.map.max_area.tip": "Sets the zone to the post's maximum allowed square.",
-	"laborcraft.ui.worker.task.need_zone": "Draw the work area on the Post to start."
+	"laborcraft.ui.worker.task.need_zone": "Draw the work area on the Post to start.",
+	"laborcraft.ui.worker.task.need_water": "I need water in the zone to plant.",
+	"laborcraft.ui.worker.task.dry_soil": "Dry soil — add water so crops grow faster."
 }

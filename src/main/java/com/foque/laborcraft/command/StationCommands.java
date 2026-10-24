@@ -242,6 +242,7 @@ final class StationCommands {
 			return 0;
 		}
 
+		worker.setWorkNotice("");
 		worker.setWorkerState(WorkerState.PAUSED);
 		if (walk) {
 			worker.getNavigation().moveTo(pos.getX() + 0.5D, pos.getY() + 1.0D, pos.getZ() + 0.5D, 1.0D);

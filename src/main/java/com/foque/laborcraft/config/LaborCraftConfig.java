@@ -188,6 +188,8 @@ public final class LaborCraftConfig {
 		public int billingPeriodDays = 1;
 		public boolean useBoneMeal = false;
 		public boolean useComposter = false;
+		public int seedSurplusForCompost = 64;
+		public String waterPolicy = "prefer";
 
 		public JobSettings() {
 		}

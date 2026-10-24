@@ -3,7 +3,13 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
-## [Não lançado]
+## [0.1.0-alpha.6] — 2026-10-24
+
+Fazendeiro automatizado de ponta a ponta: área de trabalho obrigatória, colheita/replantio/plantio, água,
+bone meal, composteira, coleta de drops e destaques no mundo. O Posto ganhou ajuda, limite máximo visível
+e o botão **Usar área máxima**.
+
+Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
 
 ### Adicionado
 
@@ -15,7 +21,9 @@ Versionamento semântico a partir da primeira release pública.
 - Comandos `worker storage deposit|withdraw <trabalhador>` (base para a IA e teste manual).
 - IA do fazendeiro MVP (`FarmerBrain`): valida enxada/sementes (puxa do baú), procura cultura madura na zona/raio, anda, colhe, replanta, guarda os drops e deposita no baú quando enche. Pausa com aviso quando falta enxada/semente/baú ou o baú enche.
 - IA coleta itens dropados no raio máximo do posto (sementes, produto e bone meal) e os usa/guarda.
-- Plantio prefere farmland **hidratado** (`MOISTURE > 0`); se só houver seco, planta mesmo assim.
+- Água validada por proximidade (4 blocos/9x9, mesmo Y ou 1 acima, fluid tag/waterlogged, chuva) com um único predicado. `farmer.waterPolicy`: `prefer` (padrão) planta mesmo em terra seca e avisa 1x/min; `require` só planta/ara com água, avisa e espera (auto-retoma ao irrigar); `ignore` desliga.
+- Bone meal: com `useBoneMeal`, aplica em culturas em crescimento quando há bone meal na mochila.
+- Composteira: com `useComposter`, o excedente de sementes acima de `seedSurplusForCompost` vai para a composteira mais próxima (raio do posto); ele recolhe a farinha de osso e o depósito mantém esse estoque de sementes.
 - IA agora **planta farmland vazio** com a semente disponível e **reara o chão pisoteado** (dirt/grass vira farmland e é replantado).
 - A IA prefere um ponto de apoio **fora do farmland** para colher, reduzindo o pisoteio.
 - O aviso de pausa no chat inclui o **nome do trabalhador**.
@@ -33,6 +41,8 @@ Versionamento semântico a partir da primeira release pública.
 - Botão **?** na tela do Posto com uma ajuda rápida (área de trabalho, baús, mochila, olho e comandos); rótulos, aviso sem zona e texto abaixo do mapa atualizados (legenda separa área de trabalho em âmbar do limite tracejado).
 - No mapa, a camada de superfície usa `MOTION_BLOCKING`: culturas/plantas são ignoradas e o farmland aparece marrom, distinto do gramado.
 - O tracejado do limite máximo do posto no mapa ficou mais visível (azul com alpha alto).
+- O fazendeiro **volta ao trabalho sozinho** quando a enxada/sementes/baú são resolvidos e **equipa automaticamente** uma enxada válida da mochila; a pausa manual continua exigindo “Retomar”.
+- A composteira pronta é esvaziada mesmo com poucas sementes (antes ele enchia até 100% e parava de usar).
 
 ## [0.1.0-alpha.5] — 2026-10-24
 

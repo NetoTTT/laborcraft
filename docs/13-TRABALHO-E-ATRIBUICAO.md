@@ -290,10 +290,18 @@ não há baú ou quando o baú enche. A **área de trabalho é a zona desenhada*
 é apenas o limite máximo. Sem zona ele pausa com o aviso “Desenhe a área de trabalho no Posto”; dentro da
 zona pode arar, plantar e colher (e usar **Usar área máxima** para o quadrado máximo). Ele também prefere um
 ponto de apoio fora do farmland. Ele coleta itens dropados (sementes, produto, bone meal) dentro do raio
-máximo do posto e prefere farmland **hidratado** (MOISTURE > 0) ao plantar; se só houver seco, planta assim
-mesmo. Ainda faltam: expediente, coleta de água/balde, layout de irrigação 9x9, uso de bone meal e composteira.
-Ainda faltam: expediente, coleta de água/balde, plantio otimizado com hidratação, uso de bone meal/composteira
-e ferramentas especiais.
+máximo do posto. A água é validada por **proximidade** (4 blocos/9x9, mesmo Y ou 1 acima, fluid tag/waterlogged,
+chuva) via `FarmerWater`, usada em todas as rotas. Política `farmer.waterPolicy`:
+- `prefer` (padrão): planta hidratado primeiro; se só houver seco, planta e avisa (1x/min), sem pausar.
+- `require`: só planta/ara com água; avisa e espera (sem pausa manual), retomando sozinho quando a água aparece.
+- `ignore`: desliga a validação.
+
+Com `useBoneMeal`, aplica bone meal em culturas em crescimento; com `useComposter`, quando as sementes
+passam de `seedSurplusForCompost`, leva o excedente à composteira mais próxima (raio do posto) e recolhe a
+farinha (inclusive quando a composteira já está pronta, independente da contagem de sementes). Ele também
+**volta ao trabalho sozinho** quando a enxada/sementes/baú são resolvidos e **equipa automaticamente** uma
+enxada válida que estiver na mochila.
+Ainda faltam: expediente e coleta/colocação automática de água + layout 9x9 (baixa prioridade).
 
 ## 12. Impacto no que já existe
 

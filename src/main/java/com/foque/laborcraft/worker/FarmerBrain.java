@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.BeetrootBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CarrotBlock;
+import net.minecraft.world.level.block.ComposterBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.FarmlandBlock;
 import net.minecraft.world.level.block.PotatoBlock;
@@ -43,6 +44,7 @@ public final class FarmerBrain {
 
 	private enum Action {
 		HARVEST,
+		FERTILIZE,
 		PLANT,
 		TILL
 	}
@@ -58,14 +60,17 @@ public final class FarmerBrain {
 	private int pathTicks;
 	private int depositTicks;
 	private UUID dropId;
+	private boolean sawDryFarmland;
+	private boolean sawGrowingCrops;
 	private int dropTicks;
+	private long lastWaterWarning;
 
 	public FarmerBrain(LaborCraftWorker worker) {
 		this.worker = worker;
 	}
 
 	public void tick() {
-		if (worker.level().isClientSide() || worker.workerState() != WorkerState.ACTIVE) {
+		if (worker.level().isClientSide()) {
 			return;
 		}
 		if (!JobTypes.FARMER.id().equals(worker.jobId()) || worker.isAttending()) {
@@ -81,11 +86,23 @@ public final class FarmerBrain {
 		if (station == null) {
 			return;
 		}
+
+		if (worker.workerState() == WorkerState.PAUSED) {
+			if (!canResume(level, station)) {
+				return;
+			}
+			worker.setWorkerState(WorkerState.ACTIVE);
+		}
+		if (worker.workerState() != WorkerState.ACTIVE) {
+			return;
+		}
+
 		if (!station.hasZone()) {
 			pause(level, "laborcraft.ui.worker.task.need_zone");
 			return;
 		}
 
+		ensureTool();
 		ItemStack tool = worker.toolItem();
 		if (tool.isEmpty() || !JobEquipment.validTool(worker.jobId(), tool)) {
 			pause(level, "laborcraft.ui.worker.task.need_tool");
@@ -101,6 +118,20 @@ public final class FarmerBrain {
 			if (FarmerStorage.count(worker, FarmerStorage::isSeed) <= 0) {
 				pause(level, "laborcraft.ui.worker.task.need_seeds");
 				return;
+			}
+		}
+
+		if (LaborCraftConfig.get().farmer.useComposter) {
+			int seeds = FarmerStorage.count(worker, FarmerStorage::isSeed);
+			BlockPos composter = findComposter(level, station);
+			if (composter != null) {
+				BlockState state = level.getBlockState(composter);
+				boolean ready = state.is(Blocks.COMPOSTER)
+						&& state.getValue(ComposterBlock.LEVEL) >= ComposterBlock.READY;
+				if (ready || seeds > LaborCraftConfig.get().farmer.seedSurplusForCompost) {
+					compost(level, composter);
+					return;
+				}
 			}
 		}
 
@@ -122,6 +153,11 @@ public final class FarmerBrain {
 		}
 
 		if (target == null) {
+			if (waterPolicy().equals("require") && sawDryFarmland && !sawGrowingCrops) {
+				warnNeedWater(level);
+				idle(station);
+				return;
+			}
 			if (FarmerStorage.count(worker, FarmerStorage::isProduce) > 0) {
 				deposit(level, station);
 			} else {
@@ -134,6 +170,7 @@ public final class FarmerBrain {
 		if (worker.position().distanceToSqr(center) <= REACH_SQR) {
 			switch (target.action()) {
 				case HARVEST -> harvest(level, target.pos());
+				case FERTILIZE -> fertilize(level, target.pos());
 				case PLANT -> plant(level, target.pos());
 				case TILL -> till(level, target.pos());
 			}
@@ -174,6 +211,80 @@ public final class FarmerBrain {
 			}
 		}
 		return free;
+	}
+
+	private void ensureTool() {
+		ItemStack tool = worker.toolItem();
+		boolean usable = !tool.isEmpty()
+				&& JobEquipment.validTool(worker.jobId(), tool)
+				&& (!tool.isDamageableItem() || tool.getMaxDamage() - tool.getDamageValue() > 2);
+		if (usable) {
+			return;
+		}
+
+		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {
+			ItemStack candidate = worker.inventoryItem(slot);
+			if (candidate.isEmpty() || !JobEquipment.validTool(worker.jobId(), candidate)) {
+				continue;
+			}
+			if (candidate.isDamageableItem() && candidate.getMaxDamage() - candidate.getDamageValue() <= 2) {
+				continue;
+			}
+
+			worker.setInventoryItem(slot, tool);
+			worker.setInventoryItem(LaborCraftWorker.TOOL_SLOT, candidate);
+			return;
+		}
+	}
+
+	private boolean canResume(ServerLevel level, StationRegistry.Station station) {
+		String notice = worker.workNotice();
+		if (notice == null || notice.isBlank()) {
+			return false;
+		}
+
+		return switch (notice) {
+			case "laborcraft.ui.worker.task.need_zone" -> station.hasZone();
+			case "laborcraft.ui.worker.task.need_tool", "laborcraft.ui.worker.task.tool_breaking" -> {
+				ensureTool();
+				ItemStack tool = worker.toolItem();
+				yield !tool.isEmpty()
+						&& JobEquipment.validTool(worker.jobId(), tool)
+						&& (!tool.isDamageableItem() || tool.getMaxDamage() - tool.getDamageValue() > 2);
+			}
+			case "laborcraft.ui.worker.task.need_seeds" -> FarmerStorage.count(worker, FarmerStorage::isSeed) > 0
+					|| hasSeedInStorage(level, station);
+			case "laborcraft.ui.worker.task.no_chest" -> !WorkerStorage.linked(level, station, false).isEmpty();
+			case "laborcraft.ui.worker.task.chest_full" -> hasContainerRoom(level, station);
+			default -> false;
+		};
+	}
+
+	private static boolean hasSeedInStorage(ServerLevel level, StationRegistry.Station station) {
+		for (Container container : WorkerStorage.linked(level, station, true)) {
+			for (int slot = 0; slot < container.getContainerSize(); slot++) {
+				ItemStack stack = container.getItem(slot);
+				if (!stack.isEmpty() && FarmerStorage.isSeed(stack)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private static boolean hasContainerRoom(ServerLevel level, StationRegistry.Station station) {
+		for (Container container : WorkerStorage.linked(level, station, false)) {
+			for (int slot = 0; slot < container.getContainerSize(); slot++) {
+				ItemStack stack = container.getItem(slot);
+				if (stack.isEmpty()) {
+					return true;
+				}
+				if (FarmerStorage.isProduce(stack) && stack.getCount() < stack.getMaxStackSize()) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	private void deposit(ServerLevel level, StationRegistry.Station station) {
@@ -304,14 +415,27 @@ public final class FarmerBrain {
 	private WorkTarget findTarget(ServerLevel level, StationRegistry.Station station) {
 		int[] bounds = workBounds(station);
 		WorkTarget bestCrop = null;
-		WorkTarget bestHydrated = null;
-		WorkTarget bestDry = null;
-		WorkTarget bestTill = null;
+		WorkTarget bestFertilize = null;
+		WorkTarget bestHydratedPlant = null;
+		WorkTarget bestDryPlant = null;
+		WorkTarget bestHydratedTill = null;
+		WorkTarget bestDryTill = null;
 		double bestCropDistance = Double.MAX_VALUE;
-		double bestHydratedDistance = Double.MAX_VALUE;
-		double bestDryDistance = Double.MAX_VALUE;
-		double bestTillDistance = Double.MAX_VALUE;
+		double bestFertilizeDistance = Double.MAX_VALUE;
+		double bestHydratedPlantDistance = Double.MAX_VALUE;
+		double bestDryPlantDistance = Double.MAX_VALUE;
+		double bestHydratedTillDistance = Double.MAX_VALUE;
+		double bestDryTillDistance = Double.MAX_VALUE;
 		boolean canPlant = canPlant();
+		boolean useBoneMeal = LaborCraftConfig.get().farmer.useBoneMeal
+				&& findItem(Items.BONE_MEAL) >= 0;
+		String policy = waterPolicy();
+		boolean require = policy.equals("require");
+		boolean ignore = policy.equals("ignore");
+		boolean[] hydrated = FarmerWater.mask(level, bounds);
+		boolean raining = level.isRaining();
+		sawDryFarmland = false;
+		sawGrowingCrops = false;
 		long now = level.getGameTime();
 
 		for (int x = bounds[0]; x <= bounds[1]; x++) {
@@ -327,6 +451,14 @@ public final class FarmerBrain {
 
 					BlockState state = level.getBlockState(pos);
 					double distance = worker.position().distanceToSqr(Vec3.atCenterOf(pos));
+					if (state.getBlock() instanceof CropBlock crop && !crop.isMaxAge(state)) {
+						sawGrowingCrops = true;
+						if (useBoneMeal && distance < bestFertilizeDistance) {
+							bestFertilizeDistance = distance;
+							bestFertilize = new WorkTarget(pos, Action.FERTILIZE, findStand(level, pos));
+						}
+						continue;
+					}
 					if (isMatureCrop(state)) {
 						if (distance < bestCropDistance) {
 							bestCropDistance = distance;
@@ -335,24 +467,38 @@ public final class FarmerBrain {
 						continue;
 					}
 
-					if (!canPlant) {
+					if (!canPlant || !level.getBlockState(pos.above()).isAir()) {
 						continue;
 					}
 
-					if (state.is(Blocks.FARMLAND) && level.getBlockState(pos.above()).isAir()) {
-						boolean hydrated = state.getValue(FarmlandBlock.MOISTURE) > 0;
-						if (hydrated && distance < bestHydratedDistance) {
-							bestHydratedDistance = distance;
-							bestHydrated = new WorkTarget(pos, Action.PLANT, findStand(level, pos));
-						} else if (!hydrated && distance < bestDryDistance) {
-							bestDryDistance = distance;
-							bestDry = new WorkTarget(pos, Action.PLANT, findStand(level, pos));
+					boolean isFarmland = state.is(Blocks.FARMLAND);
+					boolean waterHere = ignore
+							|| FarmerWater.maskAt(hydrated, bounds, pos)
+							|| (isFarmland && state.getValue(FarmlandBlock.MOISTURE) > 0)
+							|| (raining && level.isRainingAt(pos.above()));
+
+					if (isFarmland) {
+						if (waterHere) {
+							if (distance < bestHydratedPlantDistance) {
+								bestHydratedPlantDistance = distance;
+								bestHydratedPlant = new WorkTarget(pos, Action.PLANT, findStand(level, pos));
+							}
+						} else if (require) {
+							sawDryFarmland = true;
+						} else if (distance < bestDryPlantDistance) {
+							bestDryPlantDistance = distance;
+							bestDryPlant = new WorkTarget(pos, Action.PLANT, findStand(level, pos));
 						}
-					} else if ((state.is(Blocks.DIRT) || state.is(Blocks.GRASS_BLOCK))
-							&& level.getBlockState(pos.above()).isAir()
-							&& distance < bestTillDistance) {
-						bestTillDistance = distance;
-						bestTill = new WorkTarget(pos, Action.TILL, findStand(level, pos));
+					} else if (state.is(Blocks.DIRT) || state.is(Blocks.GRASS_BLOCK)) {
+						if (waterHere) {
+							if (distance < bestHydratedTillDistance) {
+								bestHydratedTillDistance = distance;
+								bestHydratedTill = new WorkTarget(pos, Action.TILL, findStand(level, pos));
+							}
+						} else if (!require && distance < bestDryTillDistance) {
+							bestDryTillDistance = distance;
+							bestDryTill = new WorkTarget(pos, Action.TILL, findStand(level, pos));
+						}
 					}
 				}
 			}
@@ -361,13 +507,58 @@ public final class FarmerBrain {
 		if (bestCrop != null) {
 			return bestCrop;
 		}
-		if (bestHydrated != null) {
-			return bestHydrated;
+		if (bestFertilize != null) {
+			return bestFertilize;
 		}
-		if (bestDry != null) {
-			return bestDry;
+		if (bestHydratedPlant != null) {
+			return bestHydratedPlant;
 		}
-		return bestTill;
+		if (bestDryPlant != null) {
+			return bestDryPlant;
+		}
+		if (bestHydratedTill != null) {
+			return bestHydratedTill;
+		}
+		return bestDryTill;
+	}
+
+	private static String waterPolicy() {
+		String raw = LaborCraftConfig.get().farmer.waterPolicy;
+		if (raw == null) {
+			return "prefer";
+		}
+		String normalized = raw.toLowerCase(java.util.Locale.ROOT);
+		return switch (normalized) {
+			case "require", "ignore" -> normalized;
+			default -> "prefer";
+		};
+	}
+
+	private void warnDry(ServerLevel level) {
+		warn(level, "laborcraft.ui.worker.task.dry_soil");
+	}
+
+	private void warnNeedWater(ServerLevel level) {
+		warn(level, "laborcraft.ui.worker.task.need_water");
+	}
+
+	private void warn(ServerLevel level, String notice) {
+		long now = level.getGameTime();
+		if (now - lastWaterWarning < 20L * 60L) {
+			return;
+		}
+		lastWaterWarning = now;
+
+		ServerPlayer owner = worker.owner() == null
+				? null
+				: level.getServer().getPlayerList().getPlayer(worker.owner());
+		if (owner != null) {
+			owner.sendSystemMessage(Component.translatable(
+					"laborcraft.notification.worker",
+					worker.getName(),
+					Component.translatable(notice)
+			));
+		}
 	}
 
 	/**
@@ -442,6 +633,9 @@ public final class FarmerBrain {
 		BlockState state = level.getBlockState(target.pos());
 		return switch (target.action()) {
 			case HARVEST -> isMatureCrop(state);
+			case FERTILIZE -> state.getBlock() instanceof CropBlock crop
+					&& !crop.isMaxAge(state)
+					&& findItem(Items.BONE_MEAL) >= 0;
 			case PLANT -> state.is(Blocks.FARMLAND) && level.getBlockState(target.pos().above()).isAir();
 			case TILL -> (state.is(Blocks.DIRT) || state.is(Blocks.GRASS_BLOCK))
 					&& level.getBlockState(target.pos().above()).isAir();
@@ -475,7 +669,15 @@ public final class FarmerBrain {
 
 		Item seed = seedFor(state);
 		if (seed != null) {
-			int slot = findItem(seed);
+			BlockPos farmland = pos.below();
+			BlockState soil = level.getBlockState(farmland);
+			boolean hydrated = soil.is(Blocks.FARMLAND) && FarmerWater.isHydrated(level, farmland);
+			String policy = waterPolicy();
+			boolean canReplant = hydrated || !policy.equals("require");
+			if (!hydrated && policy.equals("prefer")) {
+				warnDry(level);
+			}
+			int slot = canReplant ? findItem(seed) : -1;
 			if (slot >= 0) {
 				worker.inventoryItem(slot).shrink(1);
 				level.setBlock(pos, ((CropBlock) state.getBlock()).getStateForAge(0), 3);
@@ -485,10 +687,124 @@ public final class FarmerBrain {
 		worker.addMastery(worker.jobId(), LaborCraftConfig.get().worker.masteryXpPerHarvest);
 	}
 
-	private void plant(ServerLevel level, BlockPos farmland) {
-		if (!level.getBlockState(farmland).is(Blocks.FARMLAND)
-				|| !level.getBlockState(farmland.above()).isAir()) {
+	private void fertilize(ServerLevel level, BlockPos pos) {
+		BlockState state = level.getBlockState(pos);
+		if (!(state.getBlock() instanceof CropBlock crop) || crop.isMaxAge(state)) {
 			return;
+		}
+
+		int slot = findItem(Items.BONE_MEAL);
+		if (slot < 0) {
+			return;
+		}
+
+		worker.inventoryItem(slot).shrink(1);
+		crop.growCrops(level, pos, state);
+	}
+
+	private BlockPos findComposter(ServerLevel level, StationRegistry.Station station) {
+		int radius = Math.max(4, LaborCraftConfig.get().area.maxRadius);
+		int vertical = Math.max(1, LaborCraftConfig.get().area.verticalRadius);
+		BlockPos center = station.pos();
+		BlockPos bestReady = null;
+		BlockPos bestInsert = null;
+		double bestReadyDistance = Double.MAX_VALUE;
+		double bestInsertDistance = Double.MAX_VALUE;
+
+		for (int x = center.getX() - radius; x <= center.getX() + radius; x++) {
+			for (int z = center.getZ() - radius; z <= center.getZ() + radius; z++) {
+				for (int y = center.getY() - vertical; y <= center.getY() + vertical; y++) {
+					BlockPos pos = new BlockPos(x, y, z);
+					if (!level.hasChunkAt(pos)) {
+						continue;
+					}
+
+					BlockState state = level.getBlockState(pos);
+					if (!state.is(Blocks.COMPOSTER)) {
+						continue;
+					}
+
+					int current = state.getValue(ComposterBlock.LEVEL);
+					if (current == ComposterBlock.MAX_LEVEL) {
+						// Full but not ready yet; the composter will finish on its own.
+						continue;
+					}
+
+					double distance = worker.position().distanceToSqr(Vec3.atCenterOf(pos));
+					if (current >= ComposterBlock.READY) {
+						if (distance < bestReadyDistance) {
+							bestReadyDistance = distance;
+							bestReady = pos.immutable();
+						}
+					} else if (distance < bestInsertDistance) {
+						bestInsertDistance = distance;
+						bestInsert = pos.immutable();
+					}
+				}
+			}
+		}
+		return bestReady != null ? bestReady : bestInsert;
+	}
+
+	private void compost(ServerLevel level, BlockPos pos) {
+		if (worker.position().distanceToSqr(Vec3.atCenterOf(pos)) > REACH_SQR) {
+			if (worker.getNavigation().isDone()) {
+				worker.getNavigation().moveTo(
+						pos.getX() + 0.5D,
+						pos.getY(),
+						pos.getZ() + 0.5D,
+						1.0D
+				);
+			}
+			return;
+		}
+
+		BlockState state = level.getBlockState(pos);
+		if (!state.is(Blocks.COMPOSTER)) {
+			return;
+		}
+
+		int current = state.getValue(ComposterBlock.LEVEL);
+		if (current >= ComposterBlock.READY) {
+			level.setBlock(pos, state.setValue(ComposterBlock.LEVEL, 0), 3);
+			ItemStack leftover = FarmerStorage.addToWorker(worker, new ItemStack(Items.BONE_MEAL));
+			if (!leftover.isEmpty()) {
+				Block.popResource(level, pos.above(), leftover);
+			}
+			return;
+		}
+		if (current >= ComposterBlock.MAX_LEVEL) {
+			return;
+		}
+
+		ItemStack seed = findSeedStack();
+		if (seed.isEmpty()) {
+			return;
+		}
+
+		ItemStack one = seed.copyWithCount(1);
+		BlockState next = ComposterBlock.insertItem(worker, state, level, one, pos);
+		if (one.isEmpty()) {
+			seed.shrink(1);
+			level.setBlock(pos, next, 3);
+		}
+	}
+
+	private void plant(ServerLevel level, BlockPos farmland) {
+		BlockState soil = level.getBlockState(farmland);
+		if (!soil.is(Blocks.FARMLAND) || !level.getBlockState(farmland.above()).isAir()) {
+			return;
+		}
+
+		String policy = waterPolicy();
+		if (!FarmerWater.isHydrated(level, farmland)) {
+			if (policy.equals("require")) {
+				warnNeedWater(level);
+				return;
+			}
+			if (policy.equals("prefer")) {
+				warnDry(level);
+			}
 		}
 
 		ItemStack seed = findSeedStack();
@@ -511,6 +827,17 @@ public final class FarmerBrain {
 		if ((!state.is(Blocks.DIRT) && !state.is(Blocks.GRASS_BLOCK))
 				|| !level.getBlockState(pos.above()).isAir()) {
 			return;
+		}
+
+		String policy = waterPolicy();
+		if (!FarmerWater.isHydrated(level, pos)) {
+			if (policy.equals("require")) {
+				warnNeedWater(level);
+				return;
+			}
+			if (policy.equals("prefer")) {
+				warnDry(level);
+			}
 		}
 
 		level.setBlock(pos, Blocks.FARMLAND.defaultBlockState(), 3);

@@ -128,10 +128,15 @@ Campos atuais de `config/laborcraft.json`:
     "workRadius": 4,
     "billingPeriodDays": 1,
     "useBoneMeal": true,
-    "useComposter": true
+    "useComposter": true,
+    "seedSurplusForCompost": 64,
+    "waterPolicy": "prefer"
   }
 }
 ```
+
+- `farmer.waterPolicy`: `prefer` (padrão) planta mesmo em terra seca e avisa uma vez por minuto; `require` só planta/ara com água, avisa e espera (retoma sozinho ao irrigar); `ignore` desliga a validação.
+- `farmer.seedSurplusForCompost`: com `useComposter`, quantas sementes ele guarda; o excedente vai para a composteira (e define o estoque mantido no depósito).
 
 `config/laborcraft-ledger.json` guarda os saldos do provedor interno (`UUID` → valor). Não edite com o servidor rodando.
 

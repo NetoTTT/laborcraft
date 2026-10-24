@@ -376,10 +376,12 @@
 	"laborcraft.notification.worker": "%s: %s",
 	"laborcraft.ui.station.action": "Trabalha apenas dentro da zona desenhada · Y-%s a Y+%s",
 	"laborcraft.ui.help.title": "Ajuda — Posto de Trabalho",
-	"laborcraft.ui.help.body": "A área de trabalho é a zona desenhada; o raio do posto é apenas o limite máximo e não faz o trabalhador agir. Sem zona, ele fica parado até você desenhar (ou usar \"Usar área máxima\"). Dentro da zona ele pode arar, plantar e colher, retirar sementes e depositar no baú vinculado. A mochila tem 9 slots + ferramenta; clique ou arraste para transferir e use o popup para a quantidade. O olho destaca baús e trabalhadores no mundo; o HUD aponta a direção quando estão fora da tela. Toda ação desta tela tem um comando equivalente.",
+	"laborcraft.ui.help.body": "A área de trabalho é a zona desenhada e é obrigatória; o raio do posto é apenas o limite máximo. Sem zona, ele fica parado até você desenhar (ou usar \"Usar área máxima\"). Dentro da zona ele pode arar, plantar e colher, retirar sementes e depositar no baú vinculado. A água é validada pela proximidade (4 blocos, 9x9, mesmo nível ou 1 acima): por padrão ele planta mesmo em terra seca e avisa; no modo require (config farmer.waterPolicy) ele só planta com água. Com bone meal ele acelera culturas; com composteira ele transforma o excesso de sementes em farinha. A mochila tem 9 slots + ferramenta; clique ou arraste para transferir e use o popup para a quantidade. O olho destaca baús e trabalhadores no mundo; o HUD aponta a direção quando estão fora da tela. Toda ação desta tela tem um comando equivalente.",
 	"laborcraft.ui.help.close": "Fechar ajuda",
 	"laborcraft.ui.help.tip": "Abrir a ajuda desta tela.",
 	"laborcraft.ui.station.map.max_area": "Usar área máxima",
 	"laborcraft.ui.station.map.max_area.tip": "Define a zona como o quadrado máximo permitido do posto.",
-	"laborcraft.ui.worker.task.need_zone": "Desenhe a área de trabalho no Posto para eu começar."
+	"laborcraft.ui.worker.task.need_zone": "Desenhe a área de trabalho no Posto para eu começar.",
+	"laborcraft.ui.worker.task.need_water": "Preciso de água na zona para plantar.",
+	"laborcraft.ui.worker.task.dry_soil": "Terra seca — irrigue para as plantas crescerem mais rápido."
 }
