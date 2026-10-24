@@ -1,0 +1,107 @@
+package com.foque.laborcraft.item;
+
+import com.foque.laborcraft.config.LaborCraftConfig;
+import com.foque.laborcraft.network.OpenStationPayload;
+import com.foque.laborcraft.worker.StationRegistry;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+
+/**
+ * Estaca de Demarcacao. Clique A, clique B e depois agachar + clique no Posto para aplicar a zona.
+ * E o caminho acessivel (e o fallback) do desenho de area que a UI do posto vai oferecer.
+ */
+public class SurveyStakeItem extends Item {
+	private static final Map<UUID, Selection> PENDING = new HashMap<>();
+
+	public SurveyStakeItem(Properties properties) {
+		super(properties);
+	}
+
+	@Override
+	public InteractionResult useOn(UseOnContext context) {
+		Level level = context.getLevel();
+		if (!(level instanceof ServerLevel serverLevel)) {
+			return InteractionResult.SUCCESS;
+		}
+
+		if (!(context.getPlayer() instanceof ServerPlayer player)) {
+			return InteractionResult.PASS;
+		}
+
+		BlockPos clicked = context.getClickedPos().immutable();
+		String dimension = serverLevel.dimension().identifier().toString();
+
+		if (player.isShiftKeyDown()) {
+			applyToStation(serverLevel, player, dimension, clicked);
+			return InteractionResult.SUCCESS_SERVER;
+		}
+
+		Selection selection = PENDING.get(player.getUUID());
+		if (selection == null || !selection.dimension().equals(dimension) || selection.to() != null) {
+			PENDING.put(player.getUUID(), new Selection(dimension, clicked, null));
+			player.sendSystemMessage(Component.translatable(
+					"laborcraft.stake.corner_a",
+					clicked.getX(),
+					clicked.getY(),
+					clicked.getZ()
+			));
+			return InteractionResult.SUCCESS_SERVER;
+		}
+
+		PENDING.put(player.getUUID(), new Selection(dimension, selection.from(), clicked));
+		int width = Math.abs(clicked.getX() - selection.from().getX()) + 1;
+		int depth = Math.abs(clicked.getZ() - selection.from().getZ()) + 1;
+		player.sendSystemMessage(Component.translatable("laborcraft.stake.corner_b", width, depth));
+		return InteractionResult.SUCCESS_SERVER;
+	}
+
+	private void applyToStation(ServerLevel level, ServerPlayer player, String dimension, BlockPos clicked) {
+		StationRegistry.Station station = StationRegistry.get(level.getServer(), dimension, clicked);
+		if (station == null) {
+			player.sendSystemMessage(Component.translatable("laborcraft.stake.not_station"));
+			return;
+		}
+
+		if (!station.isOwner(player.getUUID())) {
+			player.sendSystemMessage(Component.translatable("laborcraft.station.not_owner"));
+			return;
+		}
+
+		Selection selection = PENDING.get(player.getUUID());
+		if (selection == null || selection.to() == null || !selection.dimension().equals(dimension)) {
+			player.sendSystemMessage(Component.translatable("laborcraft.stake.need_corners"));
+			return;
+		}
+
+		String error = StationRegistry.validateZone(level.getServer(), station, selection.from(), selection.to());
+		if (error != null) {
+			player.sendSystemMessage(Component.translatable("laborcraft.station.zone.invalid." + error));
+			return;
+		}
+
+		int vertical = Math.max(1, LaborCraftConfig.get().area.verticalRadius);
+		BlockPos from = new BlockPos(selection.from().getX(), station.pos().getY() - vertical, selection.from().getZ());
+		BlockPos to = new BlockPos(selection.to().getX(), station.pos().getY() + vertical, selection.to().getZ());
+		StationRegistry.setZone(level.getServer(), station, from, to);
+		PENDING.remove(player.getUUID());
+
+		StationRegistry.Station updated = StationRegistry.get(level.getServer(), dimension, clicked);
+		OpenStationPayload.open(player, updated);
+
+		int width = Math.abs(to.getX() - from.getX()) + 1;
+		int depth = Math.abs(to.getZ() - from.getZ()) + 1;
+		player.sendSystemMessage(Component.translatable("laborcraft.stake.applied", width, depth));
+	}
+
+	public record Selection(String dimension, BlockPos from, BlockPos to) {
+	}
+}

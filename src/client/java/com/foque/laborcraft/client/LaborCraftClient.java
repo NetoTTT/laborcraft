@@ -1,6 +1,7 @@
 package com.foque.laborcraft.client;
 
 import com.foque.laborcraft.client.render.LaborCraftWorkerRenderer;
+import com.foque.laborcraft.client.render.StationPreviewManager;
 import com.foque.laborcraft.client.ui.chat.LcValuePrompt;
 import com.foque.laborcraft.client.ui.screen.LaborCraftAdminScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftConfigScreen;
@@ -22,6 +23,7 @@ import com.foque.laborcraft.network.OpenStationPayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.network.SetLanguagePayload;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -35,7 +37,11 @@ public class LaborCraftClient implements ClientModInitializer {
 		ClientSendMessageEvents.ALLOW_CHAT.register(LcValuePrompt::allowChat);
 		ClientSendMessageEvents.ALLOW_COMMAND.register(LcValuePrompt::allowCommand);
 		ClientSendMessageEvents.CHAT_CANCELED.register(LcValuePrompt::chatCanceled);
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> LcValuePrompt.cancelActive());
+		ClientTickEvents.END_CLIENT_TICK.register(StationPreviewManager::tick);
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			LcValuePrompt.cancelActive();
+			StationPreviewManager.resetAll();
+		});
 
 		ClientPlayNetworking.registerGlobalReceiver(OpenAdminPayload.TYPE, (payload, context) -> {
 			Minecraft client = context.client();

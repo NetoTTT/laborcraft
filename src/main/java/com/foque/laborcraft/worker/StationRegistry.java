@@ -1,6 +1,7 @@
 package com.foque.laborcraft.worker;
 
 import com.foque.laborcraft.LaborCraft;
+import com.foque.laborcraft.config.LaborCraftConfig;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.IOException;
@@ -132,6 +133,84 @@ public final class StationRegistry {
 		registry.replace(claimed);
 		registry.save();
 		return claimed;
+	}
+
+	/** Valida uma zona e devolve o motivo da recusa (chave curta) ou {@code null} se estiver ok. */
+	public static String validateZone(MinecraftServer server, Station station, BlockPos from, BlockPos to) {
+		int width = Math.abs(to.getX() - from.getX()) + 1;
+		int depth = Math.abs(to.getZ() - from.getZ()) + 1;
+		int maxSize = 32;
+		if (width > maxSize || depth > maxSize) {
+			return "too_large";
+		}
+
+		int maxRadius = Math.max(4, LaborCraftConfig.get().area.maxRadius);
+		if (Math.abs(from.getX() - station.pos().getX()) > maxRadius
+				|| Math.abs(from.getZ() - station.pos().getZ()) > maxRadius
+				|| Math.abs(to.getX() - station.pos().getX()) > maxRadius
+				|| Math.abs(to.getZ() - station.pos().getZ()) > maxRadius) {
+			return "too_far";
+		}
+
+		List<Station> all = load(server).stations;
+		for (Station other : all) {
+			if (other.pos().equals(station.pos()) || !other.dimension().equals(station.dimension())) {
+				continue;
+			}
+			if (insideHorizontal(from, to, other.pos())) {
+				return "overlap";
+			}
+		}
+
+		BlockPos min = new BlockPos(
+				Math.min(from.getX(), to.getX()),
+				Math.min(from.getY(), to.getY()),
+				Math.min(from.getZ(), to.getZ())
+		);
+		BlockPos max = new BlockPos(
+				Math.max(from.getX(), to.getX()),
+				Math.max(from.getY(), to.getY()),
+				Math.max(from.getZ(), to.getZ())
+		);
+		Station candidate = station.withZones(List.of(new Zone(min, max))).withMode(StationMode.ZONES);
+		if (!StationAreas.hasEffectiveCells(candidate, all, maxRadius)) {
+			return "overlap";
+		}
+
+		return null;
+	}
+
+	public static String validateNewPlacement(MinecraftServer server, String dimension, BlockPos pos) {
+		int maxRadius = Math.max(4, LaborCraftConfig.get().area.maxRadius);
+		List<Station> all = load(server).stations;
+		for (Station other : all) {
+			if (!other.dimension().equals(dimension) || other.pos().equals(pos)) {
+				continue;
+			}
+			if (StationAreas.isEffective(other, all, maxRadius, pos.getX(), pos.getZ())) {
+				return "occupied";
+			}
+		}
+		return null;
+	}
+
+	public static String validateClaim(MinecraftServer server, Station station) {
+		int maxRadius = Math.max(4, LaborCraftConfig.get().area.maxRadius);
+		List<Station> all = load(server).stations;
+		if (StationAreas.centerOwnedByOther(station, all, maxRadius)) {
+			return "occupied";
+		}
+		if (!StationAreas.hasEffectiveCells(station, all, maxRadius)) {
+			return "occupied";
+		}
+		return null;
+	}
+
+	private static boolean insideHorizontal(BlockPos from, BlockPos to, BlockPos pos) {
+		return pos.getX() >= Math.min(from.getX(), to.getX())
+				&& pos.getX() <= Math.max(from.getX(), to.getX())
+				&& pos.getZ() >= Math.min(from.getZ(), to.getZ())
+				&& pos.getZ() <= Math.max(from.getZ(), to.getZ());
 	}
 
 	public static void setMode(MinecraftServer server, Station station, StationMode mode) {		StationRegistry registry = load(server);

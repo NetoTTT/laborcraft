@@ -72,6 +72,8 @@ public final class LaborCraftCommands {
 	public static final String STATION_UNBIND = STATION + " unbind";
 	public static final String STATION_RECALL = STATION + " recall";
 	public static final String STATION_RESUME = STATION + " resume";
+	public static final String STATION_ZONE_SET = STATION + " zone set";
+	public static final String STATION_ZONE_CLEAR = STATION + " zone clear";
 	public static final String LANGUAGE = "laborcraft language";
 	public static final String LANGUAGE_PT_BR = LANGUAGE + " pt_br";
 	public static final String LANGUAGE_EN_US = LANGUAGE + " en_us";
@@ -191,7 +193,24 @@ public final class LaborCraftCommands {
 												.executes(context -> stationInfo(
 														context.getSource(),
 														BlockPosArgument.getLoadedBlockPos(context, "pos")
-												)))))
+												))))
+								.then(Commands.literal("zone")
+									.then(Commands.literal("set")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+											.then(Commands.argument("from", BlockPosArgument.blockPos())
+												.then(Commands.argument("to", BlockPosArgument.blockPos())
+													.executes(context -> stationZoneSet(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos"),
+														BlockPosArgument.getLoadedBlockPos(context, "from"),
+														BlockPosArgument.getLoadedBlockPos(context, "to")
+													))))))
+									.then(Commands.literal("clear")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+											.executes(context -> stationZoneClear(
+												context.getSource(),
+												BlockPosArgument.getLoadedBlockPos(context, "pos")
+											))))))
 						.then(Commands.literal("home")
 								.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
 								.then(Commands.literal("scan")
@@ -716,6 +735,64 @@ public final class LaborCraftCommands {
 		OpenStationPayload.open(player, station);
 		source.sendSuccess(
 				() -> Component.translatable("laborcraft.station.resumed", worker.getName()),
+				false
+		);
+		return 1;
+	}
+
+	private static int stationZoneClear(CommandSourceStack source, BlockPos pos)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+		if (!station.hasZone()) {
+			source.sendFailure(Component.translatable("laborcraft.station.zone.none"));
+			return 0;
+		}
+
+		StationRegistry.clearZone(source.getServer(), station);
+		OpenStationPayload.open(player, stationAt(source, pos));
+		source.sendSuccess(() -> Component.translatable("laborcraft.station.zone.cleared"), false);
+		return 1;
+	}
+
+	private static int stationZoneSet(CommandSourceStack source, BlockPos pos, BlockPos from, BlockPos to)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		String error = StationRegistry.validateZone(source.getServer(), station, from, to);
+		if (error != null) {
+			source.sendFailure(Component.translatable("laborcraft.station.zone.invalid." + error));
+			return 0;
+		}
+
+		int vertical = Math.max(1, LaborCraftConfig.get().area.verticalRadius);
+		BlockPos zoneFrom = new BlockPos(from.getX(), station.pos().getY() - vertical, from.getZ());
+		BlockPos zoneTo = new BlockPos(to.getX(), station.pos().getY() + vertical, to.getZ());
+		StationRegistry.setZone(source.getServer(), station, zoneFrom, zoneTo);
+		OpenStationPayload.open(player, stationAt(source, pos));
+		source.sendSuccess(
+				() -> Component.translatable(
+						"laborcraft.stake.applied",
+						Math.abs(to.getX() - from.getX()) + 1,
+						Math.abs(to.getZ() - from.getZ()) + 1
+				),
 				false
 		);
 		return 1;

@@ -53,6 +53,15 @@ public final class LaborCraftItems {
 			.setId(HOUSE_PLAN_KEY)
 			.stacksTo(1));
 
+	public static final ResourceKey<Item> SURVEY_STAKE_KEY = ResourceKey.create(
+			Registries.ITEM,
+			LaborCraft.id("survey_stake")
+	);
+
+	public static final Item SURVEY_STAKE = new SurveyStakeItem(new Item.Properties()
+			.setId(SURVEY_STAKE_KEY)
+			.stacksTo(1));
+
 	private LaborCraftItems() {
 	}
 
@@ -80,5 +89,6 @@ public final class LaborCraftItems {
 	public static void bootstrap() {
 		Registry.register(BuiltInRegistries.ITEM, LaborCraft.id("worker_contract"), WORKER_CONTRACT);
 		Registry.register(BuiltInRegistries.ITEM, LaborCraft.id("house_plan"), HOUSE_PLAN);
+		Registry.register(BuiltInRegistries.ITEM, LaborCraft.id("survey_stake"), SURVEY_STAKE);
 	}
 }

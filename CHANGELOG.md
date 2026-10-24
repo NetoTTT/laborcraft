@@ -3,6 +3,35 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.1.0-alpha.2] — 2026-10-23
+
+Zona de trabalho desenhada no mapa, prioridade e recorte entre postos, e visualização da área no mundo.
+Casa e IA do fazendeiro continuam pausadas.
+
+Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
+
+### Adicionado
+
+- Mapa interativo da área no Posto (`LcAreaMap`): recorte do mundo visto de cima com relevo, grade de chunk e zoom 1–4 px/bloco; arraste define o retângulo, com limite de 32x32 e status ao vivo.
+- Aba Config do Posto em modo leitura: área efetiva em âmbar, outros postos em azul, raio livre tracejado e invasão da seleção em vermelho apenas nas células em conflito.
+- Botões **Desenhar área**, **Confirmar**, **Cancelar**, **Visualizar** e **Limpar zona**; o botão compacto **Visualizar área** reaproveita a zona já confirmada.
+- Pré-visualização no mundo por 10 s com partículas na borda efetiva e contador acima da hotbar.
+- `StationAreas`: área efetiva por célula, prioridade pelo Posto mais antigo, recorte de borda e exclusão do bloco de postos vizinhos.
+- Item **Estaca de Demarcação** (`laborcraft:survey_stake`): canto A, canto B e agachar + clique no Posto, como alternativa acessível ao mapa.
+- Comandos `station zone set` e `station zone clear`; validação no servidor (dono, 32x32, distância, sobreposição, bloco de outro posto).
+- `WorkstationBlockItem` recusa colocar o Posto dentro da área efetiva de outro Posto ou onde o centro já pertence a ele.
+- Payload `open_station` agora envia área efetiva, áreas vizinhas e postos próximos para o mapa.
+
+### Corrigido
+
+- `/laborcraft station zone clear` não existia: o nó `clear` estava aninhado em `zone set` por um parêntese errado.
+- O botão **Visualizar** sobrepunha o **Fechar** na aba Config; a ação foi movida para o topo da caixa.
+
+### Alterado
+
+- O mapa é gerado em `DynamicTexture`/`NativeImage` (um blit por frame) e redesenhado a cada 5 s ou ao mudar o zoom.
+- O mapa é cliente-only e usa só os chunks carregados; colunas fora deles aparecem como `?`.
+
 ## [0.1.0-alpha.1] — 2026-10-23
 
 Primeira release alpha pública: mercado de trabalho do servidor, contrato v2 com rank/raridade/boosts,

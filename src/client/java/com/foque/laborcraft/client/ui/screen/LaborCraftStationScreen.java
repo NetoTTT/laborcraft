@@ -1,16 +1,21 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.render.StationPreviewManager;
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
 import com.foque.laborcraft.client.ui.LcRender;
 import com.foque.laborcraft.client.ui.LcTheme;
 import com.foque.laborcraft.client.ui.LcTooltips;
 import com.foque.laborcraft.client.ui.LcWorkerText;
 import com.foque.laborcraft.client.ui.widget.LcButton;
+
 import com.foque.laborcraft.client.ui.widget.LcScrollList;
+import com.foque.laborcraft.client.ui.widget.LcAreaMap;
 import com.foque.laborcraft.command.LaborCraftCommands;
 import com.foque.laborcraft.network.OpenStationPayload;
 import java.util.Locale;
+import net.minecraft.core.BlockPos;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -29,10 +34,18 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 	private int selectedIndex = -1;
 	private LcButton primary;
 	private LcButton secondary;
+	private boolean mapOpen;
+	private LcAreaMap areaMap;
+	private LcButton confirmMapButton;
+	private LcButton previewMapButton;
 
 	public LaborCraftStationScreen(OpenStationPayload station) {
 		super(Component.translatable("laborcraft.ui.station.title"), 460, 360);
 		this.station = station;
+		if (StationPreviewManager.hasDraft(station.pos())) {
+			this.tab = Tab.CONFIG;
+			this.mapOpen = true;
+		}
 	}
 
 	@Override
@@ -110,6 +123,196 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		LcButton close = new LcButton(x + width - 96, buttonsY, 96, 24,
 				Component.translatable("laborcraft.ui.worker.close"), LcButton.Variant.GHOST, this::onClose);
 		addRenderableWidget(close);
+
+		if (mapOpen) {
+			StationPreviewManager.Draft draft = StationPreviewManager.getDraft(station.pos());
+			BlockPos savedFrom = station.zone() == null ? null : station.zone().from();
+			BlockPos savedTo = station.zone() == null ? null : station.zone().to();
+			BlockPos selectionFrom;
+			BlockPos selectionTo;
+			if (draft != null) {
+				selectionFrom = draft.from();
+				selectionTo = draft.to();
+			} else {
+				selectionFrom = savedFrom == null ? null : atStationY(savedFrom);
+				selectionTo = savedTo == null ? null : atStationY(savedTo);
+			}
+			areaMap = createAreaMap(x, width, selectionFrom, selectionTo, false);
+			addRenderableWidget(areaMap);
+			confirmMapButton = new LcButton(x, buttonsY, 100, 24,
+					Component.translatable("laborcraft.ui.station.map.confirm"), LcButton.Variant.PRIMARY, this::confirmZone);
+			confirmMapButton.active = areaMap.selectionFitsLimit();
+			addRenderableWidget(confirmMapButton);
+			LcButton cancel = new LcButton(x + 106, buttonsY, 90, 24,
+					Component.translatable("laborcraft.ui.station.map.cancel"), LcButton.Variant.GHOST, this::cancelMap);
+			addRenderableWidget(cancel);
+			previewMapButton = new LcButton(x + 202, buttonsY, 100, 24,
+					Component.translatable("laborcraft.ui.station.map.preview"), LcButton.Variant.GHOST, this::previewZone);
+			previewMapButton.active = areaMap.selectionFitsLimit();
+			addRenderableWidget(previewMapButton);
+		} else {
+			areaMap = createAreaMap(x, width, null, null, true);
+			addRenderableWidget(areaMap);
+
+			// Compact action in the box header; the bottom row stays for Draw / Clear / Close.
+			LcButton preview = new LcButton(x + width - 118, panelY + 102, 106, 20,
+					Component.translatable("laborcraft.ui.station.map.preview_saved"), LcButton.Variant.GHOST,
+					this::previewSavedZone);
+			preview.active = !station.ownAreas().isEmpty();
+			addRenderableWidget(preview);
+
+			LcButton draw = new LcButton(x, buttonsY, 132, 24,
+					Component.translatable("laborcraft.ui.station.map.draw"), LcButton.Variant.PRIMARY, this::openMap);
+			addRenderableWidget(draw);
+			if (station.zone() != null) {
+				LcButton clear = new LcButton(x + 140, buttonsY, 128, 24,
+						Component.translatable("laborcraft.ui.station.map.clear"), LcButton.Variant.DANGER,
+						this::clearZone);
+				addRenderableWidget(clear);
+			}
+		}
+	}
+
+	private LcAreaMap createAreaMap(int x, int width, BlockPos selectionFrom, BlockPos selectionTo, boolean readOnly) {
+		BlockPos savedFrom = station.zone() == null ? null : station.zone().from();
+		BlockPos savedTo = station.zone() == null ? null : station.zone().to();
+		return new LcAreaMap(
+				x + 12,
+				panelY + 132,
+				width - 24,
+				120,
+				station.pos(),
+				station.maxRadius(),
+				selectionFrom,
+				selectionTo,
+				savedFrom,
+				savedTo,
+				station.bound() != null ? station.bound().id() : null,
+				station.bound() != null ? station.bound().name() : null,
+				station.ownAreas(),
+				station.areas(),
+				readOnly
+		);
+	}
+
+	private BlockPos atStationY(BlockPos pos) {
+		return new BlockPos(pos.getX(), station.pos().getY(), pos.getZ());
+	}
+
+	@Override
+	protected void clearWidgets() {
+		if (areaMap != null) {
+			areaMap.close();
+			areaMap = null;
+		}
+		super.clearWidgets();
+	}
+
+	@Override
+	public void removed() {
+		if (areaMap != null) {
+			areaMap.close();
+			areaMap = null;
+		}
+		super.removed();
+	}
+
+	@Override
+	public void onClose() {
+		if (areaMap != null) {
+			areaMap.close();
+			areaMap = null;
+		}
+		super.onClose();
+	}
+
+	private void openMap() {
+		mapOpen = true;
+		clearWidgets();
+		init();
+	}
+
+	private void cancelMap() {
+		StationPreviewManager.clear(station.pos());
+		mapOpen = false;
+		clearWidgets();
+		init();
+	}
+
+	private void confirmZone() {
+		if (areaMap == null || !areaMap.selectionFitsLimit()) {
+			return;
+		}
+		BlockPos from = areaMap.from();
+		BlockPos to = areaMap.to();
+		String command = LaborCraftCommands.STATION_ZONE_SET + " " + posString()
+				+ " " + coordinates(from) + " " + coordinates(to);
+		LaborCraftUiActions.run(command);
+		StationPreviewManager.clear(station.pos());
+	}
+
+	private void previewZone() {
+		if (areaMap == null || !areaMap.selectionFitsLimit()) {
+			return;
+		}
+		BlockPos from = areaMap.from();
+		BlockPos to = areaMap.to();
+		StationPreviewManager.startPreview(
+				station.pos(),
+				from,
+				to,
+				station.verticalRadius(),
+				station.areas(),
+				station.otherPosts()
+		);
+		this.onClose();
+	}
+
+	private void previewSavedZone() {
+		StationPreviewManager.startSavedPreview(
+				station.pos(),
+				station.ownAreas(),
+				station.verticalRadius()
+		);
+		this.onClose();
+	}
+
+	private void clearZone() {
+		LaborCraftUiActions.run(LaborCraftCommands.STATION_ZONE_CLEAR + " " + posString());
+	}
+
+	private void updateMapButton() {
+		if (confirmMapButton != null && areaMap != null) {
+			confirmMapButton.active = areaMap.selectionFitsLimit();
+		}
+		if (previewMapButton != null && areaMap != null) {
+			previewMapButton.active = areaMap.selectionFitsLimit();
+		}
+	}
+
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		boolean handled = super.mouseClicked(event, doubleClick);
+		updateMapButton();
+		return handled;
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+		boolean handled = super.mouseDragged(event, deltaX, deltaY);
+		updateMapButton();
+		return handled;
+	}
+
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		boolean handled = super.mouseReleased(event);
+		updateMapButton();
+		return handled;
+	}
+
+	private static String coordinates(BlockPos pos) {
+		return pos.getX() + " " + pos.getY() + " " + pos.getZ();
 	}
 
 	private void updateButtons() {
@@ -232,11 +435,12 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		int cardWidth = width - 222;
 
 		if (station.workers().isEmpty()) {
-			graphics.centeredText(
+			graphics.textWithWordWrap(
 					font,
 					Component.translatable("laborcraft.ui.station.workers.empty"),
-					x + 104,
-					panelY + 180,
+					x + 10,
+					panelY + 168,
+					188,
 					LcTheme.MUTED
 			);
 		}
@@ -288,28 +492,49 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		graphics.fill(x, boxY, x + width, boxY + 190, 0x401B232D);
 		LcRender.border(graphics, x, boxY, width, 190, LcTheme.DIVIDER);
 
-		graphics.text(font, Component.translatable("laborcraft.ui.station.mode"), x + 12, boxY + 12, LcTheme.MUTED);
-		Component mode = station.zone() == null
-				? Component.translatable("laborcraft.ui.station.mode.free")
-				: Component.translatable("laborcraft.ui.station.mode.zone", station.zone().width(), station.zone().depth());
-		graphics.text(font, mode, x + 12, boxY + 28, LcTheme.TITLE);
+		if (mapOpen) {
+			graphics.text(font, Component.translatable("laborcraft.ui.station.map.title"),
+					x + 12, boxY + 8, LcTheme.TITLE);
+			graphics.text(font, Component.translatable("laborcraft.ui.station.map.hint"),
+					x + 12, boxY + 22, LcTheme.MUTED);
 
-		graphics.textWithWordWrap(
-				font,
-				Component.translatable("laborcraft.ui.station.config.soon"),
-				x + 12,
-				boxY + 52,
-				width - 24,
-				LcTheme.MUTED
-		);
+			if (areaMap != null) {
+				if (areaMap.hasSelection()) {
+					int blocks = areaMap.selectionWidth() * areaMap.selectionDepth();
+					int color = areaMap.selectionFitsLimit() ? LcTheme.ACCENT : LcTheme.DANGER;
+					graphics.text(font, Component.translatable(
+							"laborcraft.ui.station.map.size",
+							areaMap.selectionWidth(), areaMap.selectionDepth(), blocks,
+							station.pos().getY() - station.verticalRadius(),
+							station.pos().getY() + station.verticalRadius()
+					), x + 12, boxY + 162, color);
+				} else {
+					graphics.text(font, Component.translatable("laborcraft.ui.station.map.no_selection"),
+							x + 12, boxY + 162, LcTheme.MUTED);
+				}
+				if (confirmMapButton != null) {
+					confirmMapButton.active = areaMap.selectionFitsLimit();
+				}
+				if (previewMapButton != null) {
+					previewMapButton.active = areaMap.selectionFitsLimit();
+				}
+			}
 
-		graphics.text(
-				font,
-				Component.translatable("laborcraft.ui.station.config.commands"),
-				x + 12,
-				boxY + 84,
-				LcTheme.MUTED
-		);
+			graphics.text(font, Component.translatable("laborcraft.ui.station.map.legend"),
+					x + 12, boxY + 176, LcTheme.MUTED);
+		} else {
+			graphics.text(font, Component.translatable("laborcraft.ui.station.mode"), x + 12, boxY + 8, LcTheme.MUTED);
+			int diameter = station.maxRadius() * 2 + 1;
+			Component mode = station.zone() == null
+					? Component.translatable("laborcraft.ui.station.mode.free_radius", diameter, diameter)
+					: Component.translatable("laborcraft.ui.station.mode.zone", station.zone().width(), station.zone().depth());
+			graphics.text(font, mode, x + 12, boxY + 22, LcTheme.TITLE);
+
+			graphics.text(font, Component.translatable("laborcraft.ui.station.config.vertical",
+					station.verticalRadius()), x + 12, boxY + 162, LcTheme.MUTED);
+			graphics.text(font, Component.translatable("laborcraft.ui.station.map.legend"),
+					x + 12, boxY + 176, LcTheme.MUTED);
+		}
 	}
 
 	private void drawWorker(

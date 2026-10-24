@@ -180,7 +180,7 @@ Interagir com o posto abre `LaborCraftStationScreen` (mesmo tamanho das outras, 
 - No modo livre: mostra o raio efetivo (tier/maestria) e o que ele cobre. Sem botão de “aumentar” por enquanto.
 - No modo zona: lista as zonas (hoje 1) com tamanho e botão **Desenhar área**.
 - **Baú de saída**: mostra o baú detectado ao redor do posto (ou “nenhum”) e um botão **Detectar**.
-- **Preview**: liga/desliga as partículas da área.
+- **Visualizar**: fecha a tela e mostra a borda efetiva recortada com partículas por 10 s; um contador fica logo acima da hotbar. Também existe um botão compacto **Visualizar área** no topo da caixa da aba Config para rever a área já confirmada, sem reabrir o desenho.
 
 ### Mapa de seleção (`LcAreaMap`)
 
@@ -188,8 +188,10 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
 
 - Recorte do mundo visto de cima, centrado no posto (padrão ±48 blocos), 1–4 px por bloco (scroll = zoom).
 - **Arrastar com o mouse** define o retângulo; a barra mostra `12x4 · 48 blocos` e o limite máximo.
-- Botões: **Confirmar** (envia `station zone set`), **Cancelar**, **Visualizar** (fecha a UI e marca a área com partículas por ~10 s).
+- Botões: **Confirmar** (envia `station zone set`), **Cancelar**, **Visualizar** (fecha a UI e marca a área com partículas por 10 s, com contador acima da hotbar).
 - Colunas fora dos chunks carregados aparecem como “?” e não podem ser selecionadas.
+
+- Na aba Config sem abrir o desenho, o mapa aparece em modo leitura: área efetiva em âmbar; sem zona, o raio livre recortado; outros postos próximos em azul; parte da seleção que invade outro Posto em vermelho. No desenho, só as células em conflito ficam vermelhas: o resto da seleção continua na cor normal porque ainda pode ser usado.
 
 **Como o mapa é desenhado (e por que funciona no cliente):**
 
@@ -199,7 +201,7 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
   posto, a área que interessa está carregada. (O JourneyMap mostra áreas exploradas porque lê os arquivos de
   região do mundo — isso funciona em single-player; em servidor multiplayer ele depende de dados próprios.
   Não vamos por esse caminho.)
-- Cache por chunk; redesenha só o recorte visível e só quando algo muda (bloco alterado ou a cada N segundos).
+- Textura dinâmica gerada a partir do heightmap, redesenhada a cada 5 s ou quando o zoom muda; um único blit por frame.
 - **Y da zona** = Y do posto ± `area.verticalRadius` (mostrado como “de Y-2 a Y+2”). Não precisa desenhar em 3D;
   fazenda em andares pode ganhar seletor de Y depois.
 
@@ -214,7 +216,9 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
 
 - Só o **dono** do posto configura.
 - Zona máxima 32x32 na horizontal, dentro de `area.maxRadius` do posto, volume limitado.
-- Não pode sobrepor zona/posto de outro jogador (primeiro que registra leva).
+- A área efetiva é recortada pelas áreas mais antigas; o Posto mais antigo vence. O mapa desenha a máscara recortada e mantém o retângulo original tracejado.
+- Zona desenhada não pode conter o bloco de outro Posto; raio livre pode encostar, mas o bloco do Posto vizinho fica excluído da área efetiva.
+- Colocar ou reivindicar um Posto cujo centro já pertence à área efetiva de outro Posto é recusado.
 - Zona recusada = mensagem clara no chat, sem alterar nada.
 
 ## 11. Status da implementação
@@ -225,14 +229,24 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
 | Posto registra dono ao ser colocado; posto sem dono é reivindicado no primeiro uso | ✅ |
 | Interagir com o posto abre a tela (payload `open_station`) | ✅ |
 | Aba Trabalho: lista de empregados, vaga do posto, vincular/desvincular/chamar/retomar | ✅ |
-| Aba Config: modo de área (livre/zona) e tamanho da zona | ✅ (leitura) |
+| Aba Config: modo, mapa interativo, seleção por arraste, zoom, pré-visualização e confirmação da zona | ✅ |
+| Aba Config: mapa read-only com área efetiva, outros postos próximos e destaque de invasão | ✅ |
+| Aba Config: **Visualizar área** da zona confirmada, 10 s com contador acima da hotbar | ✅ |
+| `StationAreas`: área efetiva por células, prioridade pelo Posto mais antigo, recorte de borda | ✅ |
 | Comandos `station bind/unbind/recall/pause/resume/open/info` | ✅ |
-| Desenho da zona (estaca e mapa) | ⏳ próxima etapa |
+| Desenho da zona (mapa interativo e estaca como alternativa) | ✅ |
+| Remover zona e voltar ao raio livre (`station zone clear`) | ✅ |
 | Baú de saída e insumos | ⏳ |
 | IA do fazendeiro (SCAN/MOVE/WORK/DEPOSIT) | ⏳ |
 
 O que já dá para testar em jogo: colocar o posto, abrir a tela, vincular um empregado, chamar/retomar e ver
-o estado na tela. O vínculo já aparece no `/laborcraft station info`.
+o estado na tela. Para desenhar uma área, abra a aba Config e clique em **Desenhar área**. O mapa abre
+com zoom ajustado ao limite do posto; arraste para selecionar e use o scroll para ajustar o zoom.
+**Visualizar** fecha a tela e mostra a área no mundo por 10 s (contador acima da hotbar); reabra o posto para **Confirmar** ou
+**Cancelar**. **Confirmar** salva a zona pelo comando validado no servidor. A Estaca de Demarcação continua
+como alternativa. O comando
+`/laborcraft station zone clear <x> <y> <z>` remove a zona e restaura o raio livre. Chunks descarregados ficam
+marcados com `?`. Na aba Config, sem abrir o desenho, o mapa já mostra a área efetiva em âmbar, o raio livre recortado quando não há zona, outros postos próximos em azul e a parte da seleção que invade outro Posto em vermelho.
 
 ## 12. Impacto no que já existe
 

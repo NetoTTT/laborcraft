@@ -78,6 +78,13 @@ public class WorkstationBlock extends Block {
 		);
 
 		if (station.owner() == null) {
+			String error = StationRegistry.validateClaim(serverLevel.getServer(), station);
+			if (error != null) {
+				serverPlayer.sendSystemMessage(
+						Component.translatable("laborcraft.station.claim." + error)
+				);
+				return InteractionResult.SUCCESS_SERVER;
+			}
 			station = StationRegistry.claim(serverLevel.getServer(), station, serverPlayer.getUUID());
 		}
 

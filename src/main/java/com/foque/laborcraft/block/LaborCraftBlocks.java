@@ -5,7 +5,6 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -28,7 +27,7 @@ public final class LaborCraftBlocks {
 			.strength(2.5F)
 			.sound(SoundType.WOOD));
 
-	public static final Item WORKSTATION_ITEM = new BlockItem(
+	public static final Item WORKSTATION_ITEM = new WorkstationBlockItem(
 			WORKSTATION,
 			new Item.Properties().setId(WORKSTATION_ITEM_KEY).useBlockDescriptionPrefix()
 	);
