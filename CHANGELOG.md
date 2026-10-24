@@ -3,6 +3,34 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.1.0-alpha.5] — 2026-10-24
+
+Mochila do trabalhador com transferência estilo baú, quantidade e validação de ferramenta; comandos
+divididos em módulos. Primeira arte pixel art própria do Posto, Planta de Casa, Estaca e Contrato.
+
+Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
+
+### Adicionado
+
+- Mochila do trabalhador: 9 slots gerais + 1 de ferramenta persistidos na entidade.
+- Tela **Mochila** com inventário do jogador à esquerda e mochila à direita; clique em um slot e depois no outro (ou arraste) para mover/trocar, com tooltip e barra de durabilidade.
+- Popup de quantidade para pilhas com mais de 1: campo editável com cursor piscando, **Tudo**, **Confirmar** e **Cancelar**.
+- Validação de ferramenta por cargo (`JobEquipment`): o fazendeiro aceita apenas enxada; o slot mostra o tipo aceito e recusa o resto na tela e no servidor.
+- Base para layouts por cargo no futuro (o payload leva o `jobId`): segurança com armadura, minerador com picareta etc.
+- Comandos `worker open` e `worker inv open|take|give|swap|deposit|withdraw <trabalhador> ...`, equivalentes às ações da tela.
+- **Voltar** na mochila reabre a tela do Empregado; o X fecha.
+- Texturas pixel art próprias: Posto de Trabalho (topo/lateral/frente/baixo), Planta de Casa, Estaca de Demarcação e Contrato de Trabalhador.
+
+### Alterado
+
+- Comandos divididos em módulos (`WorkerCommands`, `StationCommands`, `HomeCommands`, `AdminCommands`, `UiCommands`, `LanguageCommands`) com `CommandSupport` para helpers; `LaborCraftCommands` ficou só com o registro e os IDs usados pela UI.
+
+### Corrigido
+
+- Campo de quantidade não aceitava dígitos no 26.3: as teclas são scancodes SDL e os dígitos não formam um intervalo contínuo (0=39, 1..9=30..38); o mapeamento agora é explícito, incluindo o teclado numérico.
+- Aviso de ferramenta inválida/slot cheio ficava atrás do blur da tela; agora aparece numa faixa dentro da própria UI.
+- Texto da dica da mochila era cortado; a caixa calcula a altura pelo texto quebrado e o painel cresceu.
+
 ## [0.1.0-alpha.3] — 2026-10-24
 
 Armazenamento do Posto (aba **Baús**) e melhoria do mapa com camadas de superfície/subsolo.

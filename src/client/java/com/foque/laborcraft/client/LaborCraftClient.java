@@ -14,6 +14,7 @@ import com.foque.laborcraft.client.ui.screen.LaborCraftItemTestScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftPlayersScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftProfileScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftStationScreen;
+import com.foque.laborcraft.client.ui.screen.LaborCraftWorkerInventoryScreen;
 import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.network.OpenConfigPayload;
@@ -23,6 +24,7 @@ import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.network.OpenPlayersPayload;
 import com.foque.laborcraft.network.OpenProfilePayload;
 import com.foque.laborcraft.network.OpenStationPayload;
+import com.foque.laborcraft.network.OpenWorkerInventoryPayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.network.SetLanguagePayload;
 import net.fabricmc.api.ClientModInitializer;
@@ -134,6 +136,19 @@ public class LaborCraftClient implements ClientModInitializer {
 					storage = open.activeStorage();
 				}
 				client.setScreenAndShow(new LaborCraftStationScreen(payload, tab, storage));
+			});
+		});
+
+		ClientPlayNetworking.registerGlobalReceiver(OpenWorkerInventoryPayload.TYPE, (payload, context) -> {
+			Minecraft client = context.client();
+			client.execute(() -> {
+				LcValuePrompt.cancelActive();
+				if (client.gui.screen() instanceof LaborCraftWorkerInventoryScreen open
+						&& open.workerId().equals(payload.workerId())) {
+					open.update(payload);
+					return;
+				}
+				client.setScreenAndShow(new LaborCraftWorkerInventoryScreen(payload));
 			});
 		});
 	}

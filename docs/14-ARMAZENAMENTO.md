@@ -96,9 +96,25 @@ O cargo declara o que conhece:
 
 ## 5. Mochila e ferramentas
 
-- 9 slots + 1 ferramenta; persistidos com `ItemStack.CODEC` na entidade.
-- Tela do Empregado ganha a seção **Mochila** com grade, transferência por clique e tooltip.
-- Comandos equivalentes: `worker inv give|take <slot> [quantidade]`.
+- 9 slots + 1 ferramenta; persistidos na entidade com `ItemStack.OPTIONAL_CODEC` (sobrevive a salvar/carregar).
+- A tela do Empregado ganha o botão **Mochila**, que abre `LaborCraftWorkerInventoryScreen` em layout de baú:
+  - **inventário do jogador à esquerda** (3 linhas + hotbar) e **mochila do trabalhador à direita** (3x3 + ferramenta);
+  - **clique em um slot e depois no outro** para mover; se o destino tiver item, **troca**;
+  - **arrastar** de um lado para o outro também move/troca;
+  - tooltip mostra nome, quantidade e durabilidade; o trabalhador fica congelado enquanto a mochila está aberta;
+  - **Voltar** reabre a tela do Empregado; o **X** fecha tudo.
+- **Quantidade**: pilha com mais de 1 abre um popup com o item, o intervalo `1..N`, campo numérico,
+  **Tudo**, **Confirmar** e **Cancelar**. O comando correspondente é
+  `worker inv deposit|withdraw <trabalhador> <slotMochila> <slotJogador> <quantidade>`.
+- **Ferramenta validada pelo cargo** (`JobEquipment`): o fazendeiro aceita apenas enxada (`#minecraft:hoes`);
+  tentar guardar pão no slot de ferramenta é recusado no cliente e no servidor. Emprego sem regra aceita
+  qualquer ferramenta.
+- O layout da mochila é **por cargo**: hoje 3x3 + ferramenta; a ideia futura é cada cargo declarar seu
+  layout (segurança: 3x1 + armadura + mão/escudo, minerador: picareta/tochas etc.).
+- Comandos equivalentes: `worker open <trabalhador>` (volta), `worker inv open`, `worker inv take`,
+  `worker inv give`, `worker inv swap <trabalhador> <slotMochila> <slotJogador>` e
+  `worker inv deposit|withdraw ... <quantidade>`.
+- Slot 9 é a **ferramenta** (índice `LaborCraftWorker.TOOL_SLOT`); o cargo ainda não exige uma, isso entra na IA.
 - Ferramenta: só a que o jogador colocar. `storage.equipFromChest` (desligado por padrão) permite puxar do
   baú de ferramentas.
 - Durabilidade: perto de quebrar, ele devolve ao baú `TOOLS` e avisa; sem ferramenta exigida pelo cargo,
@@ -148,6 +164,8 @@ O cargo declara o que conhece:
 | Aba **Baús** no Posto (lista, detectar, desvincular, papel) | ✅ |
 | Destacar baú no mundo (partículas 10 s) e seleção persistente entre refreshes | ✅ |
 | Indicador fora da tela (HUD estilo FPS) com direção e distância | ✅ |
-| Mochila do trabalhador + UI | ⏳ |
+| Mochila do trabalhador (9 + ferramenta) e UI | ✅ |
+| Popup de quantidade (Tudo/Confirmar) para pilhas > 1 | ✅ |
+| Validação de ferramenta por cargo (fazendeiro: enxada) | ✅ |
 | Protocolo de saque/depósito do fazendeiro | ⏳ |
 | Upgrades no item + hover / relocate | ⏳ |

@@ -15,6 +15,7 @@ import com.foque.laborcraft.network.OpenItemTestPayload;
 import com.foque.laborcraft.network.OpenPlayersPayload;
 import com.foque.laborcraft.network.OpenProfilePayload;
 import com.foque.laborcraft.network.OpenStationPayload;
+import com.foque.laborcraft.network.OpenWorkerInventoryPayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.network.SetLanguagePayload;
 import com.foque.laborcraft.network.WorkerScreenStatePayload;
@@ -46,6 +47,7 @@ public class LaborCraft implements ModInitializer {
 		OpenProfilePayload.bootstrap();
 		OpenStationPayload.bootstrap();
 		OpenWorkerPayload.bootstrap();
+		OpenWorkerInventoryPayload.bootstrap();
 		SetLanguagePayload.bootstrap();
 		CloseScreenPayload.bootstrap();
 		WorkerScreenStatePayload.bootstrap();

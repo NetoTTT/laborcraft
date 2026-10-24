@@ -78,6 +78,22 @@ public final class LaborCraftEmployeeScreen extends LaborCraftWorkerScreen {
 		));
 		addRenderableWidget(dismissButton);
 
+		LcButton backpack = new LcButton(
+				x + 140,
+				buttonsY,
+				120,
+				24,
+				Component.translatable("laborcraft.ui.employee.backpack"),
+				LcButton.Variant.SECONDARY,
+				this::openBackpack
+		);
+		backpack.tip(LcTooltips.of(
+				Component.translatable("laborcraft.ui.employee.backpack"),
+				Component.translatable("laborcraft.ui.employee.backpack.tip"),
+				"/" + LaborCraftCommands.WORKER_INV_OPEN + " " + workerId()
+		));
+		addRenderableWidget(backpack);
+
 		LcButton close = new LcButton(
 				x + width - closeWidth,
 				buttonsY,
@@ -181,6 +197,10 @@ public final class LaborCraftEmployeeScreen extends LaborCraftWorkerScreen {
 		}
 
 		LaborCraftUiActions.run(LaborCraftCommands.WORKER_DISMISS + " " + workerId());
+	}
+
+	private void openBackpack() {
+		LaborCraftUiActions.run(LaborCraftCommands.WORKER_INV_OPEN + " " + workerId());
 	}
 
 	private static ItemStack jobIcon(JobType job) {

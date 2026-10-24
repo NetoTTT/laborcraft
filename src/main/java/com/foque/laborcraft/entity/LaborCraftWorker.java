@@ -11,6 +11,7 @@ import com.foque.laborcraft.worker.WorkerTraits;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -27,11 +28,16 @@ import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 public class LaborCraftWorker extends PathfinderMob {
+	public static final int STORAGE_SLOTS = 9;
+	public static final int TOOL_SLOT = 9;
+	public static final int SLOT_COUNT = STORAGE_SLOTS + 1;
+
 	private UUID owner;
 	private String jobId = "";
 	private String offerId = "";
@@ -44,6 +50,7 @@ public class LaborCraftWorker extends PathfinderMob {
 	private int hunger = 20;
 	private int mood = 100;
 	private WorkerState state = WorkerState.ACTIVE;
+	private final NonNullList<ItemStack> inventory = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
 	/**
 	 * Jogador que esta com a tela deste trabalhador aberta. Enquanto isso o trabalhador fica parado,
 	 * olhando para ele, sem executar nenhuma acao. Nao e persistido.
@@ -159,6 +166,24 @@ public class LaborCraftWorker extends PathfinderMob {
 
 	public String jobId() {
 		return jobId;
+	}
+
+	public NonNullList<ItemStack> inventory() {
+		return inventory;
+	}
+
+	public ItemStack inventoryItem(int slot) {
+		return slot >= 0 && slot < SLOT_COUNT ? inventory.get(slot) : ItemStack.EMPTY;
+	}
+
+	public void setInventoryItem(int slot, ItemStack stack) {
+		if (slot >= 0 && slot < SLOT_COUNT) {
+			inventory.set(slot, stack == null ? ItemStack.EMPTY : stack);
+		}
+	}
+
+	public ItemStack toolItem() {
+		return inventoryItem(TOOL_SLOT);
 	}
 
 	public boolean hasJob() {
@@ -349,6 +374,7 @@ public class LaborCraftWorker extends PathfinderMob {
 		output.putInt("Hunger", hunger);
 		output.putInt("Mood", mood);
 		output.putString("WorkerState", state.name());
+		output.store("Inventory", ItemStack.OPTIONAL_CODEC.listOf(), inventory);
 	}
 
 	@Override
@@ -382,6 +408,12 @@ public class LaborCraftWorker extends PathfinderMob {
 		} catch (IllegalArgumentException exception) {
 			state = WorkerState.ACTIVE;
 		}
+
+		input.read("Inventory", ItemStack.OPTIONAL_CODEC.listOf()).ifPresent(stacks -> {
+			for (int index = 0; index < Math.min(stacks.size(), SLOT_COUNT); index++) {
+				inventory.set(index, stacks.get(index));
+			}
+		});
 
 		applyMovementSpeed();
 	}

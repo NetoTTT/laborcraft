@@ -46,3 +46,9 @@ build-out-*.log
 
 # session transcript digest (scratch)
 .session-digest/
+
+# python
+__pycache__/
+
+# local session export
+sessao.json
