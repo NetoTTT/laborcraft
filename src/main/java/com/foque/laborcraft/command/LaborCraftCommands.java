@@ -32,6 +32,8 @@ public final class LaborCraftCommands {
 	public static final String WORKER_INV_SWAP = WORKER + " inv swap";
 	public static final String WORKER_INV_DEPOSIT = WORKER + " inv deposit";
 	public static final String WORKER_INV_WITHDRAW = WORKER + " inv withdraw";
+	public static final String WORKER_STORAGE_DEPOSIT = WORKER + " storage deposit";
+	public static final String WORKER_STORAGE_WITHDRAW = WORKER + " storage withdraw";
 	public static final String STATION = "laborcraft station";
 	public static final String STATION_BIND = STATION + " bind";
 	public static final String STATION_UNBIND = STATION + " unbind";

@@ -13,9 +13,12 @@ import com.foque.laborcraft.client.ui.widget.LcScrollList;
 import com.foque.laborcraft.client.ui.widget.LcAreaMap;
 import com.foque.laborcraft.command.LaborCraftCommands;
 import com.foque.laborcraft.network.OpenStationPayload;
+import com.mojang.blaze3d.platform.InputConstants;
 import java.util.Locale;
 import net.minecraft.core.BlockPos;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -39,6 +42,7 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 	private LcButton primary;
 	private LcButton secondary;
 	private boolean mapOpen;
+	private boolean helpOpen;
 	private LcAreaMap areaMap;
 	private LcButton confirmMapButton;
 	private LcButton previewMapButton;
@@ -108,6 +112,22 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		addRenderableWidget(configTab);
 		addRenderableWidget(storageTab);
 
+		LcButton help = new LcButton(
+				panelX + panelWidth() - 30,
+				panelY + 8,
+				20,
+				20,
+				Component.literal("?"),
+				LcButton.Variant.GHOST,
+				() -> helpOpen = true
+		);
+		help.tip(LcTooltips.of(
+				Component.translatable("laborcraft.ui.help.title"),
+				Component.translatable("laborcraft.ui.help.tip"),
+				null
+		));
+		addRenderableWidget(help);
+
 		switch (tab) {
 			case WORK -> buildWorkTab(x, width);
 			case CONFIG -> buildConfigTab(x, width);
@@ -123,6 +143,68 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		tab = next;
 		clearWidgets();
 		init();
+	}
+
+	private static final int HELP_WIDTH = 420;
+	private static final int HELP_HEIGHT = 240;
+
+	@Override
+	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+		super.extractRenderState(graphics, mouseX, mouseY, delta);
+		if (helpOpen) {
+			drawHelp(graphics, mouseX, mouseY);
+		}
+	}
+
+	private void drawHelp(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+		int left = helpX();
+		int top = helpY();
+		graphics.fill(0, 0, width, height, 0x99000000);
+		graphics.fill(left, top, left + HELP_WIDTH, top + HELP_HEIGHT, 0xF0101820);
+		LcRender.border(graphics, left, top, HELP_WIDTH, HELP_HEIGHT, LcTheme.ACCENT);
+		graphics.text(
+				font,
+				Component.translatable("laborcraft.ui.help.title"),
+				left + 12,
+				top + 10,
+				LcTheme.TITLE
+		);
+
+		java.util.List<net.minecraft.util.FormattedCharSequence> lines = font.split(
+				Component.translatable("laborcraft.ui.help.body"),
+				HELP_WIDTH - 24
+		);
+		for (int index = 0; index < lines.size(); index++) {
+			graphics.text(font, lines.get(index), left + 12, top + 30 + index * 12, LcTheme.MUTED);
+		}
+
+		int closeX = left + HELP_WIDTH - 122;
+		int closeY = top + HELP_HEIGHT - 30;
+		boolean hovered = mouseX >= closeX && mouseX < closeX + 110
+				&& mouseY >= closeY && mouseY < closeY + 22;
+		graphics.fill(closeX, closeY, closeX + 110, closeY + 22, hovered ? LcTheme.BUTTON_HOVER : LcTheme.BUTTON_BG);
+		LcRender.border(graphics, closeX, closeY, 110, 22, hovered ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER);
+		graphics.centeredText(
+				font,
+				Component.translatable("laborcraft.ui.help.close"),
+				closeX + 55,
+				closeY + 7,
+				hovered ? LcTheme.TITLE : LcTheme.TEXT
+		);
+	}
+
+	private int helpX() {
+		return (width - HELP_WIDTH) / 2;
+	}
+
+	private int helpY() {
+		return (height - HELP_HEIGHT) / 2;
+	}
+
+	private boolean helpCloseHovered(double mouseX, double mouseY) {
+		int closeX = helpX() + HELP_WIDTH - 122;
+		int closeY = helpY() + HELP_HEIGHT - 30;
+		return mouseX >= closeX && mouseX < closeX + 110 && mouseY >= closeY && mouseY < closeY + 22;
 	}
 
 	private void buildWorkTab(int x, int width) {
@@ -196,7 +278,7 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 			LcButton preview = new LcButton(x + width - 118, panelY + 102, 106, 20,
 					Component.translatable("laborcraft.ui.station.map.preview_saved"), LcButton.Variant.GHOST,
 					this::previewSavedZone);
-			preview.active = !station.ownAreas().isEmpty();
+			preview.active = station.zone() != null && !station.ownAreas().isEmpty();
 			addRenderableWidget(preview);
 
 			LcButton draw = new LcButton(x, buttonsY, 132, 24,
@@ -207,6 +289,16 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 						Component.translatable("laborcraft.ui.station.map.clear"), LcButton.Variant.DANGER,
 						this::clearZone);
 				addRenderableWidget(clear);
+			} else {
+				LcButton maxArea = new LcButton(x + 140, buttonsY, 168, 24,
+						Component.translatable("laborcraft.ui.station.map.max_area"), LcButton.Variant.SECONDARY,
+						this::useMaxArea);
+				maxArea.tip(LcTooltips.of(
+						Component.translatable("laborcraft.ui.station.map.max_area"),
+						Component.translatable("laborcraft.ui.station.map.max_area.tip"),
+						null
+				));
+				addRenderableWidget(maxArea);
 			}
 		}
 
@@ -345,7 +437,7 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		if (index < 0 || index >= station.storage().size()) {
 			return;
 		}
-		WorldHighlightManager.highlight(station.storage().get(index).pos(), 0xFFFFC65A);
+		WorldHighlightManager.highlight(station.storage().get(index).pos(), 0xFFFFC65A, new ItemStack(Items.CHEST));
 		this.onClose();
 	}
 
@@ -459,6 +551,16 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		LaborCraftUiActions.run(LaborCraftCommands.STATION_ZONE_CLEAR + " " + posString());
 	}
 
+	private void useMaxArea() {
+		int radius = Math.min(15, Math.max(1, station.maxRadius()));
+		BlockPos center = station.pos();
+		LaborCraftUiActions.run(
+				LaborCraftCommands.STATION_ZONE_SET + " " + posString()
+						+ " " + coordinates(new BlockPos(center.getX() - radius, center.getY(), center.getZ() - radius))
+						+ " " + coordinates(new BlockPos(center.getX() + radius, center.getY(), center.getZ() + radius))
+		);
+	}
+
 	private void updateMapButton() {
 		if (confirmMapButton != null && areaMap != null) {
 			confirmMapButton.active = areaMap.selectionFitsLimit();
@@ -470,15 +572,36 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (helpOpen) {
+			if (helpCloseHovered(event.x(), event.y())) {
+				helpOpen = false;
+			}
+			return true;
+		}
+
 		if (tab == Tab.STORAGE && storageList != null) {
 			int index = storageList.rowAt(event.x(), event.y());
 			if (index >= 0) {
 				int rowY = storageList.rowTop(index);
 				int eyeX = storageList.getX() + storageList.rowWidth() - 24;
-				int eyeY = rowY + 6;
+				int eyeY = rowY + (32 - 2 - 18) / 2;
 				if (event.x() >= eyeX && event.x() < eyeX + 18
 						&& event.y() >= eyeY && event.y() < eyeY + 18) {
 					highlightStorage(index);
+					return true;
+				}
+			}
+		}
+
+		if (tab == Tab.WORK && workers != null) {
+			int index = workers.rowAt(event.x(), event.y());
+			if (index >= 0) {
+				int rowY = workers.rowTop(index);
+				int eyeX = workers.getX() + workers.rowWidth() - 24;
+				int eyeY = rowY + (36 - 2 - 18) / 2;
+				if (event.x() >= eyeX && event.x() < eyeX + 18
+						&& event.y() >= eyeY && event.y() < eyeY + 18) {
+					highlightWorker(workers.get(index).id());
 					return true;
 				}
 			}
@@ -489,11 +612,35 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		return handled;
 	}
 
+	private void highlightWorker(java.util.UUID id) {
+		Minecraft client = Minecraft.getInstance();
+		boolean found = WorldHighlightManager.highlightEntity(id, 0xFF48D7A0, EYE_ICON);
+		onClose();
+		if (!found && client.gui != null) {
+			client.gui.hud.setOverlayMessage(
+					Component.translatable("laborcraft.ui.highlight.missing"),
+					false
+			);
+		}
+	}
+
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
+		if (helpOpen) {
+			return true;
+		}
 		boolean handled = super.mouseReleased(event);
 		updateMapButton();
 		return handled;
+	}
+
+	@Override
+	public boolean keyPressed(KeyEvent event) {
+		if (helpOpen && event.key() == InputConstants.KEY_ESCAPE) {
+			helpOpen = false;
+			return true;
+		}
+		return super.keyPressed(event);
 	}
 
 	private static String coordinates(BlockPos pos) {
@@ -717,10 +864,10 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 			Component mode = station.zone() == null
 					? Component.translatable("laborcraft.ui.station.mode.free_radius", diameter, diameter)
 					: Component.translatable("laborcraft.ui.station.mode.zone", station.zone().width(), station.zone().depth());
-			graphics.text(font, mode, x + 12, boxY + 22, LcTheme.TITLE);
+			graphics.text(font, mode, x + 12, boxY + 22, station.zone() == null ? LcTheme.DANGER : LcTheme.TITLE);
 
-			graphics.text(font, Component.translatable("laborcraft.ui.station.config.vertical",
-					station.verticalRadius()), x + 12, boxY + 162, LcTheme.MUTED);
+			graphics.text(font, Component.translatable("laborcraft.ui.station.action",
+					station.verticalRadius(), station.verticalRadius()), x + 12, boxY + 162, LcTheme.MUTED);
 			graphics.text(font, Component.translatable("laborcraft.ui.station.map.legend"),
 					x + 12, boxY + 176, LcTheme.MUTED);
 		}
@@ -808,7 +955,7 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		);
 
 		int eyeX = x + width - 24;
-		int eyeY = y + 6;
+		int eyeY = y + (32 - 2 - 18) / 2;
 		boolean eyeHovered = mouseX >= eyeX && mouseX < eyeX + 18 && mouseY >= eyeY && mouseY < eyeY + 18;
 		graphics.fill(eyeX, eyeY, eyeX + 18, eyeY + 18, eyeHovered ? 0x66354250 : 0x44111820);
 		LcRender.border(graphics, eyeX, eyeY, 18, 18, eyeHovered ? LcTheme.ACCENT : 0xFF354250);
@@ -866,6 +1013,13 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 					LcTheme.DANGER
 			);
 		}
+
+		int eyeX = x + width - 24;
+		int eyeY = y + (height - 2 - 18) / 2;
+		boolean eyeHovered = mouseX >= eyeX && mouseX < eyeX + 18 && mouseY >= eyeY && mouseY < eyeY + 18;
+		graphics.fill(eyeX, eyeY, eyeX + 18, eyeY + 18, eyeHovered ? LcTheme.BUTTON_HOVER : LcTheme.BUTTON_BG);
+		LcRender.border(graphics, eyeX, eyeY, 18, 18, eyeHovered ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER);
+		graphics.item(EYE_ICON, eyeX + 1, eyeY + 1);
 	}
 
 	private static Component stateLabel(OpenStationPayload.Summary summary) {

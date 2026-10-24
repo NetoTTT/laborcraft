@@ -4,18 +4,23 @@ import com.foque.laborcraft.client.ui.LcRender;
 import com.foque.laborcraft.client.ui.LcTheme;
 import com.foque.laborcraft.client.ui.LcWorkerText;
 import com.foque.laborcraft.client.ui.widget.LcButton;
+import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.foque.laborcraft.client.ui.widget.LcScrollList;
 import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
 import com.foque.laborcraft.network.OpenProfilePayload;
 import java.util.List;
 import java.util.Locale;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public final class LaborCraftProfileScreen extends LaborCraftScreen {
+	private static final ItemStack EYE_ICON = new ItemStack(Items.ENDER_EYE);
+
 	private final OpenProfilePayload profile;
 	private LcScrollList<OpenProfilePayload.WorkerSummary> workers;
 
@@ -92,6 +97,14 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 					LcTheme.MUTED
 			);
 		}
+
+		graphics.text(
+				font,
+				Component.translatable("laborcraft.ui.profile.highlight.hint"),
+				x,
+				panelY + 296,
+				LcTheme.MUTED
+		);
 	}
 
 	private Component employeesValue() {
@@ -173,7 +186,7 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 				LcTheme.MUTED
 		);
 
-		int statsX = x + width - 12;
+		int statsX = x + width - 38;
 		Component health = Component.translatable(
 				"laborcraft.ui.profile.worker.health",
 				(int) summary.health(),
@@ -184,6 +197,44 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 		graphics.text(font, health, statsX - font.width(health), y + 7, LcTheme.TEXT);
 		graphics.text(font, hunger, statsX - font.width(hunger), y + 22, LcTheme.MUTED);
 		graphics.text(font, mood, statsX - font.width(mood), y + 36, LcTheme.MUTED);
+
+		int eyeX = x + width - 26;
+		int eyeY = y + (52 - 2 - 18) / 2;
+		boolean eyeHovered = mouseX >= eyeX && mouseX < eyeX + 18 && mouseY >= eyeY && mouseY < eyeY + 18;
+		graphics.fill(eyeX, eyeY, eyeX + 18, eyeY + 18, eyeHovered ? LcTheme.BUTTON_HOVER : LcTheme.BUTTON_BG);
+		LcRender.border(graphics, eyeX, eyeY, 18, 18, eyeHovered ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER);
+		graphics.item(EYE_ICON, eyeX + 1, eyeY + 1);
+	}
+
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (workers != null) {
+			int index = workers.rowAt(event.x(), event.y());
+			if (index >= 0) {
+				int rowY = workers.rowTop(index);
+				int eyeX = workers.getX() + workers.rowWidth() - 26;
+				int eyeY = rowY + (52 - 2 - 18) / 2;
+				if (event.x() >= eyeX && event.x() < eyeX + 18
+						&& event.y() >= eyeY && event.y() < eyeY + 18) {
+					highlightWorker(profile.summaries().get(index).id());
+					return true;
+				}
+			}
+		}
+
+		return super.mouseClicked(event, doubleClick);
+	}
+
+	private void highlightWorker(java.util.UUID id) {
+		Minecraft client = Minecraft.getInstance();
+		boolean found = WorldHighlightManager.highlightEntity(id, 0xFF48D7A0, EYE_ICON);
+		onClose();
+		if (!found && client.gui != null) {
+			client.gui.hud.setOverlayMessage(
+					Component.translatable("laborcraft.ui.highlight.missing"),
+					false
+			);
+		}
 	}
 
 	private static Component jobLabel(String jobId) {

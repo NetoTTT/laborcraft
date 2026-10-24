@@ -24,26 +24,29 @@ Trabalhador (entidade)
 ```
 
 - **Posto** = ponto de referência e "mesa" do trabalhador: onde ele fica ocioso, onde deposita e de onde
-  pega insumo. **Não gera área sozinho.**
-- **Zona** = retângulo 3D (canto A ↔ canto B) desenhado pelo dono. O trabalhador só age dentro da zona.
-- **Sem zona** = modo livre: ele trabalha dentro do raio do posto (`area.radiusByTier`, hoje 4–9).
-- **Zona tem prioridade** sobre o raio. Se a zona existir, o raio é ignorado.
-
-Isso cobre os dois casos com o mesmo código: quem quer precisão desenha 12x4; quem quer "se vira" não desenha nada.
+  pega insumo. **Não gera área de trabalho sozinho.** O raio do posto é apenas o **limite máximo** de uma zona.
+- **Zona** = retângulo 3D (canto A ↔ canto B) desenhado pelo dono. **É a área de trabalho**: o trabalhador
+  arar, planta, colhe e deposita apenas dentro dela. Para o fazendeiro (e futuros cargos), a zona é
+  **obrigatória**; sem zona ele pausa com um aviso.
+- O player pode desenhar a zona no mapa ou usar **Usar área máxima** para definir o quadrado máximo do posto
+  de uma vez.
+- **Sem zona** ≠ raio livre para trabalhar: o raio é só o limite onde a zona pode ser desenhada.
 
 ## 3. Fluxo do jogador (passo a passo)
 
 1. **Crave o posto** perto do trabalho (é o bloco `laborcraft:workstation`; visual e nome ainda mudam).
-2. **Desenhe a zona** (opcional) com a **Estaca de Demarcação** (`laborcraft:survey_stake`, ideia de nome):
+2. **Desenhe a zona** (obrigatório para o trabalhador agir) no mapa da aba Config ou com a **Estaca de
+   Demarcação** (`laborcraft:survey_stake`):
    - clique direito no primeiro canto → mensagem "canto A em 120, 64, -30";
    - clique direito no canto oposto → "zona 12x4x3 (144 blocos)";
    - agachar + clique direito no posto → zona vinculada, com preview de partículas.
+   - Ou **Usar área máxima** na aba Config para o quadrado máximo permitido.
 3. **Vincule o trabalhador**: na tela de Empregado, botão **"Posto"** lista os postos livres; ou
    `/laborcraft station bind <trabalhador> <posto>`. Um posto aceita 1 trabalhador por padrão.
 4. **Escolha o cargo** (fazendeiro) na mesma tela, se ainda não escolheu.
 5. **Ligue o trabalhador** (`/laborcraft worker toggle` ou botão). Ele começa o expediente.
 
-Sem zona, o passo 2 não existe — o posto já vale pelo raio.
+O trabalhador só inicia com uma zona definida; o raio do posto não substitui a zona.
 
 ## 4. Dados
 
@@ -181,10 +184,14 @@ Interagir com o posto abre `LaborCraftStationScreen` (mesmo tamanho das outras, 
 
 ### Aba Config
 
-- **Modo da área**: `Livre (raio do posto)` ou `Zona desenhada` (escolha única).
-- No modo livre: mostra o raio efetivo (tier/maestria) e o que ele cobre. Sem botão de “aumentar” por enquanto.
-- No modo zona: lista as zonas (hoje 1) com tamanho e botão **Desenhar área**.
+- **Área de trabalho**: é a **zona desenhada**. O raio do posto é só o limite máximo e não faz o
+  trabalhador agir; sem zona ele pausa (“Desenhe a área de trabalho no Posto”).
+- Sem zona: o texto fica em vermelho (“Sem zona · limite do posto 25x25 (não trabalha)”) e aparece o
+  botão **Usar área máxima** para definir o quadrado máximo de uma vez.
+- Com zona: mostra `Zona WxD` e o botão **Limpar zona** (volta a pausar até desenhar outra).
+- **Desenhar área** abre o mapa; **Usar área máxima** envia `station zone set` já com as bordas do limite.
 - O armazenamento fica na aba **Baús** (vínculos, papéis e detecção), detalhada no [doc 14](14-ARMAZENAMENTO.md).
+- **Ajuda**: botão **?** no topo abre um overlay explicando área de trabalho, baús, mochila, olho e comandos.
 - **Visualizar**: fecha a tela e mostra a borda efetiva recortada com partículas por 10 s; um contador fica logo acima da hotbar. Também existe um botão compacto **Visualizar área** no topo da caixa da aba Config para rever a área já confirmada, sem reabrir o desenho.
 
 ### Mapa de seleção (`LcAreaMap`)
@@ -200,7 +207,7 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
 
 **Como o mapa é desenhado (e por que funciona no cliente):**
 
-- Para cada coluna, pega o bloco do topo (heightmap `WORLD_SURFACE`) e a cor com
+- Para cada coluna, pega o bloco do topo (heightmap `MOTION_BLOCKING`, que ignora culturas/plantas e mostra o farmland) e a cor com
   `state.getMapColor(level, pos).calculateARGBColor(...)` — a mesma paleta do mapa vanilla. Barato e sem textura.
 - O cliente **só tem chunks carregados**: o servidor manda o que está perto do jogador. Como ele está ao lado do
   posto, a área que interessa está carregada. (O JourneyMap mostra áreas exploradas porque lê os arquivos de
@@ -214,7 +221,7 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
 
 O botão **Camada** (ao lado das abas) alterna `Auto → Superfície → Subsolo`. O rótulo mostra o Y usado no subsolo.
 
-- **Superfície**: heightmap `WORLD_SURFACE`, como antes.
+- **Superfície**: heightmap `MOTION_BLOCKING` (farmland aparece marrom, não verde sob a cultura).
 - **Auto**: superfície ao ar livre; subsolo quando o jogador está coberto. A detecção usa
   `level.getBrightness(LightLayer.SKY, pos) <= 0` e, como reforço, `playerY < superfície - 2`.
 - **Subsolo**: varre a coluna a partir do Y do jogador (pivô):
@@ -263,7 +270,7 @@ O botão **Camada** (ao lado das abas) alterna `Auto → Superfície → Subsolo
 | Remover zona e voltar ao raio livre (`station zone clear`) | ✅ |
 | Baús: vínculo, papéis (mixed/output/input/tools) e aba **Baús** | ✅ |
 | Mochila do trabalhador e protocolo de saque/depósito | ⏳ ([doc 14](14-ARMAZENAMENTO.md)) |
-| IA do fazendeiro (SCAN/MOVE/WORK/DEPOSIT) | ⏳ |
+| IA do fazendeiro (SCAN/MOVE/WORK/DEPOSIT) | ✅ MVP em `FarmerBrain` (colhe, replanta, deposita, pausa com aviso) |
 
 O que já dá para testar em jogo: colocar o posto, abrir a tela, vincular um empregado, chamar/retomar e ver
 o estado na tela. Para desenhar uma área, abra a aba Config e clique em **Desenhar área**. O mapa abre
@@ -273,6 +280,20 @@ com zoom ajustado ao limite do posto; arraste para selecionar e use o scroll par
 como alternativa. O comando
 `/laborcraft station zone clear <x> <y> <z>` remove a zona e restaura o raio livre. Chunks descarregados ficam
 marcados com `?`. Na aba Config, sem abrir o desenho, o mapa já mostra a área efetiva em âmbar, o raio livre recortado quando não há zona, outros postos próximos em azul e a parte da seleção que invade outro Posto em vermelho.
+
+### Status da IA (MVP)
+
+Implementado em `FarmerBrain`: valida enxada no slot e sementes (puxa do baú vinculado), procura cultura
+madura na área, anda até ela, colhe, replanta, adiciona os drops na mochila e deposita no baú quando
+a mochila enche. Pausa com aviso quando falta enxada/semente, quando a enxada está quase quebrando, quando
+não há baú ou quando o baú enche. A **área de trabalho é a zona desenhada** (obrigatória); o raio do posto
+é apenas o limite máximo. Sem zona ele pausa com o aviso “Desenhe a área de trabalho no Posto”; dentro da
+zona pode arar, plantar e colher (e usar **Usar área máxima** para o quadrado máximo). Ele também prefere um
+ponto de apoio fora do farmland. Ele coleta itens dropados (sementes, produto, bone meal) dentro do raio
+máximo do posto e prefere farmland **hidratado** (MOISTURE > 0) ao plantar; se só houver seco, planta assim
+mesmo. Ainda faltam: expediente, coleta de água/balde, layout de irrigação 9x9, uso de bone meal e composteira.
+Ainda faltam: expediente, coleta de água/balde, plantio otimizado com hidratação, uso de bone meal/composteira
+e ferramentas especiais.
 
 ## 12. Impacto no que já existe
 

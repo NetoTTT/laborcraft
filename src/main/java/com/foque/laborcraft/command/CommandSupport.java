@@ -41,16 +41,16 @@ final class CommandSupport {
 	}
 
 	static LaborCraftWorker findWorker(CommandSourceStack source, String rawId) throws CommandSyntaxException {
-		UUID workerId = parseUuid(rawId);
-		if (workerId == null) {
-			return null;
-		}
-
 		ServerPlayer player = source.getPlayerOrException();
+		UUID workerId = parseUuid(rawId);
+		String name = rawId == null ? "" : rawId.trim();
 		return source.getLevel().getEntitiesOfClass(
 						LaborCraftWorker.class,
 						player.getBoundingBox().inflate(16.0D),
-						worker -> worker.getUUID().equals(workerId)
+						worker -> worker.isOwnedBy(player.getUUID())
+								&& (workerId != null
+								? worker.getUUID().equals(workerId)
+								: worker.getName().getString().equalsIgnoreCase(name))
 				)
 				.stream()
 				.findFirst()
@@ -75,6 +75,17 @@ final class CommandSupport {
 			if (player != null) {
 				WorkerOwnership.ownedWorkerList(player)
 						.forEach(worker -> builder.suggest(worker.getUUID().toString()));
+			}
+			return builder.buildFuture();
+		};
+	}
+
+	static SuggestionProvider<CommandSourceStack> ownedWorkerNameSuggestions() {
+		return (context, builder) -> {
+			ServerPlayer player = context.getSource().getPlayer();
+			if (player != null) {
+				WorkerOwnership.ownedWorkerList(player)
+						.forEach(worker -> builder.suggest(worker.getName().getString()));
 			}
 			return builder.buildFuture();
 		};

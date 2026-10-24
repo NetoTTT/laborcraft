@@ -192,14 +192,12 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 
 		// In edit mode, hide this post's amber area and radius limit so the selection is clear.
 		if (readOnly) {
-			// 3. Free-radius limit of this post (dashed)
+			// 3. Post limit (maximum area, not the work area)
 			drawRadiusLimit(graphics);
 
-			// 4. Effective work area of this post (amber)
-			drawEffectiveAreas(graphics, ownAreas, SAVED_BORDER, SAVED_FILL);
-
-			// 5. Original drawn zone boundary, even when clipped (dashed)
+			// 4/5. Only the drawn zone is the work area
 			if (savedFrom != null && savedTo != null) {
+				drawEffectiveAreas(graphics, ownAreas, SAVED_BORDER, SAVED_FILL);
 				drawDashedZone(graphics, savedFrom, savedTo, 0x88FFC65A);
 			}
 		}
@@ -285,7 +283,7 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 						argb = applyChunkGridTint(argb);
 					}
 				} else {
-					int surfaceY = level.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, tempPos.set(worldX, center.getY(), worldZ)).getY() - 1;
+					int surfaceY = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, tempPos.set(worldX, center.getY(), worldZ)).getY() - 1;
 					BlockState state = level.getBlockState(tempPos.set(worldX, surfaceY, worldZ));
 					MapColor mapColor = state.getMapColor(level, tempPos);
 
@@ -295,7 +293,7 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 						// Topographic hillshading: compare surface height with north neighbor
 						int northY = surfaceY;
 						if (level.hasChunkAt(worldX, worldZ - 1)) {
-							northY = level.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, northPos.set(worldX, center.getY(), worldZ - 1)).getY() - 1;
+							northY = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, northPos.set(worldX, center.getY(), worldZ - 1)).getY() - 1;
 						}
 
 						int dy = surfaceY - northY;
@@ -454,7 +452,7 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 		int x1 = blockToScreenX(maxX) + pixelsPerBlock;
 		int y1 = blockToScreenZ(maxZ) + pixelsPerBlock;
 
-		drawDashedRect(graphics, x0, y0, x1, y1, 0x55FFC65A);
+		drawDashedRect(graphics, x0, y0, x1, y1, 0xCC5FA8FF);
 	}
 
 	private void drawEffectiveAreas(

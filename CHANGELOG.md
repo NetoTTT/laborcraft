@@ -3,6 +3,37 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [Não lançado]
+
+### Adicionado
+
+- Destaque no mundo de **entidades**: o wireframe de partículas acompanha o bounding box do trabalhador em movimento por 10 s, com indicador de direção fora da tela.
+- Botão de olho por trabalhador na aba **Trabalho** do Posto e no **Perfil**: fecha a tela, destaca o trabalhador e avisa se ele não estiver carregado por perto.
+- `WorldHighlightManager` agora atende blocos e entidades e aceita o ícone do alvo para o HUD.
+- `WorkerStorage`: inserção só em slot vazio/igual e extração só do insumo pedido, respeitando o papel do baú (`mixed/output/input/tools`).
+- `FarmerStorage`: mantém 32 sementes e até 16 bone meal na mochila, deposita só produto/excedente e retira sementes antes do trabalho.
+- Comandos `worker storage deposit|withdraw <trabalhador>` (base para a IA e teste manual).
+- IA do fazendeiro MVP (`FarmerBrain`): valida enxada/sementes (puxa do baú), procura cultura madura na zona/raio, anda, colhe, replanta, guarda os drops e deposita no baú quando enche. Pausa com aviso quando falta enxada/semente/baú ou o baú enche.
+- IA coleta itens dropados no raio máximo do posto (sementes, produto e bone meal) e os usa/guarda.
+- Plantio prefere farmland **hidratado** (`MOISTURE > 0`); se só houver seco, planta mesmo assim.
+- IA agora **planta farmland vazio** com a semente disponível e **reara o chão pisoteado** (dirt/grass vira farmland e é replantado).
+- A IA prefere um ponto de apoio **fora do farmland** para colher, reduzindo o pisoteio.
+- O aviso de pausa no chat inclui o **nome do trabalhador**.
+
+### Alterado
+
+- O contador do destaque ficou genérico (`Destacado: Ns`).
+
+### Corrigido
+
+- O botão de olho das linhas do Posto agora fica centralizado verticalmente na linha.
+- O trabalhador não fica mais com farmland vazio sem semente após depositar: a mochila mantém 32 sementes e a IA replanta/planta os espaços vazios.
+- O fazendeiro agora exige **zona desenhada** como área de trabalho; o raio do posto é apenas o limite máximo. Sem zona ele pausa com o aviso “Desenhe a área de trabalho no Posto”.
+- Botão **Usar área máxima** na aba Config define a zona como o quadrado máximo permitido de uma vez.
+- Botão **?** na tela do Posto com uma ajuda rápida (área de trabalho, baús, mochila, olho e comandos); rótulos, aviso sem zona e texto abaixo do mapa atualizados (legenda separa área de trabalho em âmbar do limite tracejado).
+- No mapa, a camada de superfície usa `MOTION_BLOCKING`: culturas/plantas são ignoradas e o farmland aparece marrom, distinto do gramado.
+- O tracejado do limite máximo do posto no mapa ficou mais visível (azul com alpha alto).
+
 ## [0.1.0-alpha.5] — 2026-10-24
 
 Mochila do trabalhador com transferência estilo baú, quantidade e validação de ferramenta; comandos

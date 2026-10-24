@@ -15,6 +15,8 @@ import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenHiringPayload;
 import com.foque.laborcraft.network.OpenWorkerInventoryPayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
+import com.foque.laborcraft.worker.FarmerStorage;
+import com.foque.laborcraft.worker.StationRegistry;
 import com.foque.laborcraft.worker.WorkerMarket;
 import com.foque.laborcraft.worker.WorkerOffer;
 import com.foque.laborcraft.worker.WorkerOwnership;
@@ -157,7 +159,22 @@ final class WorkerCommands {
 																		IntegerArgumentType.getInteger(context, "workerSlot"),
 																		IntegerArgumentType.getInteger(context, "playerSlot"),
 																		IntegerArgumentType.getInteger(context, "amount")
-																))))))));
+																))))))))
+				.then(Commands.literal("storage")
+						.then(Commands.literal("deposit")
+								.then(Commands.argument("worker", StringArgumentType.greedyString())
+										.suggests(CommandSupport.ownedWorkerNameSuggestions())
+										.executes(context -> workerStorageDeposit(
+												context.getSource(),
+												StringArgumentType.getString(context, "worker")
+										))))
+						.then(Commands.literal("withdraw")
+								.then(Commands.argument("worker", StringArgumentType.greedyString())
+										.suggests(CommandSupport.ownedWorkerNameSuggestions())
+										.executes(context -> workerStorageWithdraw(
+												context.getSource(),
+												StringArgumentType.getString(context, "worker")
+										)))));
 	}
 
 	private static int spawnWorker(CommandSourceStack source, String name)
@@ -618,6 +635,81 @@ final class WorkerCommands {
 		}
 		from.shrink(moved);
 		OpenWorkerInventoryPayload.open(player, worker);
+		return 1;
+	}
+
+	private static int workerStorageDeposit(CommandSourceStack source, String rawId)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		LaborCraftWorker worker = CommandSupport.findWorker(source, rawId);
+		if (worker == null) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.not_found"));
+			return 0;
+		}
+		if (!worker.isOwnedBy(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.not_owner"));
+			return 0;
+		}
+		StationRegistry.Station station = StationRegistry.byWorker(source.getServer(), worker.getUUID());
+		if (station == null || !(worker.level() instanceof ServerLevel level)) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.storage.no_station"));
+			return 0;
+		}
+
+		int moved = FarmerStorage.deposit(level, station, worker);
+		OpenWorkerInventoryPayload.open(player, worker);
+		if (moved <= 0) {
+			source.sendSuccess(
+					() -> Component.translatable("laborcraft.command.worker.storage.nothing"),
+					false
+			);
+			return 0;
+		}
+
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.command.worker.storage.deposited", moved),
+				false
+		);
+		return 1;
+	}
+
+	private static int workerStorageWithdraw(CommandSourceStack source, String rawId)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		LaborCraftWorker worker = CommandSupport.findWorker(source, rawId);
+		if (worker == null) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.not_found"));
+			return 0;
+		}
+		if (!worker.isOwnedBy(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.not_owner"));
+			return 0;
+		}
+		StationRegistry.Station station = StationRegistry.byWorker(source.getServer(), worker.getUUID());
+		if (station == null || !(worker.level() instanceof ServerLevel level)) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.storage.no_station"));
+			return 0;
+		}
+
+		int moved = FarmerStorage.withdraw(
+				level,
+				station,
+				worker,
+				LaborCraftConfig.get().farmer.useBoneMeal
+		);
+		OpenWorkerInventoryPayload.open(player, worker);
+		if (moved <= 0) {
+			source.sendSuccess(
+					() -> Component.translatable("laborcraft.command.worker.storage.nothing"),
+					false
+			);
+			return 0;
+		}
+
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.command.worker.storage.withdrawn", moved),
+				false
+		);
 		return 1;
 	}
 

@@ -11,7 +11,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -22,10 +21,6 @@ import net.minecraft.world.phys.Vec3;
 public final class TargetIndicatorHud implements HudElement {
 	private static final int BADGE = 11;
 	private static final double MAX_RANGE = 96.0D;
-
-	// ItemStacks cannot be built during the client entrypoint (data components are not bound yet),
-	// so the icon is created lazily on the first HUD frame.
-	private ItemStack chestIcon;
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, DeltaTracker delta) {
@@ -89,7 +84,10 @@ public final class TargetIndicatorHud implements HudElement {
 
 		graphics.fill(cx - BADGE, cy - BADGE, cx + BADGE, cy + BADGE, 0xCC101820);
 		LcRender.border(graphics, cx - BADGE, cy - BADGE, BADGE * 2, BADGE * 2, color);
-		graphics.item(chestIcon(), cx - 8, cy - 8);
+		ItemStack icon = WorldHighlightManager.icon();
+		if (!icon.isEmpty()) {
+			graphics.item(icon, cx - 8, cy - 8);
+		}
 
 		float angle = (float) Math.atan2(uy, ux);
 		graphics.pose().pushMatrix();
@@ -115,12 +113,5 @@ public final class TargetIndicatorHud implements HudElement {
 				0xAA101820
 		);
 		graphics.centeredText(client.font, label, cx, labelY, color);
-	}
-
-	private ItemStack chestIcon() {
-		if (chestIcon == null) {
-			chestIcon = new ItemStack(Items.CHEST);
-		}
-		return chestIcon;
 	}
 }

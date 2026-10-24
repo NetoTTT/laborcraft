@@ -1,6 +1,7 @@
 package com.foque.laborcraft.entity;
 
 import com.foque.laborcraft.network.OpenWorkerPayload;
+import com.foque.laborcraft.worker.FarmerBrain;
 import com.foque.laborcraft.worker.WorkerAptitudes;
 import com.foque.laborcraft.worker.WorkerBoost;
 import com.foque.laborcraft.worker.WorkerMastery;
@@ -51,6 +52,8 @@ public class LaborCraftWorker extends PathfinderMob {
 	private int mood = 100;
 	private WorkerState state = WorkerState.ACTIVE;
 	private final NonNullList<ItemStack> inventory = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
+	private final FarmerBrain farmerBrain = new FarmerBrain(this);
+	private String workNotice = "";
 	/**
 	 * Jogador que esta com a tela deste trabalhador aberta. Enquanto isso o trabalhador fica parado,
 	 * olhando para ele, sem executar nenhuma acao. Nao e persistido.
@@ -147,21 +150,26 @@ public class LaborCraftWorker extends PathfinderMob {
 	public void tick() {
 		super.tick();
 
-		if (level().isClientSide() || attendingPlayer == null) {
+		if (level().isClientSide()) {
 			return;
 		}
 
-		if (attendingPlayer.isRemoved()
-				|| attendingPlayer.level() != level()
-				|| attendingPlayer.distanceToSqr(this) > 64.0D) {
-			endAttending();
+		if (attendingPlayer != null) {
+			if (attendingPlayer.isRemoved()
+					|| attendingPlayer.level() != level()
+					|| attendingPlayer.distanceToSqr(this) > 64.0D) {
+				endAttending();
+				return;
+			}
+
+			getNavigation().stop();
+			getMoveControl().setWantedPosition(getX(), getY(), getZ(), 0.0D);
+			setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
+			getLookControl().setLookAt(attendingPlayer, 30.0F, 30.0F);
 			return;
 		}
 
-		getNavigation().stop();
-		getMoveControl().setWantedPosition(getX(), getY(), getZ(), 0.0D);
-		setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
-		getLookControl().setLookAt(attendingPlayer, 30.0F, 30.0F);
+		farmerBrain.tick();
 	}
 
 	public String jobId() {
@@ -297,7 +305,7 @@ public class LaborCraftWorker extends PathfinderMob {
 		}
 
 		if (state == WorkerState.PAUSED) {
-			return "laborcraft.ui.worker.task.paused";
+			return workNotice.isBlank() ? "laborcraft.ui.worker.task.paused" : workNotice;
 		}
 
 		if (state == WorkerState.STORED) {
@@ -317,6 +325,17 @@ public class LaborCraftWorker extends PathfinderMob {
 
 	public void setWorkerState(WorkerState state) {
 		this.state = state;
+		if (state == WorkerState.ACTIVE || state == WorkerState.STORED) {
+			this.workNotice = "";
+		}
+	}
+
+	public String workNotice() {
+		return workNotice;
+	}
+
+	public void setWorkNotice(String notice) {
+		this.workNotice = notice == null ? "" : notice;
 	}
 
 	@Override

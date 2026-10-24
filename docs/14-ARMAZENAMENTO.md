@@ -145,13 +145,18 @@ O cargo declara o que conhece:
 | `station storage role <posto> <baú> <papel>` | muda `mixed/output/input/tools` |
 | `station storage scan <posto>` | procura no raio e vincula o mais próximo livre |
 | `station storage list <posto>` | lista os vínculos no chat |
+| `worker storage deposit <trabalhador>` | deposita produto/excedente nos baús vinculados |
+| `worker storage withdraw <trabalhador>` | retira sementes (e bone meal, se ligado) dos baús |
+
+O `<trabalhador>` aceita UUID ou o nome; nos comandos `worker storage` o nome pode ter espaços
+(argumento greedy). Os demais comandos de mochila seguem aceitando UUID/nome sem espaços.
 
 ## 9. Ordem de implementação
 
 1. **Vínculos + UI** (esta etapa): `StorageLink` no registro, comandos, aba **Baús** no Posto, migração do
    antigo `outputChest`.
 2. **Mochila**: inventário de 9 + ferramenta, persistência e UI da tela do Empregado.
-3. **Protocolo do fazendeiro**: saque/depósito com `keep`/`target`, pausa/avisos, durabilidade.
+3. **Protocolo do fazendeiro**: `WorkerStorage` (inserir/extrair por papel) + `FarmerStorage` (keep 32 sementes, target 16 bone meal, só produto) + comandos de teste. A IA (SCAN/MOVE/WORK/DEPOSIT) usa esses serviços na etapa seguinte.
 4. **Relocate + upgrades no item** e hover.
 5. Minerador/pedreiro reutilizando o mesmo spec.
 
@@ -167,5 +172,8 @@ O cargo declara o que conhece:
 | Mochila do trabalhador (9 + ferramenta) e UI | ✅ |
 | Popup de quantidade (Tudo/Confirmar) para pilhas > 1 | ✅ |
 | Validação de ferramenta por cargo (fazendeiro: enxada) | ✅ |
-| Protocolo de saque/depósito do fazendeiro | ⏳ |
+| `WorkerStorage`: inserir só em slot vazio/igual, extrair só insumo, respeitando papel | ✅ |
+| `FarmerStorage`: keep 32 sementes, target 16 bone meal, deposita só produto | ✅ |
+| Comandos `worker storage deposit/withdraw` | ✅ |
+| IA do fazendeiro MVP usando o protocolo (colher/replantar/depositar, puxar sementes, pausa/avisos) | ✅ |
 | Upgrades no item + hover / relocate | ⏳ |
