@@ -17,6 +17,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 
 /**
  * Tela do Posto de Trabalho: vagas do posto (hoje 1), trabalhador vinculado e a lista de
@@ -32,7 +33,8 @@ public record OpenStationPayload(
 		List<Summary> workers,
 		List<AreaView> ownAreas,
 		List<AreaView> areas,
-		List<BlockPos> otherPosts
+		List<BlockPos> otherPosts,
+		List<StorageView> storage
 ) implements CustomPacketPayload {
 	public static final Type<OpenStationPayload> TYPE = new Type<>(LaborCraft.id("open_station"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, OpenStationPayload> CODEC = StreamCodec.of(
@@ -71,6 +73,14 @@ public record OpenStationPayload(
 				buffer.writeVarInt(payload.otherPosts().size());
 				for (BlockPos post : payload.otherPosts()) {
 					buffer.writeBlockPos(post);
+				}
+				buffer.writeVarInt(payload.storage().size());
+				for (StorageView view : payload.storage()) {
+					buffer.writeBlockPos(view.pos());
+					buffer.writeUtf(view.role(), 16);
+					buffer.writeVarInt(view.distance());
+					buffer.writeBoolean(view.valid());
+					buffer.writeUtf(view.blockKey(), 256);
 				}
 			},
 			buffer -> {
@@ -112,10 +122,21 @@ public record OpenStationPayload(
 				for (int index = 0; index < postCount; index++) {
 					otherPosts.add(buffer.readBlockPos());
 				}
+				int storageCount = buffer.readVarInt();
+				List<StorageView> storage = new ArrayList<>(storageCount);
+				for (int index = 0; index < storageCount; index++) {
+					storage.add(new StorageView(
+							buffer.readBlockPos(),
+							buffer.readUtf(16),
+							buffer.readVarInt(),
+							buffer.readBoolean(),
+							buffer.readUtf(256)
+					));
+				}
 				return new OpenStationPayload(
 						pos, mode, zone, maxRadius, verticalRadius, bound,
 						List.copyOf(workers), List.copyOf(ownAreas), List.copyOf(areas),
-						List.copyOf(otherPosts)
+						List.copyOf(otherPosts), List.copyOf(storage)
 				);
 			}
 	);
@@ -160,8 +181,21 @@ public record OpenStationPayload(
 				List.copyOf(workers),
 				toAreaViews(station, StationAreas.effectiveSpans(station, all, maxRadius), false),
 				nearbyAreas(station, nearby, all, maxRadius),
-				nearby.stream().map(StationRegistry.Station::pos).toList()
+				nearby.stream().map(StationRegistry.Station::pos).toList(),
+				storageViews(player, station)
 		);
+	}
+
+	private static List<StorageView> storageViews(ServerPlayer player, StationRegistry.Station station) {
+		List<StorageView> views = new ArrayList<>(station.storage().size());
+		for (StationRegistry.StorageLink link : station.storage()) {
+			BlockPos pos = link.pos();
+			boolean valid = player.level().getBlockEntity(pos) instanceof Container;
+			String blockKey = player.level().getBlockState(pos).getBlock().getDescriptionId();
+			int distance = (int) Math.round(Math.sqrt(pos.distSqr(station.pos())));
+			views.add(new StorageView(pos, link.role().id(), distance, valid, blockKey));
+		}
+		return List.copyOf(views);
 	}
 
 	private static List<StationRegistry.Station> nearbyStations(
@@ -284,6 +318,9 @@ public record OpenStationPayload(
 	 * draft selection must be clipped by it.
 	 */
 	public record AreaView(String kind, BlockPos from, BlockPos to, boolean blocksDraft) {
+	}
+
+	public record StorageView(BlockPos pos, String role, int distance, boolean valid, String blockKey) {
 	}
 
 	public record Summary(

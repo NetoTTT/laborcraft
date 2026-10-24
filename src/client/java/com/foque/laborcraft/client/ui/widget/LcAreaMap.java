@@ -13,12 +13,15 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.MapColor;
@@ -29,6 +32,21 @@ import net.minecraft.world.level.material.MapColor;
  * topographic relief shading (hillshading), and a subtle chunk grid (JourneyMap style).
  */
 public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
+	/**
+	 * Which vertical slice the map renders. AUTO follows the player: surface while under open sky,
+	 * cave floor-scan once the player is covered.
+	 */
+	public enum Layer {
+		AUTO,
+		SURFACE,
+		UNDERGROUND;
+
+		public Layer next() {
+			Layer[] all = values();
+			return all[(ordinal() + 1) % all.length];
+		}
+	}
+
 	private static final int BG_DARK = 0xFF141A22;
 	private static final int GRID_COLOR = 0xFF222B36;
 	private static final int SELECTION_FILL = 0x4548D7A0;
@@ -37,6 +55,7 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 	private static final int SAVED_BORDER = 0xFFFFC65A;
 	private static final int OVERLAP_FILL = 0x77FF5555;
 	private static final int OVERLAP_BORDER = 0xFFFF5555;
+	private static final int NO_FLOOR = Integer.MIN_VALUE;
 
 	private final BlockPos center;
 	private final int maxRadius;
@@ -52,6 +71,11 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 	private DynamicTexture texture;
 	private boolean dirty = true;
 	private long lastUpdateTick;
+
+	private Layer layer = Layer.AUTO;
+	private boolean lastUnderground;
+	private int pivotY;
+	private Component layerLabel = Component.empty();
 
 	private BlockPos from;
 	private BlockPos to;
@@ -84,6 +108,8 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 
 		int span = this.maxRadius * 2 + 1;
 		this.pixelsPerBlock = Mth.clamp(Math.min(width / span, height / span), 1, 4);
+		this.lastUnderground = undergroundActive();
+		this.layerLabel = buildLayerLabel(this.lastUnderground, effectivePivotY());
 	}
 
 	public BlockPos from() {
@@ -92,6 +118,22 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 
 	public BlockPos to() {
 		return to;
+	}
+
+	public void setLayer(Layer layer) {
+		if (layer == null || this.layer == layer) {
+			return;
+		}
+		this.layer = layer;
+		this.dirty = true;
+	}
+
+	public Layer layer() {
+		return layer;
+	}
+
+	public Component layerLabel() {
+		return layerLabel;
 	}
 
 	public boolean hasSelection() {
@@ -124,10 +166,20 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 	@Override
 	protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
 		long currentTick = Minecraft.getInstance().level == null ? 0L : Minecraft.getInstance().level.getGameTime();
-		if (dirty || texture == null || currentTick - lastUpdateTick >= 100L) {
-			updateMapTexture();
+		boolean underground = undergroundActive();
+		int pivot = effectivePivotY();
+		long refreshTicks = underground ? 200L : 100L;
+		boolean pivotMoved = underground && Math.abs(pivot - pivotY) >= 2;
+
+		if (dirty || texture == null || underground != lastUnderground || pivotMoved
+				|| currentTick - lastUpdateTick >= refreshTicks) {
+			pivotY = pivot;
+			lastUnderground = underground;
+			updateMapTexture(underground);
 			lastUpdateTick = currentTick;
 		}
+
+		updateLayerLabel(underground, pivot);
 
 		graphics.fill(getX(), getY(), getX() + width, getY() + height, BG_DARK);
 		graphics.enableScissor(getX(), getY(), getX() + width, getY() + height);
@@ -177,7 +229,7 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 		LcRender.border(graphics, getX(), getY(), width, height, 0xFF354250);
 	}
 
-	private void updateMapTexture() {
+	private void updateMapTexture(boolean underground) {
 		if (texture == null) {
 			texture = new DynamicTexture("laborcraft_area_map", width, height, false);
 			Minecraft.getInstance().getTextureManager().register(textureId, texture);
@@ -188,7 +240,7 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 			return;
 		}
 
-		var level = Minecraft.getInstance().level;
+		ClientLevel level = Minecraft.getInstance().level;
 		if (level == null) {
 			img.fillRect(0, 0, width, height, BG_DARK);
 			texture.upload();
@@ -227,6 +279,11 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 
 				if (!chunkLoaded) {
 					argb = isChunkGrid ? GRID_COLOR : BG_DARK;
+				} else if (underground) {
+					argb = undergroundColumnColor(level, worldX, worldZ, tempPos);
+					if (isChunkGrid && (argb >>> 24) != 0) {
+						argb = applyChunkGridTint(argb);
+					}
 				} else {
 					int surfaceY = level.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, tempPos.set(worldX, center.getY(), worldZ)).getY() - 1;
 					BlockState state = level.getBlockState(tempPos.set(worldX, surfaceY, worldZ));
@@ -279,6 +336,107 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 		int g = Math.min(255, ((argb >> 8) & 0xFF) + 38);
 		int b = Math.min(255, (argb & 0xFF) + 38);
 		return (a << 24) | (r << 16) | (g << 8) | b;
+	}
+
+	/**
+	 * Cave layer: finds the nearest floor around the pivot Y and colors the block below it.
+	 * Columns with no floor are left transparent so the map background shows through.
+	 */
+	private int undergroundColumnColor(ClientLevel level, int x, int z, BlockPos.MutableBlockPos pos) {
+		int floorY = findFloor(level, x, z, pivotY, pos);
+		if (floorY == NO_FLOOR) {
+			return 0x00000000;
+		}
+
+		pos.set(x, floorY - 1, z);
+		BlockState floor = level.getBlockState(pos);
+		MapColor mapColor = floor.getMapColor(level, pos);
+		if (mapColor == MapColor.NONE) {
+			return 0x00000000;
+		}
+
+		int depth = pivotY - (floorY - 1);
+		MapColor.Brightness brightness = depth <= 3
+				? MapColor.Brightness.NORMAL
+				: (depth <= 8 ? MapColor.Brightness.LOW : MapColor.Brightness.LOWEST);
+		return mapColor.calculateARGBColor(brightness);
+	}
+
+	/**
+	 * Returns the Y of the first open cell above a floor, scanning from the pivot: downward when
+	 * the pivot is open, upward (max 10) when it is inside a solid block. Mirrors the cave-mode
+	 * floor scan used by open-source map mods.
+	 */
+	private static int findFloor(ClientLevel level, int x, int z, int pivot, BlockPos.MutableBlockPos pos) {
+		BlockState state = level.getBlockState(pos.set(x, pivot, z));
+
+		if (!occludes(state)) {
+			for (int y = pivot - 1; y >= level.getMinY(); y--) {
+				state = level.getBlockState(pos.set(x, y, z));
+				if (occludes(state)) {
+					return y + 1;
+				}
+			}
+			return NO_FLOOR;
+		}
+
+		int top = Math.min(pivot + 10, level.getMaxY());
+		for (int y = pivot + 1; y <= top; y++) {
+			state = level.getBlockState(pos.set(x, y, z));
+			if (!occludes(state)) {
+				return y;
+			}
+		}
+		return NO_FLOOR;
+	}
+
+	private static boolean occludes(BlockState state) {
+		return state.canOcclude() || state.is(Blocks.LAVA);
+	}
+
+	private boolean undergroundActive() {
+		return switch (layer) {
+			case SURFACE -> false;
+			case UNDERGROUND -> true;
+			case AUTO -> playerUnderground();
+		};
+	}
+
+	private int effectivePivotY() {
+		Minecraft client = Minecraft.getInstance();
+		return client.player == null ? center.getY() : Mth.floor(client.player.getY());
+	}
+
+	private static boolean playerUnderground() {
+		Minecraft client = Minecraft.getInstance();
+		if (client.player == null || client.level == null) {
+			return false;
+		}
+
+		BlockPos pos = client.player.blockPosition();
+		if (client.level.getBrightness(LightLayer.SKY, pos) <= 0) {
+			return true;
+		}
+
+		int surfaceY = client.level.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, pos).getY();
+		return pos.getY() < surfaceY - 2;
+	}
+
+	private void updateLayerLabel(boolean underground, int pivot) {
+		Component next = buildLayerLabel(underground, pivot);
+		if (!next.getString().equals(layerLabel.getString())) {
+			layerLabel = next;
+		}
+	}
+
+	private Component buildLayerLabel(boolean underground, int pivot) {
+		return switch (layer) {
+			case SURFACE -> Component.translatable("laborcraft.ui.station.map.layer.surface");
+			case UNDERGROUND -> Component.translatable("laborcraft.ui.station.map.layer.underground", pivot);
+			case AUTO -> underground
+					? Component.translatable("laborcraft.ui.station.map.layer.auto_underground", pivot)
+					: Component.translatable("laborcraft.ui.station.map.layer.auto_surface");
+		};
 	}
 
 	private void drawOtherAreas(GuiGraphicsExtractor graphics) {

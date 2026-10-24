@@ -1,7 +1,10 @@
 package com.foque.laborcraft.client;
 
+import com.foque.laborcraft.LaborCraft;
+import com.foque.laborcraft.client.hud.TargetIndicatorHud;
 import com.foque.laborcraft.client.render.LaborCraftWorkerRenderer;
 import com.foque.laborcraft.client.render.StationPreviewManager;
+import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.foque.laborcraft.client.ui.chat.LcValuePrompt;
 import com.foque.laborcraft.client.ui.screen.LaborCraftAdminScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftConfigScreen;
@@ -27,8 +30,10 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.core.BlockPos;
 
 public class LaborCraftClient implements ClientModInitializer {
 	@Override
@@ -38,9 +43,12 @@ public class LaborCraftClient implements ClientModInitializer {
 		ClientSendMessageEvents.ALLOW_COMMAND.register(LcValuePrompt::allowCommand);
 		ClientSendMessageEvents.CHAT_CANCELED.register(LcValuePrompt::chatCanceled);
 		ClientTickEvents.END_CLIENT_TICK.register(StationPreviewManager::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(WorldHighlightManager::tick);
+		HudElementRegistry.addLast(LaborCraft.id("target_indicator"), new TargetIndicatorHud());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			LcValuePrompt.cancelActive();
 			StationPreviewManager.resetAll();
+			WorldHighlightManager.reset();
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(OpenAdminPayload.TYPE, (payload, context) -> {
@@ -118,7 +126,14 @@ public class LaborCraftClient implements ClientModInitializer {
 			Minecraft client = context.client();
 			client.execute(() -> {
 				LcValuePrompt.cancelActive();
-				client.setScreenAndShow(new LaborCraftStationScreen(payload));
+				LaborCraftStationScreen.Tab tab = null;
+				BlockPos storage = null;
+				if (client.gui.screen() instanceof LaborCraftStationScreen open
+						&& open.stationPos().equals(payload.pos())) {
+					tab = open.activeTab();
+					storage = open.activeStorage();
+				}
+				client.setScreenAndShow(new LaborCraftStationScreen(payload, tab, storage));
 			});
 		});
 	}

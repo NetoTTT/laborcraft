@@ -1,6 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
 import com.foque.laborcraft.client.render.StationPreviewManager;
+import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
 import com.foque.laborcraft.client.ui.LcRender;
 import com.foque.laborcraft.client.ui.LcTheme;
@@ -17,15 +18,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /**
  * Tela do Posto de Trabalho. Aba Trabalho: empregados do jogador e a vaga do posto com as acoes.
  * Aba Config: modo de area (raio livre ou zona) — o desenho do mapa entra depois.
  */
 public final class LaborCraftStationScreen extends LaborCraftScreen {
-	private enum Tab {
+	public enum Tab {
 		WORK,
-		CONFIG
+		CONFIG,
+		STORAGE
 	}
 
 	private final OpenStationPayload station;
@@ -38,14 +42,45 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 	private LcAreaMap areaMap;
 	private LcButton confirmMapButton;
 	private LcButton previewMapButton;
+	private LcButton layerButton;
+	private LcAreaMap.Layer mapLayer = LcAreaMap.Layer.AUTO;
+	private LcScrollList<OpenStationPayload.StorageView> storageList;
+	private LcButton storageRoleButton;
+	private LcButton storageUnlinkButton;
+	private int selectedStorage = -1;
+	private BlockPos selectedStoragePos;
+	private static final ItemStack EYE_ICON = new ItemStack(Items.ENDER_EYE);
 
 	public LaborCraftStationScreen(OpenStationPayload station) {
+		this(station, null, null);
+	}
+
+	public LaborCraftStationScreen(OpenStationPayload station, Tab initialTab) {
+		this(station, initialTab, null);
+	}
+
+	public LaborCraftStationScreen(OpenStationPayload station, Tab initialTab, BlockPos initialStorage) {
 		super(Component.translatable("laborcraft.ui.station.title"), 460, 360);
 		this.station = station;
-		if (StationPreviewManager.hasDraft(station.pos())) {
+		this.selectedStoragePos = initialStorage;
+		if (initialTab != null) {
+			this.tab = initialTab;
+		} else if (StationPreviewManager.hasDraft(station.pos())) {
 			this.tab = Tab.CONFIG;
 			this.mapOpen = true;
 		}
+	}
+
+	public BlockPos stationPos() {
+		return station.pos();
+	}
+
+	public Tab activeTab() {
+		return tab;
+	}
+
+	public BlockPos activeStorage() {
+		return selectedStoragePos;
 	}
 
 	@Override
@@ -67,13 +102,16 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 				tab == Tab.WORK ? LcButton.Variant.PRIMARY : LcButton.Variant.GHOST, () -> switchTab(Tab.WORK));
 		LcButton configTab = new LcButton(x + 98, panelY + 54, 92, 20, Component.translatable("laborcraft.ui.station.tab.config"),
 				tab == Tab.CONFIG ? LcButton.Variant.PRIMARY : LcButton.Variant.GHOST, () -> switchTab(Tab.CONFIG));
+		LcButton storageTab = new LcButton(x + 196, panelY + 54, 92, 20, Component.translatable("laborcraft.ui.station.tab.storage"),
+				tab == Tab.STORAGE ? LcButton.Variant.PRIMARY : LcButton.Variant.GHOST, () -> switchTab(Tab.STORAGE));
 		addRenderableWidget(workTab);
 		addRenderableWidget(configTab);
+		addRenderableWidget(storageTab);
 
-		if (tab == Tab.WORK) {
-			buildWorkTab(x, width);
-		} else {
-			buildConfigTab(x, width);
+		switch (tab) {
+			case WORK -> buildWorkTab(x, width);
+			case CONFIG -> buildConfigTab(x, width);
+			case STORAGE -> buildStorageTab(x, width);
 		}
 	}
 
@@ -171,12 +209,150 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 				addRenderableWidget(clear);
 			}
 		}
+
+		addLayerButton(x, width);
+	}
+
+	private void addLayerButton(int x, int width) {
+		layerButton = new LcButton(x + width - 110, panelY + 54, 110, 20,
+				areaMap != null ? areaMap.layerLabel() : Component.empty(),
+				LcButton.Variant.GHOST, this::cycleLayer);
+		layerButton.tip(LcTooltips.of(
+				Component.translatable("laborcraft.ui.station.map.layer"),
+				Component.translatable("laborcraft.ui.station.map.layer.tip"),
+				null
+		));
+		addRenderableWidget(layerButton);
+	}
+
+	private void cycleLayer() {
+		if (areaMap == null) {
+			return;
+		}
+		mapLayer = mapLayer.next();
+		areaMap.setLayer(mapLayer);
+		layerButton.setMessage(areaMap.layerLabel());
+	}
+
+	private void buildStorageTab(int x, int width) {
+		int buttonsY = panelY + panelHeight() - 50;
+		LcButton close = new LcButton(x + width - 96, buttonsY, 96, 24,
+				Component.translatable("laborcraft.ui.worker.close"), LcButton.Variant.GHOST, this::onClose);
+		addRenderableWidget(close);
+
+		LcButton detect = new LcButton(x + width - 110, panelY + 102, 106, 20,
+				Component.translatable("laborcraft.ui.station.storage.detect"), LcButton.Variant.GHOST,
+				this::detectStorage);
+		detect.tip(LcTooltips.of(
+				Component.translatable("laborcraft.ui.station.storage.detect"),
+				Component.translatable("laborcraft.ui.station.storage.detect.tip"),
+				null
+		));
+		addRenderableWidget(detect);
+
+		storageList = new LcScrollList<>(
+				x + 8,
+				panelY + 126,
+				width - 16,
+				140,
+				32,
+				this::drawStorageRow,
+				(view, index) -> {
+					selectedStorage = index;
+					selectedStoragePos = view.pos();
+					updateStorageButtons();
+				}
+		);
+		storageList.replaceItems(station.storage());
+		addRenderableWidget(storageList);
+
+		selectedStorage = -1;
+		if (selectedStoragePos != null) {
+			for (int index = 0; index < station.storage().size(); index++) {
+				if (station.storage().get(index).pos().equals(selectedStoragePos)) {
+					selectedStorage = index;
+					break;
+				}
+			}
+		}
+
+		storageRoleButton = new LcButton(x, buttonsY, 150, 24, Component.empty(),
+				LcButton.Variant.SECONDARY, this::cycleStorageRole);
+		storageUnlinkButton = new LcButton(x + 158, buttonsY, 120, 24,
+				Component.translatable("laborcraft.ui.station.storage.unlink"), LcButton.Variant.DANGER,
+				this::unlinkStorage);
+		addRenderableWidget(storageRoleButton);
+		addRenderableWidget(storageUnlinkButton);
+		updateStorageButtons();
+	}
+
+	private OpenStationPayload.StorageView selectedStorageView() {
+		if (selectedStorage < 0 || selectedStorage >= station.storage().size()) {
+			return null;
+		}
+		return station.storage().get(selectedStorage);
+	}
+
+	private void updateStorageButtons() {
+		OpenStationPayload.StorageView view = selectedStorageView();
+		if (storageRoleButton != null) {
+			storageRoleButton.active = view != null;
+			storageRoleButton.setMessage(Component.translatable(
+					"laborcraft.ui.station.storage.role",
+					Component.translatable("laborcraft.storage.role." + (view == null ? "mixed" : view.role()))
+			));
+		}
+		if (storageUnlinkButton != null) {
+			storageUnlinkButton.active = view != null;
+		}
+	}
+
+	private void detectStorage() {
+		LaborCraftUiActions.run(LaborCraftCommands.STATION_STORAGE_SCAN + " " + posString());
+	}
+
+	private void unlinkStorage() {
+		OpenStationPayload.StorageView view = selectedStorageView();
+		if (view == null) {
+			return;
+		}
+		LaborCraftUiActions.run(
+				LaborCraftCommands.STATION_STORAGE_UNLINK + " " + posString() + " " + coordinates(view.pos())
+		);
+	}
+
+	private void cycleStorageRole() {
+		OpenStationPayload.StorageView view = selectedStorageView();
+		if (view == null) {
+			return;
+		}
+		LaborCraftUiActions.run(
+				LaborCraftCommands.STATION_STORAGE_ROLE + " " + posString() + " " + coordinates(view.pos())
+						+ " " + nextStorageRole(view.role())
+		);
+	}
+
+	private static String nextStorageRole(String role) {
+		return switch (role == null ? "" : role) {
+			case "mixed" -> "output";
+			case "output" -> "input";
+			case "input" -> "tools";
+			default -> "mixed";
+		};
+	}
+
+	private void highlightStorage(int index) {
+		if (index < 0 || index >= station.storage().size()) {
+			return;
+		}
+		WorldHighlightManager.highlight(station.storage().get(index).pos(), 0xFFFFC65A);
+		this.onClose();
 	}
 
 	private LcAreaMap createAreaMap(int x, int width, BlockPos selectionFrom, BlockPos selectionTo, boolean readOnly) {
 		BlockPos savedFrom = station.zone() == null ? null : station.zone().from();
 		BlockPos savedTo = station.zone() == null ? null : station.zone().to();
-		return new LcAreaMap(
+		LcAreaMap map = new LcAreaMap(
 				x + 12,
 				panelY + 132,
 				width - 24,
@@ -193,6 +369,8 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 				station.areas(),
 				readOnly
 		);
+		map.setLayer(mapLayer);
+		return map;
 	}
 
 	private BlockPos atStationY(BlockPos pos) {
@@ -292,14 +470,21 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-		boolean handled = super.mouseClicked(event, doubleClick);
-		updateMapButton();
-		return handled;
-	}
+		if (tab == Tab.STORAGE && storageList != null) {
+			int index = storageList.rowAt(event.x(), event.y());
+			if (index >= 0) {
+				int rowY = storageList.rowTop(index);
+				int eyeX = storageList.getX() + storageList.rowWidth() - 24;
+				int eyeY = rowY + 6;
+				if (event.x() >= eyeX && event.x() < eyeX + 18
+						&& event.y() >= eyeY && event.y() < eyeY + 18) {
+					highlightStorage(index);
+					return true;
+				}
+			}
+		}
 
-	@Override
-	public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-		boolean handled = super.mouseDragged(event, deltaX, deltaY);
+		boolean handled = super.mouseClicked(event, doubleClick);
 		updateMapButton();
 		return handled;
 	}
@@ -407,10 +592,10 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		int x = panelX + 22;
 		int width = panelWidth() - 44;
 
-		if (tab == Tab.WORK) {
-			drawWorkTab(graphics, x, width);
-		} else {
-			drawConfigTab(graphics, x, width);
+		switch (tab) {
+			case WORK -> drawWorkTab(graphics, x, width);
+			case CONFIG -> drawConfigTab(graphics, x, width);
+			case STORAGE -> drawStorageTab(graphics, x, width);
 		}
 	}
 
@@ -488,6 +673,10 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 	}
 
 	private void drawConfigTab(GuiGraphicsExtractor graphics, int x, int width) {
+		if (layerButton != null && areaMap != null) {
+			layerButton.setMessage(areaMap.layerLabel());
+		}
+
 		int boxY = panelY + 96;
 		graphics.fill(x, boxY, x + width, boxY + 190, 0x401B232D);
 		LcRender.border(graphics, x, boxY, width, 190, LcTheme.DIVIDER);
@@ -535,6 +724,95 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 			graphics.text(font, Component.translatable("laborcraft.ui.station.map.legend"),
 					x + 12, boxY + 176, LcTheme.MUTED);
 		}
+	}
+
+	private void drawStorageTab(GuiGraphicsExtractor graphics, int x, int width) {
+		int boxY = panelY + 96;
+		graphics.fill(x, boxY, x + width, boxY + 190, 0x401B232D);
+		LcRender.border(graphics, x, boxY, width, 190, LcTheme.DIVIDER);
+
+		graphics.text(font, Component.translatable(
+				"laborcraft.ui.station.storage.title",
+				station.storage().size()
+		), x + 12, boxY + 8, LcTheme.TITLE);
+
+		if (station.storage().isEmpty()) {
+			graphics.centeredText(
+					font,
+					Component.translatable("laborcraft.ui.station.storage.empty"),
+					x + width / 2,
+					boxY + 82,
+					LcTheme.MUTED
+			);
+		}
+
+		graphics.text(font, Component.translatable("laborcraft.ui.station.storage.hint"),
+				x + 12, boxY + 176, LcTheme.MUTED);
+	}
+
+	private void drawStorageRow(
+			GuiGraphicsExtractor graphics,
+			OpenStationPayload.StorageView view,
+			int index,
+			int x,
+			int y,
+			int width,
+			int height,
+			int mouseX,
+			int mouseY,
+			boolean hovered
+	) {
+		boolean selected = index == selectedStorage;
+		int background = selected
+				? LcTheme.SELECTED_BG
+				: (hovered ? LcTheme.BUTTON_HOVER : LcTheme.BUTTON_BG);
+		graphics.fill(x, y, x + width, y + height - 2, background);
+		LcRender.border(graphics, x, y, width, height - 2, selected ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER);
+
+		Component role = Component.translatable("laborcraft.storage.role." + view.role());
+		int roleColor = switch (view.role()) {
+			case "output" -> 0xFF48D7A0;
+			case "input" -> 0xFF4C8BF5;
+			case "tools" -> 0xFFFFC65A;
+			default -> LcTheme.TEXT;
+		};
+		graphics.text(font, role, x + 8, y + 5, roleColor);
+
+		if (view.valid()) {
+			graphics.text(
+					font,
+					Component.translatable(view.blockKey()),
+					x + 16 + font.width(role),
+					y + 5,
+					LcTheme.TITLE
+			);
+		} else {
+			graphics.text(
+					font,
+					Component.translatable("laborcraft.ui.station.storage.invalid"),
+					x + 16 + font.width(role),
+					y + 5,
+					LcTheme.DANGER
+			);
+		}
+
+		graphics.text(
+				font,
+				Component.literal(
+						view.pos().getX() + ", " + view.pos().getY() + ", " + view.pos().getZ()
+								+ " · " + view.distance() + " bl"
+				),
+				x + 8,
+				y + 18,
+				LcTheme.MUTED
+		);
+
+		int eyeX = x + width - 24;
+		int eyeY = y + 6;
+		boolean eyeHovered = mouseX >= eyeX && mouseX < eyeX + 18 && mouseY >= eyeY && mouseY < eyeY + 18;
+		graphics.fill(eyeX, eyeY, eyeX + 18, eyeY + 18, eyeHovered ? 0x66354250 : 0x44111820);
+		LcRender.border(graphics, eyeX, eyeY, 18, 18, eyeHovered ? LcTheme.ACCENT : 0xFF354250);
+		graphics.item(EYE_ICON, eyeX + 1, eyeY + 1);
 	}
 
 	private void drawWorker(

@@ -3,6 +3,23 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.1.0-alpha.3] — 2026-10-24
+
+Armazenamento do Posto (aba **Baús**) e melhoria do mapa com camadas de superfície/subsolo.
+Mochila do trabalhador e protocolo de saque/depósito continuam para a próxima etapa.
+
+Alvo: Minecraft 26.3 / Fabric Loader 0.19.5 / Fabric API 0.164.0+26.3.
+
+### Adicionado
+
+- Mapa do Posto com camadas **Auto / Superfície / Subsolo** e floor-scan de cavernas (pivô no Y do jogador).
+- Aba **Baús** no Posto: vínculo de containers por distância (8 blocos, até 3), papéis `mixed/output/input/tools`, detecção automática e desvinculo.
+- Comandos `/laborcraft station storage link|unlink|role|scan|list`; o antigo `outputChest` é migrado para um vínculo `mixed`.
+- Botão de olho por baú: fecha a tela e desenha um wireframe de partículas por 10 s, com contador acima da hotbar.
+- Indicador de alvo fora da tela no HUD (estilo FPS), com ícone, direção e distância.
+- A seleção do baú e a aba são preservadas quando o servidor reenvia a tela.
+- Desenho do armazenamento no [doc 14](docs/14-ARMAZENAMENTO.md): baú misturado, mochila do trabalhador e protocolo de saque/depósito (próximas etapas).
+
 ## [0.1.0-alpha.2] — 2026-10-23
 
 Zona de trabalho desenhada no mapa, prioridade e recorte entre postos, e visualização da área no mundo.

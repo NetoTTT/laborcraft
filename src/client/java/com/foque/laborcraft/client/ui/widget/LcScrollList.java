@@ -73,6 +73,32 @@ public final class LcScrollList<T> extends AbstractWidget {
 		return items.get(index);
 	}
 
+	/** Width actually available to rows (excludes the scrollbar when one is shown). */
+	public int rowWidth() {
+		return listWidth();
+	}
+
+	/** Screen Y of the top edge of a row, clamped to the current scroll offset. */
+	public int rowTop(int index) {
+		return getY() + index * rowHeight - Mth.floor(scroll);
+	}
+
+	/** Index of the row under the cursor, or -1 when the cursor is outside the list or a gap. */
+	public int rowAt(double mouseX, double mouseY) {
+		if (!active || !visible || mouseX < getX() || mouseX >= getX() + listWidth()
+				|| mouseY < getY() || mouseY >= getY() + height) {
+			return -1;
+		}
+
+		int local = (int) (mouseY - getY() + Mth.floor(scroll));
+		if (local < 0) {
+			return -1;
+		}
+
+		int index = local / rowHeight;
+		return index >= 0 && index < items.size() ? index : -1;
+	}
+
 	private int contentHeight() {
 		return items.size() * rowHeight;
 	}

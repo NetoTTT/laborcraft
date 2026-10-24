@@ -31,6 +31,7 @@ public final class LaborCraftConfig {
 	public HousingSettings housing = new HousingSettings();
 	public AcquisitionSettings acquisition = new AcquisitionSettings();
 	public AreaSettings area = new AreaSettings();
+	public StorageSettings storage = new StorageSettings();
 	public ScheduleSettings schedule = new ScheduleSettings();
 	public PathingSettings pathing = new PathingSettings();
 	public JobSettings farmer = JobSettings.farmer();
@@ -144,6 +145,16 @@ public final class LaborCraftConfig {
 		public boolean previewParticles = true;
 
 		public AreaSettings() {
+		}
+	}
+
+	public static final class StorageSettings {
+		public int maxDistance = 8;
+		public int maxContainers = 3;
+		public boolean equipFromChest = false;
+		public int workerSlots = 9;
+
+		public StorageSettings() {
 		}
 	}
 

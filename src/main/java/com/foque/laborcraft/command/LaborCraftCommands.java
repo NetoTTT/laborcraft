@@ -32,6 +32,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -50,6 +51,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.item.ItemStack;
 
@@ -74,6 +76,10 @@ public final class LaborCraftCommands {
 	public static final String STATION_RESUME = STATION + " resume";
 	public static final String STATION_ZONE_SET = STATION + " zone set";
 	public static final String STATION_ZONE_CLEAR = STATION + " zone clear";
+	public static final String STATION_STORAGE_LINK = STATION + " storage link";
+	public static final String STATION_STORAGE_UNLINK = STATION + " storage unlink";
+	public static final String STATION_STORAGE_ROLE = STATION + " storage role";
+	public static final String STATION_STORAGE_SCAN = STATION + " storage scan";
 	public static final String LANGUAGE = "laborcraft language";
 	public static final String LANGUAGE_PT_BR = LANGUAGE + " pt_br";
 	public static final String LANGUAGE_EN_US = LANGUAGE + " en_us";
@@ -208,6 +214,65 @@ public final class LaborCraftCommands {
 									.then(Commands.literal("clear")
 										.then(Commands.argument("pos", BlockPosArgument.blockPos())
 											.executes(context -> stationZoneClear(
+												context.getSource(),
+												BlockPosArgument.getLoadedBlockPos(context, "pos")
+											)))))
+								.then(Commands.literal("storage")
+									.then(Commands.literal("link")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+											.then(Commands.argument("chest", BlockPosArgument.blockPos())
+												.executes(context -> stationStorageLink(
+													context.getSource(),
+													BlockPosArgument.getLoadedBlockPos(context, "pos"),
+													BlockPosArgument.getLoadedBlockPos(context, "chest"),
+													"mixed"
+												))
+												.then(Commands.argument("role", StringArgumentType.word())
+													.suggests((context, builder) -> {
+														for (StationRegistry.StorageRole role : StationRegistry.StorageRole.values()) {
+															builder.suggest(role.id());
+														}
+														return builder.buildFuture();
+													})
+													.executes(context -> stationStorageLink(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos"),
+														BlockPosArgument.getLoadedBlockPos(context, "chest"),
+														StringArgumentType.getString(context, "role")
+													))))))
+									.then(Commands.literal("unlink")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+											.then(Commands.argument("chest", BlockPosArgument.blockPos())
+												.executes(context -> stationStorageUnlink(
+													context.getSource(),
+													BlockPosArgument.getLoadedBlockPos(context, "pos"),
+													BlockPosArgument.getLoadedBlockPos(context, "chest")
+												)))))
+									.then(Commands.literal("role")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+											.then(Commands.argument("chest", BlockPosArgument.blockPos())
+												.then(Commands.argument("role", StringArgumentType.word())
+													.suggests((context, builder) -> {
+														for (StationRegistry.StorageRole role : StationRegistry.StorageRole.values()) {
+															builder.suggest(role.id());
+														}
+														return builder.buildFuture();
+													})
+													.executes(context -> stationStorageRole(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos"),
+														BlockPosArgument.getLoadedBlockPos(context, "chest"),
+														StringArgumentType.getString(context, "role")
+													))))))
+									.then(Commands.literal("scan")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+											.executes(context -> stationStorageScan(
+												context.getSource(),
+												BlockPosArgument.getLoadedBlockPos(context, "pos")
+											))))
+									.then(Commands.literal("list")
+										.then(Commands.argument("pos", BlockPosArgument.blockPos())
+											.executes(context -> stationStorageList(
 												context.getSource(),
 												BlockPosArgument.getLoadedBlockPos(context, "pos")
 											))))))
@@ -796,6 +861,235 @@ public final class LaborCraftCommands {
 				false
 		);
 		return 1;
+	}
+
+	private static int stationStorageLink(CommandSourceStack source, BlockPos pos, BlockPos chest, String roleId)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		StationRegistry.StorageRole role = StationRegistry.StorageRole.parse(roleId);
+		if (role == null) {
+			source.sendFailure(Component.translatable("laborcraft.storage.invalid.role"));
+			return 0;
+		}
+		if (chest.equals(station.pos())) {
+			source.sendFailure(Component.translatable("laborcraft.storage.invalid.self"));
+			return 0;
+		}
+
+		LaborCraftConfig config = LaborCraftConfig.get();
+		int maxDistance = Math.max(1, config.storage.maxDistance);
+		if (station.pos().distSqr(chest) > (double) maxDistance * maxDistance) {
+			source.sendFailure(Component.translatable("laborcraft.storage.invalid.distance", maxDistance));
+			return 0;
+		}
+		if (!(source.getLevel().getBlockEntity(chest) instanceof Container)) {
+			source.sendFailure(Component.translatable("laborcraft.storage.invalid.container"));
+			return 0;
+		}
+
+		boolean existing = station.storage().stream().anyMatch(link -> link.pos().equals(chest));
+		int maxContainers = Math.max(1, config.storage.maxContainers);
+		if (!existing && station.storage().size() >= maxContainers) {
+			source.sendFailure(Component.translatable("laborcraft.storage.full", maxContainers));
+			return 0;
+		}
+
+		List<StationRegistry.StorageLink> links = new ArrayList<>(station.storage());
+		links.removeIf(link -> link.pos().equals(chest));
+		links.add(new StationRegistry.StorageLink(chest, role));
+		StationRegistry.Station updated = StationRegistry.setStorage(source.getServer(), station, links);
+		OpenStationPayload.open(player, updated);
+		source.sendSuccess(
+				() -> Component.translatable(
+						"laborcraft.storage.linked",
+						chest.getX(),
+						chest.getY(),
+						chest.getZ(),
+						Component.translatable("laborcraft.storage.role." + role.id())
+				),
+				false
+		);
+		return 1;
+	}
+
+	private static int stationStorageUnlink(CommandSourceStack source, BlockPos pos, BlockPos chest)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		List<StationRegistry.StorageLink> links = new ArrayList<>(station.storage());
+		if (!links.removeIf(link -> link.pos().equals(chest))) {
+			source.sendFailure(Component.translatable("laborcraft.storage.not_linked"));
+			return 0;
+		}
+
+		StationRegistry.Station updated = StationRegistry.setStorage(source.getServer(), station, links);
+		OpenStationPayload.open(player, updated);
+		source.sendSuccess(() -> Component.translatable("laborcraft.storage.unlinked"), false);
+		return 1;
+	}
+
+	private static int stationStorageRole(CommandSourceStack source, BlockPos pos, BlockPos chest, String roleId)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		StationRegistry.StorageRole role = StationRegistry.StorageRole.parse(roleId);
+		if (role == null) {
+			source.sendFailure(Component.translatable("laborcraft.storage.invalid.role"));
+			return 0;
+		}
+
+		List<StationRegistry.StorageLink> links = new ArrayList<>(station.storage());
+		boolean found = false;
+		for (int index = 0; index < links.size(); index++) {
+			if (links.get(index).pos().equals(chest)) {
+				links.set(index, new StationRegistry.StorageLink(chest, role));
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			source.sendFailure(Component.translatable("laborcraft.storage.not_linked"));
+			return 0;
+		}
+
+		StationRegistry.Station updated = StationRegistry.setStorage(source.getServer(), station, links);
+		OpenStationPayload.open(player, updated);
+		source.sendSuccess(
+				() -> Component.translatable(
+						"laborcraft.storage.role_set",
+						Component.translatable("laborcraft.storage.role." + role.id())
+				),
+				false
+		);
+		return 1;
+	}
+
+	private static int stationStorageScan(CommandSourceStack source, BlockPos pos)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		LaborCraftConfig config = LaborCraftConfig.get();
+		int maxContainers = Math.max(1, config.storage.maxContainers);
+		if (station.storage().size() >= maxContainers) {
+			source.sendFailure(Component.translatable("laborcraft.storage.full", maxContainers));
+			return 0;
+		}
+
+		int radius = Math.max(1, config.storage.maxDistance);
+		BlockPos center = station.pos();
+		ServerLevel level = source.getLevel();
+		List<BlockPos> candidates = new ArrayList<>();
+		for (int dx = -radius; dx <= radius; dx++) {
+			for (int dy = -radius; dy <= radius; dy++) {
+				for (int dz = -radius; dz <= radius; dz++) {
+					BlockPos candidate = center.offset(dx, dy, dz);
+					if (candidate.equals(center) || center.distSqr(candidate) > (double) radius * radius) {
+						continue;
+					}
+					if (!(level.getBlockEntity(candidate) instanceof Container)) {
+						continue;
+					}
+					BlockPos immutable = candidate.immutable();
+					if (station.storage().stream().anyMatch(link -> link.pos().equals(immutable))) {
+						continue;
+					}
+					candidates.add(immutable);
+				}
+			}
+		}
+
+		if (candidates.isEmpty()) {
+			source.sendFailure(Component.translatable("laborcraft.storage.scan.none", radius));
+			return 0;
+		}
+
+		candidates.sort(Comparator.comparingDouble(candidate -> candidate.distSqr(center)));
+		BlockPos best = candidates.getFirst();
+		List<StationRegistry.StorageLink> links = new ArrayList<>(station.storage());
+		links.add(new StationRegistry.StorageLink(best, StationRegistry.StorageRole.MIXED));
+		StationRegistry.Station updated = StationRegistry.setStorage(source.getServer(), station, links);
+		OpenStationPayload.open(player, updated);
+		int distance = (int) Math.round(Math.sqrt(best.distSqr(center)));
+		source.sendSuccess(
+				() -> Component.translatable(
+						"laborcraft.storage.scan.linked",
+						best.getX(),
+						best.getY(),
+						best.getZ(),
+						distance
+				),
+				false
+		);
+		return 1;
+	}
+
+	private static int stationStorageList(CommandSourceStack source, BlockPos pos)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+
+		if (station.storage().isEmpty()) {
+			source.sendFailure(Component.translatable("laborcraft.storage.empty"));
+			return 0;
+		}
+
+		for (StationRegistry.StorageLink link : station.storage()) {
+			BlockPos chest = link.pos();
+			int distance = (int) Math.round(Math.sqrt(chest.distSqr(station.pos())));
+			source.sendSuccess(
+					() -> Component.translatable(
+							"laborcraft.storage.list.entry",
+							Component.translatable("laborcraft.storage.role." + link.role().id()),
+							chest.getX(),
+							chest.getY(),
+							chest.getZ(),
+							distance
+					),
+					false
+			);
+		}
+		return station.storage().size();
 	}
 
 	private static int stationOpen(CommandSourceStack source, BlockPos pos)

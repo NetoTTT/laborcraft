@@ -50,7 +50,7 @@ public final class StationRegistry {
 				null,
 				StationMode.FREE,
 				List.of(),
-				null,
+				List.of(),
 				System.currentTimeMillis()
 		);
 		registry.stations.add(station);
@@ -127,7 +127,7 @@ public final class StationRegistry {
 				station.worker(),
 				station.mode(),
 				station.zones(),
-				station.outputChest(),
+				station.storage(),
 				station.createdAt()
 		);
 		registry.replace(claimed);
@@ -238,6 +238,20 @@ public final class StationRegistry {
 		}
 	}
 
+	/**
+	 * Replaces the storage links of a station. Container validation belongs to the command layer,
+	 * which knows the level the player is in.
+	 */
+	public static Station setStorage(MinecraftServer server, Station station, List<StorageLink> storage) {
+		Station updated = station.withStorage(storage);
+		StationRegistry registry = load(server);
+		if (registry.replace(updated)) {
+			registry.save();
+			return updated;
+		}
+		return station;
+	}
+
 	public static void clear() {
 		instance = null;
 	}
@@ -306,7 +320,7 @@ public final class StationRegistry {
 						parseUuid(entry.worker),
 						StationMode.of(entry.mode),
 						readZones(entry.zones),
-						entry.chest == null ? null : new BlockPos(entry.chest[0], entry.chest[1], entry.chest[2]),
+						readStorage(entry),
 						entry.createdAt
 				));
 			}
@@ -339,9 +353,16 @@ public final class StationRegistry {
 						zone.to().getX(), zone.to().getY(), zone.to().getZ()
 				});
 			}
-			entry.chest = station.outputChest() == null
-					? null
-					: new int[]{station.outputChest().getX(), station.outputChest().getY(), station.outputChest().getZ()};
+			entry.chest = null;
+			entry.storage = new ArrayList<>(station.storage().size());
+			for (StorageLink link : station.storage()) {
+				StorageData linkData = new StorageData();
+				linkData.x = link.pos().getX();
+				linkData.y = link.pos().getY();
+				linkData.z = link.pos().getZ();
+				linkData.role = link.role().id();
+				entry.storage.add(linkData);
+			}
 			entry.createdAt = station.createdAt();
 			data.stations.add(entry);
 		}
@@ -372,6 +393,30 @@ public final class StationRegistry {
 		}
 
 		return List.copyOf(zones);
+	}
+
+	private static List<StorageLink> readStorage(StationData entry) {
+		List<StorageLink> links = new ArrayList<>();
+		if (entry.storage != null) {
+			for (StorageData value : entry.storage) {
+				if (value != null) {
+					links.add(new StorageLink(
+							new BlockPos(value.x, value.y, value.z),
+							StorageRole.of(value.role)
+					));
+				}
+			}
+		}
+
+		// Migration: the old single output chest becomes a MIXED link.
+		if (links.isEmpty() && entry.chest != null && entry.chest.length == 3) {
+			links.add(new StorageLink(
+					new BlockPos(entry.chest[0], entry.chest[1], entry.chest[2]),
+					StorageRole.MIXED
+			));
+		}
+
+		return List.copyOf(links);
 	}
 
 	private static UUID parseUuid(String value) {
@@ -421,6 +466,53 @@ public final class StationRegistry {
 		}
 	}
 
+	public enum StorageRole {
+		MIXED,
+		OUTPUT,
+		INPUT,
+		TOOLS;
+
+		public String id() {
+			return name().toLowerCase(Locale.ROOT);
+		}
+
+		public StorageRole next() {
+			StorageRole[] all = values();
+			return all[(ordinal() + 1) % all.length];
+		}
+
+		public static StorageRole of(String value) {
+			if (value == null) {
+				return MIXED;
+			}
+			try {
+				return valueOf(value.toUpperCase(Locale.ROOT));
+			} catch (IllegalArgumentException exception) {
+				return MIXED;
+			}
+		}
+
+		/** Returns null when the value is not a valid role (used by commands to reject typos). */
+		public static StorageRole parse(String value) {
+			if (value == null) {
+				return null;
+			}
+			for (StorageRole role : values()) {
+				if (role.id().equalsIgnoreCase(value)) {
+					return role;
+				}
+			}
+			return null;
+		}
+	}
+
+	public record StorageLink(BlockPos pos, StorageRole role) {
+		public StorageLink {
+			pos = pos.immutable();
+			role = role == null ? StorageRole.MIXED : role;
+		}
+	}
+
 	public record Station(
 			String id,
 			String dimension,
@@ -429,15 +521,16 @@ public final class StationRegistry {
 			UUID worker,
 			StationMode mode,
 			List<Zone> zones,
-			BlockPos outputChest,
+			List<StorageLink> storage,
 			long createdAt
 	) {
 		public Station {
 			zones = List.copyOf(zones);
+			storage = List.copyOf(storage);
 		}
 
 		public Station withWorker(UUID newWorker) {
-			return new Station(id, dimension, pos, owner, newWorker, mode, zones, outputChest, createdAt);
+			return new Station(id, dimension, pos, owner, newWorker, mode, zones, storage, createdAt);
 		}
 
 		public boolean isOwner(UUID candidate) {
@@ -445,11 +538,15 @@ public final class StationRegistry {
 		}
 
 		public Station withMode(StationMode newMode) {
-			return new Station(id, dimension, pos, owner, worker, newMode, zones, outputChest, createdAt);
+			return new Station(id, dimension, pos, owner, worker, newMode, zones, storage, createdAt);
 		}
 
 		public Station withZones(List<Zone> newZones) {
-			return new Station(id, dimension, pos, owner, worker, mode, newZones, outputChest, createdAt);
+			return new Station(id, dimension, pos, owner, worker, mode, newZones, storage, createdAt);
+		}
+
+		public Station withStorage(List<StorageLink> newStorage) {
+			return new Station(id, dimension, pos, owner, worker, mode, zones, newStorage, createdAt);
 		}
 
 		public boolean hasZone() {
@@ -471,7 +568,15 @@ public final class StationRegistry {
 		private String worker;
 		private String mode;
 		private List<int[]> zones;
+		private List<StorageData> storage;
 		private int[] chest;
 		private long createdAt;
+	}
+
+	private static final class StorageData {
+		private int x;
+		private int y;
+		private int z;
+		private String role;
 	}
 }

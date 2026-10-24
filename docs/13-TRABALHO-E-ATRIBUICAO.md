@@ -62,12 +62,17 @@ Sem zona, o passo 2 não existe — o posto já vale pelo raio.
       "zones": [
         { "from": [118, 64, -32], "to": [129, 66, -28] }
       ],
-      "outputChest": [121, 65, -30],
+      "storage": [
+        { "x": 121, "y": 65, "z": -30, "role": "mixed" }
+      ],
       "createdAt": 1730000000
     }
   ]
 }
 ```
+
+- O campo antigo `outputChest` é migrado automaticamente para um vínculo `mixed`.
+- Baús, papéis e o protocolo de saque/depósito estão no [doc 14](14-ARMAZENAMENTO.md).
 
 - Posto quebrado → estação fica órfã, trabalhador pausa e avisa; recolocar o bloco na mesma posição reata.
 - Zona sobreposta de outro jogador → recusa com aviso (primeiro que registra leva, como a cama).
@@ -140,7 +145,7 @@ oferece uma **zoning tool** opcional ("clique um canto, clique o oposto") para r
 
 ## 10. UI do Posto
 
-Interagir com o posto abre `LaborCraftStationScreen` (mesmo tamanho das outras, 460x360), com duas abas.
+Interagir com o posto abre `LaborCraftStationScreen` (mesmo tamanho das outras, 460x360), com três abas: **Trabalho**, **Config** e **Baús**.
 
 ### Aba Trabalho (padrão)
 
@@ -179,7 +184,7 @@ Interagir com o posto abre `LaborCraftStationScreen` (mesmo tamanho das outras, 
 - **Modo da área**: `Livre (raio do posto)` ou `Zona desenhada` (escolha única).
 - No modo livre: mostra o raio efetivo (tier/maestria) e o que ele cobre. Sem botão de “aumentar” por enquanto.
 - No modo zona: lista as zonas (hoje 1) com tamanho e botão **Desenhar área**.
-- **Baú de saída**: mostra o baú detectado ao redor do posto (ou “nenhum”) e um botão **Detectar**.
+- O armazenamento fica na aba **Baús** (vínculos, papéis e detecção), detalhada no [doc 14](14-ARMAZENAMENTO.md).
 - **Visualizar**: fecha a tela e mostra a borda efetiva recortada com partículas por 10 s; um contador fica logo acima da hotbar. Também existe um botão compacto **Visualizar área** no topo da caixa da aba Config para rever a área já confirmada, sem reabrir o desenho.
 
 ### Mapa de seleção (`LcAreaMap`)
@@ -204,6 +209,25 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
 - Textura dinâmica gerada a partir do heightmap, redesenhada a cada 5 s ou quando o zoom muda; um único blit por frame.
 - **Y da zona** = Y do posto ± `area.verticalRadius` (mostrado como “de Y-2 a Y+2”). Não precisa desenhar em 3D;
   fazenda em andares pode ganhar seletor de Y depois.
+
+**Camadas do mapa (superfície / subsolo):**
+
+O botão **Camada** (ao lado das abas) alterna `Auto → Superfície → Subsolo`. O rótulo mostra o Y usado no subsolo.
+
+- **Superfície**: heightmap `WORLD_SURFACE`, como antes.
+- **Auto**: superfície ao ar livre; subsolo quando o jogador está coberto. A detecção usa
+  `level.getBrightness(LightLayer.SKY, pos) <= 0` e, como reforço, `playerY < superfície - 2`.
+- **Subsolo**: varre a coluna a partir do Y do jogador (pivô):
+  - pivô em ar → desce até achar sólido/lava e retorna a célula aberta acima;
+  - pivô em sólido → sobe no máximo 10 blocos procurando abertura;
+  - sem piso → coluna transparente (fundo escuro do mapa).
+  O bloco do piso é colorido com `MapColor`, escurecendo conforme a profundidade (3 e 8 blocos), e a grade de
+  chunk continua visível.
+- O pivô acompanha o jogador e a textura é regerada quando ele muda ≥2 blocos (ou a cada 10 s no subsolo), o que
+  evita recálculo por frame. Só a caverna mais próxima do pivô aparece; andares mais fundos exigem descer.
+- Referência de comportamento e algoritmo: **Conflux Map** (`Conflux-Union/conflux-map`, GPL-3.0), especificamente
+  `docs/reference-specs/cave-nether-layers.md`. O VoxelMap também tem cave mode, mas é All Rights Reserved — serve
+  só como referência visual, não para ler código.
 
 ### Acessibilidade e fallback
 
@@ -232,11 +256,13 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
 | Aba Config: modo, mapa interativo, seleção por arraste, zoom, pré-visualização e confirmação da zona | ✅ |
 | Aba Config: mapa read-only com área efetiva, outros postos próximos e destaque de invasão | ✅ |
 | Aba Config: **Visualizar área** da zona confirmada, 10 s com contador acima da hotbar | ✅ |
+| Mapa: camadas Auto/Superfície/Subsolo com floor-scan para cavernas e bases subterrâneas | ✅ |
 | `StationAreas`: área efetiva por células, prioridade pelo Posto mais antigo, recorte de borda | ✅ |
 | Comandos `station bind/unbind/recall/pause/resume/open/info` | ✅ |
 | Desenho da zona (mapa interativo e estaca como alternativa) | ✅ |
 | Remover zona e voltar ao raio livre (`station zone clear`) | ✅ |
-| Baú de saída e insumos | ⏳ |
+| Baús: vínculo, papéis (mixed/output/input/tools) e aba **Baús** | ✅ |
+| Mochila do trabalhador e protocolo de saque/depósito | ⏳ ([doc 14](14-ARMAZENAMENTO.md)) |
 | IA do fazendeiro (SCAN/MOVE/WORK/DEPOSIT) | ⏳ |
 
 O que já dá para testar em jogo: colocar o posto, abrir a tela, vincular um empregado, chamar/retomar e ver
