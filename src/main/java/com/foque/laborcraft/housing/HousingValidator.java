@@ -130,6 +130,7 @@ public final class HousingValidator {
 		Set<BlockPos> doorPositions = new HashSet<>();
 		Set<BlockPos> bedPositions = new HashSet<>();
 		Set<BlockPos> comfortPositions = new HashSet<>();
+		boolean lightSource = false;
 
 		for (BlockPos cell : visited) {
 			for (Direction direction : DIRECTIONS) {
@@ -145,6 +146,9 @@ public final class HousingValidator {
 					bedPositions.add(neighbor);
 				} else if (isComfort(state, config)) {
 					comfortPositions.add(neighbor);
+				}
+				if (state.getLightEmission() > 0) {
+					lightSource = true;
 				}
 			}
 		}
@@ -181,6 +185,8 @@ public final class HousingValidator {
 			failure = "too_small";
 		} else if (config.housing.requireDoor && doors <= 0) {
 			failure = "no_door";
+		} else if (config.housing.requireLight && !lightSource) {
+			failure = "no_light";
 		}
 
 		int capacity = failure.isEmpty()

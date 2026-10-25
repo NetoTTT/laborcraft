@@ -1,9 +1,9 @@
 # 15 — Painel Admin (inicial)
 
-**Status:** primeira versão na `alpha.10`. O painel abre por `/laborcraft ui`, recebe um snapshot
-server-authoritative e tem as abas **Salário**, **Cobrança** e **Sistema**. A edição passa pelos
-comandos atuais; o servidor valida, salva e devolve o estado. Expediente/Área/Casa/Mercado completos,
-auditoria e testes ainda pendentes.
+**Status:** `alpha.13`. O painel abre por `/laborcraft ui`, recebe um snapshot server-authoritative e
+tem as abas **Salário**, **Cobrança**, **Expediente**, **Área/Casa**, **Mercado** e **Sistema**.
+A edição passa por comandos; o servidor valida, salva e devolve o estado. Ainda faltam auditoria,
+testes de unidade e a persistência de contratos para cobrança offline.
 
 ## Objetivo
 
@@ -87,7 +87,8 @@ provedor e cobrança de contratos em chunks descarregados.
 - [x] Motor de cobrança + contrato persistido no trabalhador
 - [x] Tabela salarial configurável (mínimo/rank/raridade/boosts/período)
 - [x] Comandos live e `apply-salary`/`force`
-- [x] UI Admin inicial (Salário/Cobrança/Sistema); abas restantes pendentes
+- [x] UI Admin com Salário/Cobrança/Expediente/Área/Casa/Mercado/Sistema
 - [x] Aplicar aos contratos existentes por comando (falta UI com confirmação)
 - [x] Notificações de cobrança
 - [ ] Auditoria e testes de unidade do ciclo
+**Compatibilidade MineLab:** prioridade alta; ver [doc 17](17-COMPATIBILIDADE-MINELAB.md).

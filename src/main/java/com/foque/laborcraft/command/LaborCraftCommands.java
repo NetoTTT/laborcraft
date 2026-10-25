@@ -66,6 +66,7 @@ public final class LaborCraftCommands {
 	public static final String ADMIN_SET_PROVIDER = "laborcraft admin set provider";
 	public static final String ADMIN_SET_BALANCE = "laborcraft admin set balance";
 	public static final String ADMIN_SET_BUBBLE_WALLS = "laborcraft admin set bubble-walls";
+	public static final String ADMIN_CONFIG = "laborcraft admin config";
 	public static final String ADMIN_MARKET_REFRESH = "laborcraft admin market refresh";
 	public static final String BILLING = "laborcraft billing";
 	public static final String BILLING_SET = BILLING + " set";

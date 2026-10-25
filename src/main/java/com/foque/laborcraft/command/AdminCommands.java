@@ -64,8 +64,47 @@ final class AdminCommands {
 										.executes(context -> setBubbleWalls(
 												context.getSource(),
 												BoolArgumentType.getBool(context, "value")
+										)))))
+				.then(Commands.literal("config")
+						.then(Commands.argument("field", StringArgumentType.word())
+								.suggests((context, builder) -> {
+									CONFIG_FIELDS.forEach(builder::suggest);
+									return builder.buildFuture();
+								})
+								.then(Commands.argument("value", StringArgumentType.greedyString())
+										.executes(context -> setConfig(
+												context.getSource(),
+												StringArgumentType.getString(context, "field"),
+												StringArgumentType.getString(context, "value")
 										)))));
 	}
+
+	private static final java.util.List<String> CONFIG_FIELDS = java.util.List.of(
+			"schedule.mode",
+			"schedule.start-tick",
+			"schedule.end-tick",
+			"schedule.work-in-rain",
+			"schedule.idle-check-ticks",
+			"offers.offer-count",
+			"offers.rotation-days",
+			"worker.max-workers-per-player",
+			"area.shape",
+			"area.vertical-radius",
+			"area.max-radius",
+			"area.use-house-bonus",
+			"area.preview-particles",
+			"housing.required",
+			"housing.require-bed",
+			"housing.require-roof",
+			"housing.require-door",
+			"housing.require-enclosure",
+			"housing.require-light",
+			"housing.max-distance",
+			"housing.max-volume",
+			"housing.min-interior",
+			"housing.max-beds",
+			"housing.recheck-seconds"
+	);
 
 	private static int refreshMarket(CommandSourceStack source) {
 		if (source.getServer() == null) {
@@ -175,6 +214,100 @@ final class AdminCommands {
 			OpenAdminPayload.open(player);
 		}
 		return 1;
+	}
+
+	private static int setConfig(CommandSourceStack source, String field, String value) {
+		LaborCraftConfig config = LaborCraftConfig.get();
+		String key = field.toLowerCase(java.util.Locale.ROOT);
+		boolean refreshMarket = false;
+
+		try {
+			switch (key) {
+				case "schedule.mode" -> {
+					String mode = value.toLowerCase(java.util.Locale.ROOT);
+					if (!java.util.Set.of("daylight", "night", "custom", "always").contains(mode)) {
+						throw new IllegalArgumentException(value);
+					}
+					config.schedule.mode = mode;
+				}
+				case "schedule.start-tick" -> config.schedule.startTick = clamp(parseInt(value), 0, 23_999);
+				case "schedule.end-tick" -> config.schedule.endTick = clamp(parseInt(value), 0, 23_999);
+				case "schedule.work-in-rain" -> config.schedule.workInRain = parseBoolean(value);
+				case "schedule.idle-check-ticks" ->
+						config.schedule.idleCheckTicks = clamp(parseInt(value), 20, 24_000);
+				case "offers.offer-count" -> {
+					config.offers.offerCount = clamp(parseInt(value), 1, 20);
+					refreshMarket = true;
+				}
+				case "offers.rotation-days" -> {
+					config.offers.rotationDays = clamp(parseInt(value), 1, 365);
+					refreshMarket = true;
+				}
+				case "worker.max-workers-per-player" ->
+						config.worker.maxWorkersPerPlayer = clamp(parseInt(value), 0, 100);
+				case "area.shape" -> {
+					String shape = value.toLowerCase(java.util.Locale.ROOT);
+					if (!java.util.Set.of("square", "circle").contains(shape)) {
+						throw new IllegalArgumentException(value);
+					}
+					config.area.shape = shape;
+				}
+				case "area.vertical-radius" -> config.area.verticalRadius = clamp(parseInt(value), 1, 32);
+				case "area.max-radius" -> config.area.maxRadius = clamp(parseInt(value), 1, 64);
+				case "area.use-house-bonus" -> config.area.useHouseBonus = parseBoolean(value);
+				case "area.preview-particles" -> config.area.previewParticles = parseBoolean(value);
+				case "housing.required" -> config.housing.required = parseBoolean(value);
+				case "housing.require-bed" -> config.housing.requireBed = parseBoolean(value);
+				case "housing.require-roof" -> config.housing.requireRoof = parseBoolean(value);
+				case "housing.require-door" -> config.housing.requireDoor = parseBoolean(value);
+				case "housing.require-enclosure" -> config.housing.requireEnclosure = parseBoolean(value);
+				case "housing.require-light" -> config.housing.requireLight = parseBoolean(value);
+				case "housing.max-distance" -> config.housing.maxDistanceFromAnchor = clamp(parseInt(value), 1, 256);
+				case "housing.max-volume" -> config.housing.maxVolume = clamp(parseInt(value), 1, 100000);
+				case "housing.min-interior" -> config.housing.minInteriorSize = clamp(parseInt(value), 1, 64);
+				case "housing.max-beds" -> config.housing.maxBedsPerHouse = clamp(parseInt(value), 1, 64);
+				case "housing.recheck-seconds" -> config.housing.recheckSeconds = clamp(parseInt(value), 1, 3600);
+				default -> {
+					source.sendFailure(Component.translatable("laborcraft.command.admin.config.unknown", field));
+					return 0;
+				}
+			}
+		} catch (IllegalArgumentException exception) {
+			source.sendFailure(Component.translatable("laborcraft.command.admin.config.invalid", field, value));
+			return 0;
+		}
+
+		config.save();
+		if (refreshMarket) {
+			WorkerMarket.refresh(source.getServer());
+		}
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.command.admin.config.set", field, value),
+				true
+		);
+		ServerPlayer player = source.getPlayer();
+		if (player != null) {
+			OpenAdminPayload.open(player);
+		}
+		return 1;
+	}
+
+	private static boolean parseBoolean(String value) {
+		if ("true".equalsIgnoreCase(value)) {
+			return true;
+		}
+		if ("false".equalsIgnoreCase(value)) {
+			return false;
+		}
+		throw new IllegalArgumentException(value);
+	}
+
+	private static int parseInt(String value) {
+		return Integer.parseInt(value);
+	}
+
+	private static int clamp(int value, int min, int max) {
+		return Math.max(min, Math.min(max, value));
 	}
 
 	private static int setBubbleWalls(CommandSourceStack source, boolean value) {

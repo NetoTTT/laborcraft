@@ -30,6 +30,30 @@ public record OpenAdminPayload(
 		boolean useRarityMultiplier,
 		boolean useBoostUpkeep,
 		boolean bubbleThroughWalls,
+		String scheduleMode,
+		int scheduleStartTick,
+		int scheduleEndTick,
+		boolean workInRain,
+		int idleCheckTicks,
+		int offerCount,
+		int rotationDays,
+		int maxWorkersPerPlayer,
+		String areaShape,
+		int areaVerticalRadius,
+		int areaMaxRadius,
+		boolean areaUseHouseBonus,
+		boolean areaPreviewParticles,
+		boolean housingRequired,
+		boolean requireBed,
+		boolean requireRoof,
+		boolean requireDoor,
+		boolean requireEnclosure,
+		boolean requireLight,
+		int housingMaxDistance,
+		int housingMaxVolume,
+		int housingMinInterior,
+		int housingMaxBeds,
+		int housingRecheckSeconds,
 		double boostCap,
 		double[] rankMultipliers,
 		double[] rarityMultipliers
@@ -55,6 +79,30 @@ public record OpenAdminPayload(
 				buffer.writeBoolean(payload.useRarityMultiplier());
 				buffer.writeBoolean(payload.useBoostUpkeep());
 				buffer.writeBoolean(payload.bubbleThroughWalls());
+				buffer.writeUtf(payload.scheduleMode(), 16);
+				buffer.writeVarInt(payload.scheduleStartTick());
+				buffer.writeVarInt(payload.scheduleEndTick());
+				buffer.writeBoolean(payload.workInRain());
+				buffer.writeVarInt(payload.idleCheckTicks());
+				buffer.writeVarInt(payload.offerCount());
+				buffer.writeVarInt(payload.rotationDays());
+				buffer.writeVarInt(payload.maxWorkersPerPlayer());
+				buffer.writeUtf(payload.areaShape(), 16);
+				buffer.writeVarInt(payload.areaVerticalRadius());
+				buffer.writeVarInt(payload.areaMaxRadius());
+				buffer.writeBoolean(payload.areaUseHouseBonus());
+				buffer.writeBoolean(payload.areaPreviewParticles());
+				buffer.writeBoolean(payload.housingRequired());
+				buffer.writeBoolean(payload.requireBed());
+				buffer.writeBoolean(payload.requireRoof());
+				buffer.writeBoolean(payload.requireDoor());
+				buffer.writeBoolean(payload.requireEnclosure());
+				buffer.writeBoolean(payload.requireLight());
+				buffer.writeVarInt(payload.housingMaxDistance());
+				buffer.writeVarInt(payload.housingMaxVolume());
+				buffer.writeVarInt(payload.housingMinInterior());
+				buffer.writeVarInt(payload.housingMaxBeds());
+				buffer.writeVarInt(payload.housingRecheckSeconds());
 				buffer.writeDouble(payload.boostCap());
 				writeMultipliers(buffer, payload.rankMultipliers());
 				writeMultipliers(buffer, payload.rarityMultipliers());
@@ -78,6 +126,30 @@ public record OpenAdminPayload(
 					buffer.readBoolean(),
 					buffer.readBoolean(),
 					buffer.readBoolean(),
+					buffer.readUtf(16),
+					buffer.readVarInt(),
+					buffer.readVarInt(),
+					buffer.readBoolean(),
+					buffer.readVarInt(),
+					buffer.readVarInt(),
+					buffer.readVarInt(),
+					buffer.readVarInt(),
+					buffer.readUtf(16),
+					buffer.readVarInt(),
+					buffer.readVarInt(),
+					buffer.readBoolean(),
+					buffer.readBoolean(),
+					buffer.readBoolean(),
+					buffer.readBoolean(),
+					buffer.readBoolean(),
+					buffer.readBoolean(),
+					buffer.readBoolean(),
+					buffer.readBoolean(),
+					buffer.readVarInt(),
+					buffer.readVarInt(),
+					buffer.readVarInt(),
+					buffer.readVarInt(),
+					buffer.readVarInt(),
 					buffer.readDouble(),
 					readMultipliers(buffer),
 					readMultipliers(buffer)
@@ -106,6 +178,30 @@ public record OpenAdminPayload(
 				billing.useRarityMultiplier,
 				billing.useBoostUpkeep,
 				config.speech.bubbleThroughWalls,
+				config.schedule.mode,
+				config.schedule.startTick,
+				config.schedule.endTick,
+				config.schedule.workInRain,
+				config.schedule.idleCheckTicks,
+				config.offers.offerCount,
+				config.offers.rotationDays,
+				config.worker.maxWorkersPerPlayer,
+				config.area.shape,
+				config.area.verticalRadius,
+				config.area.maxRadius,
+				config.area.useHouseBonus,
+				config.area.previewParticles,
+				config.housing.required,
+				config.housing.requireBed,
+				config.housing.requireRoof,
+				config.housing.requireDoor,
+				config.housing.requireEnclosure,
+				config.housing.requireLight,
+				config.housing.maxDistanceFromAnchor,
+				config.housing.maxVolume,
+				config.housing.minInteriorSize,
+				config.housing.maxBedsPerHouse,
+				config.housing.recheckSeconds,
 				billing.boostCap,
 				multipliers(
 						billing.rankMultipliers,

@@ -112,6 +112,7 @@ Campos atuais de `config/laborcraft.json`:
     "requireRoof": true,
     "requireDoor": true,
     "requireEnclosure": true,
+    "requireLight": true,
     "allowSharedHouse": false,
     "oneWorkerPerBed": true,
     "maxDistanceFromAnchor": 32,
@@ -218,6 +219,7 @@ Campos atuais de `config/laborcraft.json`:
 | `offers.offerCount` | quantas pessoas o mercado do servidor oferece por rotação (padrão 5, máx. 20) |
 | `offers.rotationDays` | de quantos em quantos dias do mundo o mercado troca o estoque (padrão 1) |
 | `housing.required` | exige moradia para trabalhar |
+| `housing.requireLight` | exige pelo menos um bloco emissor de luz (tocha, lanterna, glowstone etc.) no interior; padrão `true` |
 | `housing.requireBed` / `requireRoof` / `requireDoor` / `requireEnclosure` | validação mínima da casa |
 | `housing.allowSharedHouse` / `oneWorkerPerBed` | cama compartilhada (adiada; default desliga a casa compartilhada) |
 | `housing.maxDistanceFromAnchor` / `maxVolume` / `recheckSeconds` | limite, custo e frequência da validação |

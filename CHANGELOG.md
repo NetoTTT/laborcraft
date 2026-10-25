@@ -3,6 +3,17 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.1.0-alpha.13] — 2026-10-25
+
+Painel admin ganhou as abas **Expediente**, **Área/Casa** e **Mercado**, com configuração live via comando genérico. Compatibilidade MineLab documentada como prioridade alta.
+
+### Adicionado
+- Aba **Expediente**: modo, início/fim, chuva, pausa fora do expediente e checagem de ócio.
+- Aba **Área/Casa**: forma/raio vertical/raio máximo, bônus, preview e validações de casa, incluindo **exigir iluminação** (padrão **ligado**) com verificação de tochas/lanternas/blocos emissores.
+- Aba **Mercado**: ofertas por rotação, dias por rotação e limite base de trabalhadores.
+- Comando genérico `/laborcraft admin config <campo> <valor>` para os campos dessas abas.
+- [Doc 17](docs/17-COMPATIBILIDADE-MINELAB.md): integração futura com o dinheiro `plims` do MineLab via `CurrencyProvider` isolado, sem alterar o mod deles.
+
 ## [0.1.0-alpha.12] — 2026-10-25
 
 Balões de fala acima dos trabalhadores e chat de trabalhador com identidade visual própria.

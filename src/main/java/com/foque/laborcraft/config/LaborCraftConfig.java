@@ -94,6 +94,8 @@ public final class LaborCraftConfig {
 		public boolean requireRoof = true;
 		public boolean requireDoor = true;
 		public boolean requireEnclosure = true;
+		/** Requires at least one light-emitting block (torch, lantern, glowstone...) inside the house. */
+		public boolean requireLight = true;
 		// Casas compartilhadas ficam para uma etapa futura; o primeiro build valida apenas casa separada.
 		public boolean allowSharedHouse = false;
 		public boolean oneWorkerPerBed = true;

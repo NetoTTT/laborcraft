@@ -21,6 +21,9 @@ public final class LaborCraftAdminScreen extends LaborCraftScreen {
 	private enum Tab {
 		SALARY,
 		BILLING,
+		SCHEDULE,
+		AREA,
+		MARKET,
 		SYSTEM
 	}
 
@@ -54,6 +57,9 @@ public final class LaborCraftAdminScreen extends LaborCraftScreen {
 		return switch (tab) {
 			case SALARY -> Component.translatable("laborcraft.ui.admin.subtitle.salary");
 			case BILLING -> Component.translatable("laborcraft.ui.admin.subtitle.billing");
+			case SCHEDULE -> Component.translatable("laborcraft.ui.admin.subtitle.schedule");
+			case AREA -> Component.translatable("laborcraft.ui.admin.subtitle.area");
+			case MARKET -> Component.translatable("laborcraft.ui.admin.subtitle.market");
 			case SYSTEM -> Component.translatable("laborcraft.ui.admin.subtitle.system");
 		};
 	}
@@ -64,13 +70,19 @@ public final class LaborCraftAdminScreen extends LaborCraftScreen {
 		int width = panelWidth() - 44;
 		int tabY = panelY + 54;
 
-		addRenderableWidget(tabButton(Tab.SALARY, "laborcraft.ui.admin.tab.salary", x, 146, tabY));
-		addRenderableWidget(tabButton(Tab.BILLING, "laborcraft.ui.admin.tab.billing", x + 154, 146, tabY));
-		addRenderableWidget(tabButton(Tab.SYSTEM, "laborcraft.ui.admin.tab.system", x + 308, 146, tabY));
+		addRenderableWidget(tabButton(Tab.SALARY, "laborcraft.ui.admin.tab.salary", x, 76, tabY));
+		addRenderableWidget(tabButton(Tab.BILLING, "laborcraft.ui.admin.tab.billing", x + 80, 76, tabY));
+		addRenderableWidget(tabButton(Tab.SCHEDULE, "laborcraft.ui.admin.tab.schedule", x + 160, 76, tabY));
+		addRenderableWidget(tabButton(Tab.AREA, "laborcraft.ui.admin.tab.area", x + 240, 76, tabY));
+		addRenderableWidget(tabButton(Tab.MARKET, "laborcraft.ui.admin.tab.market", x + 320, 76, tabY));
+		addRenderableWidget(tabButton(Tab.SYSTEM, "laborcraft.ui.admin.tab.system", x + 400, 76, tabY));
 
 		switch (tab) {
 			case SALARY -> buildSalary(x, width);
 			case BILLING -> buildBilling(x, width);
+			case SCHEDULE -> buildSchedule(x, width);
+			case AREA -> buildArea(x, width);
+			case MARKET -> buildMarket(x, width);
 			case SYSTEM -> buildSystem(x, width);
 		}
 
@@ -207,6 +219,197 @@ public final class LaborCraftAdminScreen extends LaborCraftScreen {
 		));
 
 		buildActions(x, left, rightX, right);
+	}
+
+	private void buildSchedule(int x, int width) {
+		int left = width / 2 - 8;
+		int y = panelY + 88;
+		int step = 26;
+
+		LcButton mode = new LcButton(
+				x, y, left, 21,
+				label("laborcraft.ui.admin.schedule.mode", Component.translatable(
+						"laborcraft.ui.admin.schedule.mode." + state.scheduleMode()
+				).getString()),
+				LcButton.Variant.SECONDARY,
+				() -> {
+					rememberTab(tab);
+					LcValuePrompt.choice(
+							Component.translatable("laborcraft.ui.admin.schedule.mode"),
+							LaborCraftCommands.ADMIN_CONFIG + " schedule.mode ",
+							java.util.List.of("daylight", "night", "custom", "always")
+					).current(state.scheduleMode()).ask();
+				}
+		);
+		mode.tip(editTip("laborcraft.ui.admin.schedule.mode", LaborCraftCommands.ADMIN_CONFIG + " schedule.mode ", false));
+		addRenderableWidget(mode);
+
+		addRenderableWidget(configIntegerButton(
+				x, y + step, left, "laborcraft.ui.admin.schedule.start", state.scheduleStartTick(),
+				"schedule.start-tick", 0, 23_999
+		));
+		addRenderableWidget(configIntegerButton(
+				x, y + step * 2, left, "laborcraft.ui.admin.schedule.end", state.scheduleEndTick(),
+				"schedule.end-tick", 0, 23_999
+		));
+		addRenderableWidget(configToggleButton(
+				x, y + step * 3, left, "laborcraft.ui.admin.schedule.rain", state.workInRain(),
+				"schedule.work-in-rain"
+		));
+		addRenderableWidget(toggleButton(
+				x, y + step * 4, left, "laborcraft.ui.admin.billing.pause_off_duty",
+				state.pauseOffDuty(), "pause-off-duty"
+		));
+		addRenderableWidget(configIntegerButton(
+				x, y + step * 5, left, "laborcraft.ui.admin.schedule.idle", state.idleCheckTicks(),
+				"schedule.idle-check-ticks", 20, 24_000
+		));
+	}
+
+	private void buildArea(int x, int width) {
+		int left = width / 2 - 8;
+		int rightX = x + left + 16;
+		int right = width - left - 16;
+		int y = panelY + 88;
+		int step = 25;
+
+		addRenderableWidget(configChoiceButton(
+				x, y, left, "laborcraft.ui.admin.area.shape", state.areaShape(),
+				"area.shape", java.util.List.of("square", "circle")
+		));
+		addRenderableWidget(configIntegerButton(
+				x, y + step, left, "laborcraft.ui.admin.area.vertical", state.areaVerticalRadius(),
+				"area.vertical-radius", 1, 32
+		));
+		addRenderableWidget(configIntegerButton(
+				x, y + step * 2, left, "laborcraft.ui.admin.area.max_radius", state.areaMaxRadius(),
+				"area.max-radius", 1, 64
+		));
+		addRenderableWidget(configToggleButton(
+				x, y + step * 3, left, "laborcraft.ui.admin.area.house_bonus", state.areaUseHouseBonus(),
+				"area.use-house-bonus"
+		));
+		addRenderableWidget(configToggleButton(
+				x, y + step * 4, left, "laborcraft.ui.admin.area.preview", state.areaPreviewParticles(),
+				"area.preview-particles"
+		));
+		addRenderableWidget(configToggleButton(
+				x, y + step * 5, left, "laborcraft.ui.admin.housing.required", state.housingRequired(),
+				"housing.required"
+		));
+		addRenderableWidget(configIntegerButton(
+				x, y + step * 6, left, "laborcraft.ui.admin.housing.recheck", state.housingRecheckSeconds(),
+				"housing.recheck-seconds", 1, 3600
+		));
+
+		addRenderableWidget(configToggleButton(
+				rightX, y, right, "laborcraft.ui.admin.housing.bed", state.requireBed(), "housing.require-bed"
+		));
+		addRenderableWidget(configToggleButton(
+				rightX, y + step, right, "laborcraft.ui.admin.housing.roof", state.requireRoof(), "housing.require-roof"
+		));
+		addRenderableWidget(configToggleButton(
+				rightX, y + step * 2, right, "laborcraft.ui.admin.housing.door", state.requireDoor(), "housing.require-door"
+		));
+		addRenderableWidget(configToggleButton(
+				rightX, y + step * 3, right, "laborcraft.ui.admin.housing.enclosure", state.requireEnclosure(), "housing.require-enclosure"
+		));
+		addRenderableWidget(configToggleButton(
+				rightX, y + step * 4, right, "laborcraft.ui.admin.housing.light", state.requireLight(), "housing.require-light"
+		));
+		addRenderableWidget(configIntegerButton(
+				rightX, y + step * 5, right, "laborcraft.ui.admin.housing.distance", state.housingMaxDistance(),
+				"housing.max-distance", 1, 256
+		));
+		addRenderableWidget(configIntegerButton(
+				rightX, y + step * 6, right, "laborcraft.ui.admin.housing.volume", state.housingMaxVolume(),
+				"housing.max-volume", 1, 100000
+		));
+		addRenderableWidget(configIntegerButton(
+				rightX, y + step * 7, right, "laborcraft.ui.admin.housing.interior", state.housingMinInterior(),
+				"housing.min-interior", 1, 64
+		));
+		addRenderableWidget(configIntegerButton(
+				rightX, y + step * 8, right, "laborcraft.ui.admin.housing.beds", state.housingMaxBeds(),
+				"housing.max-beds", 1, 64
+		));
+	}
+
+	private LcButton configChoiceButton(
+			int x, int y, int width, String key, String current, String field, java.util.List<String> options
+	) {
+		LcButton button = new LcButton(
+				x, y, width, 21,
+				label(key, Component.translatable("laborcraft.ui.admin.value." + current).getString()),
+				LcButton.Variant.SECONDARY,
+				() -> {
+					rememberTab(tab);
+					LcValuePrompt.choice(
+							Component.translatable(key),
+							LaborCraftCommands.ADMIN_CONFIG + " " + field + " ",
+							options
+					).current(current).ask();
+				}
+		);
+		button.tip(editTip(key, LaborCraftCommands.ADMIN_CONFIG + " " + field + " ", false));
+		return button;
+	}
+
+	private void buildMarket(int x, int width) {
+		int left = width / 2 - 8;
+		int y = panelY + 88;
+		int step = 26;
+
+		addRenderableWidget(configIntegerButton(
+				x, y, left, "laborcraft.ui.admin.market.offers", state.offerCount(),
+				"offers.offer-count", 1, 20
+		));
+		addRenderableWidget(configIntegerButton(
+				x, y + step, left, "laborcraft.ui.admin.market.rotation", state.rotationDays(),
+				"offers.rotation-days", 1, 365
+		));
+		addRenderableWidget(configIntegerButton(
+				x, y + step * 2, left, "laborcraft.ui.admin.market.max_workers", state.maxWorkersPerPlayer(),
+				"worker.max-workers-per-player", 0, 100
+		));
+
+		LcButton refresh = actionButton(
+				x, y + step * 3, left, "laborcraft.ui.admin.market", LaborCraftCommands.ADMIN_MARKET_REFRESH
+		);
+		refresh.tip(LcTooltips.of(
+				Component.translatable("laborcraft.ui.admin.market"),
+				Component.translatable("laborcraft.ui.admin.market.tip"),
+				"/" + LaborCraftCommands.ADMIN_MARKET_REFRESH
+		));
+		addRenderableWidget(refresh);
+	}
+
+	private LcButton configIntegerButton(
+			int x, int y, int width, String key, int current, String field, int min, int max
+	) {
+		return integerButton(
+				x, y, width, key, current,
+				LaborCraftCommands.ADMIN_CONFIG + " " + field + " ", min, max
+		);
+	}
+
+	private LcButton configToggleButton(
+			int x, int y, int width, String key, boolean current, String field
+	) {
+		LcButton button = new LcButton(
+				x, y, width, 21,
+				label(key, Component.translatable(current
+						? "laborcraft.ui.admin.state.on"
+						: "laborcraft.ui.admin.state.off").getString()),
+				current ? LcButton.Variant.PRIMARY : LcButton.Variant.SECONDARY,
+				() -> {
+					rememberTab(tab);
+					LaborCraftUiActions.run(LaborCraftCommands.ADMIN_CONFIG + " " + field + " " + !current);
+				}
+		);
+		button.selected(current);
+		button.tip(editTip(key, LaborCraftCommands.ADMIN_CONFIG + " " + field + " ", false));
+		return button;
 	}
 
 	private void buildSystem(int x, int width) {
@@ -489,6 +692,39 @@ public final class LaborCraftAdminScreen extends LaborCraftScreen {
 			graphics.textWithWordWrap(
 					font,
 					Component.translatable("laborcraft.ui.admin.billing.note"),
+					rightX,
+					panelY + 92,
+					right,
+					LcTheme.MUTED
+			);
+		} else if (tab == Tab.SCHEDULE) {
+			int left = width / 2 - 8;
+			int rightX = x + left + 16;
+			int right = width - left - 16;
+			graphics.textWithWordWrap(
+					font,
+					Component.translatable("laborcraft.ui.admin.schedule.note"),
+					rightX,
+					panelY + 92,
+					right,
+					LcTheme.MUTED
+			);
+		} else if (tab == Tab.AREA) {
+			graphics.textWithWordWrap(
+					font,
+					Component.translatable("laborcraft.ui.admin.area.note"),
+					x,
+					panelY + 320,
+					width,
+					LcTheme.MUTED
+			);
+		} else if (tab == Tab.MARKET) {
+			int left = width / 2 - 8;
+			int rightX = x + left + 16;
+			int right = width - left - 16;
+			graphics.textWithWordWrap(
+					font,
+					Component.translatable("laborcraft.ui.admin.market.note"),
 					rightX,
 					panelY + 92,
 					right,
