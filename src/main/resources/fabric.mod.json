@@ -3,11 +3,15 @@
 	"id": "laborcraft",
 	"version": "${version}",
 	"name": "LaborCraft",
-	"description": "Hire worker villagers to automate farms and other jobs. Modular, server-driven, currency-agnostic. Working title.",
+	"description": "Hire, house and manage worker villagers. Modular jobs, work zones, storage and off-duty routines for Fabric.",
 	"authors": [
-		"foque"
+		"NetoTTT"
 	],
-	"contact": {},
+	"contact": {
+		"homepage": "https://github.com/NetoTTT/laborcraft",
+		"sources": "https://github.com/NetoTTT/laborcraft",
+		"issues": "https://github.com/NetoTTT/laborcraft/issues"
+	},
 	"license": "GPL-3.0-or-later",
 	"icon": "assets/laborcraft/icon.png",
 	"environment": "*",

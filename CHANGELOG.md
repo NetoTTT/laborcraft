@@ -3,6 +3,11 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.1.0-alpha.8] — 2026-10-25
+
+Correção só de metadados: autor **NetoTTT** e links do GitHub (homepage/sources/issues) no
+`fabric.mod.json`; descrição do mod atualizada. Nenhuma mudança de gameplay em relação ao alpha.7.
+
 ## [0.1.0-alpha.7] — 2026-10-25
 
 Base da casa do trabalhador: registrar o cômodo com nome, atribuir uma cama e aumentar o limite de
