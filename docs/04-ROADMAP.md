@@ -36,8 +36,8 @@
 - [x] Inventário do trabalhador + depósito real.
 - [x] Validação de casa (cama + porta + enclausuramento limitado) com cache.
 - [x] **[ALTA] Conflito entre postos (zona-only)**: área máxima pode sobrepor; só a zona desenhada é exclusiva (doc 13 §8.1). Falta a política para empregos de área livre.
-- [ ] Descanso/rotina noturna + pathing até a cama.
-- [ ] Expediente (`WorkSchedule`) ligado ao tick do trabalhador.
+- [x] Descanso/rotina noturna + pathing até a cama (MVP; pose vanilla validada; visual do aldeão a polir).
+- [x] Expediente (`WorkSchedule`) ligado ao tick do trabalhador (farmer usa o global; perfis por cargo depois).
 
 ### M3 — Fazendeiro MVP
 

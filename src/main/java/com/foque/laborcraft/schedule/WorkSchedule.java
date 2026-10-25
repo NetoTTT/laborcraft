@@ -11,6 +11,14 @@ public final class WorkSchedule {
 	private WorkSchedule() {
 	}
 
+	/**
+	 * Per-job schedules will override this later; for now the farmer follows the global config
+	 * (default daylight), which already supports custom and wrapping windows.
+	 */
+	public static boolean isWorking(String jobId, long dayTime) {
+		return isWorking(dayTime);
+	}
+
 	public static boolean isWorking(long dayTime) {
 		LaborCraftConfig.ScheduleSettings settings = LaborCraftConfig.get().schedule;
 		long time = Math.floorMod(dayTime, TICKS_PER_DAY);

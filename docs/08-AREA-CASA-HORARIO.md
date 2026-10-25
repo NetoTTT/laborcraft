@@ -4,7 +4,7 @@ Escopo: como o trabalhador sabe **onde** trabalhar, **onde mora** e **quando** t
 
 > O fluxo de atribuição (posto, zona desenhada e vínculo com o trabalhador) está em
 > [`13-TRABALHO-E-ATRIBUICAO.md`](13-TRABALHO-E-ATRIBUICAO.md). A **base da casa** (registro/claim,
-> vagas e limite) está pronta; descanso, animações e pathing até a cama continuam pendentes.
+> vagas e limite) está pronta; o descanso MVP (andar até a cama, dormir e esperar no posto) foi implementado e validado; falta apenas polir o visual do modelo de aldeão dormindo.
 
 ## 1. Bloco âncora
 
@@ -190,7 +190,7 @@ Referência de tempo de jogo (ticks ÷ 24000):
 
 Regras:
 
-- Fora do expediente o trabalhador **não produz**: vai para a cama/casa (se tiver) ou fica ocioso no posto. Não dorme de verdade (não pula a noite).
+- Fora do expediente o trabalhador **não produz**: vai para a cama/casa (se tiver), deita com a pose vanilla da cama e não pula a noite; sem casa/cama ou com a casa em chunk não carregado, fica ocioso no posto.
 - `workInRain`: chuva não interrompe por padrão.
 - **Salário continua sendo cobrado** por período, independentemente do expediente (`pauseBillingOffDuty = false`). É o custo fixo do contrato; quem quer justiça pode ligar `pauseBillingOffDuty = true` (cobrança só em horas trabalhadas) — mais complexo de auditar.
 - `idleCheckTicks`: frequência da checagem de expediente (default 100 ticks = 5 s), para não checar por tick.
@@ -264,6 +264,6 @@ Tempo real cria diferença entre servidores e fuso horário, e permite "trabalha
 2. Cálculo de área por tier (já modelado em `WorkArea`/`AreaShape`).
 3. ~~Validação de casa (flood fill limitado) + cache + recheck.~~ **Feito** (`HousingValidator`, `HomeRegistry`, recheck periódico).
 4. ~~Expansão por casa~~ **Feito para o limite** (`worker.maxWorkersPerPlayer` + camas válidas); bônus de conforto/raio/velocidade ainda pendentes.
-5. Expediente (`WorkSchedule`) ligado ao tick do trabalhador.
-6. Descanso: trabalhador vai até a cama, pose/animação e retomada.
+5. ~~Expediente (`WorkSchedule`) ligado ao tick do trabalhador.~~ **Feito** (farmer no global; perfis por cargo depois).
+6. ~~Descanso: trabalhador vai até a cama, pose/animação e retomada.~~ **MVP feito e validado**; falta polir o visual do aldeão dormindo.
 7. Pathfinding multiandar + quarentena de alvos.

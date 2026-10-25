@@ -8,6 +8,7 @@ import com.foque.laborcraft.worker.WorkerBoost;
 import com.foque.laborcraft.worker.WorkerMastery;
 import com.foque.laborcraft.worker.WorkerRank;
 import com.foque.laborcraft.worker.WorkerRarity;
+import com.foque.laborcraft.worker.WorkerRest;
 import com.foque.laborcraft.worker.WorkerState;
 import com.foque.laborcraft.worker.WorkerTraits;
 import java.util.List;
@@ -29,6 +30,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -55,6 +57,7 @@ public class LaborCraftWorker extends PathfinderMob {
 	private WorkerState state = WorkerState.ACTIVE;
 	private final NonNullList<ItemStack> inventory = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
 	private final FarmerBrain farmerBrain = new FarmerBrain(this);
+	private final WorkerRest workerRest = new WorkerRest(this);
 	private String workNotice = "";
 	/**
 	 * Jogador que esta com a tela deste trabalhador aberta. Enquanto isso o trabalhador fica parado,
@@ -81,7 +84,8 @@ public class LaborCraftWorker extends PathfinderMob {
 		// Nada de passeio aleatorio: so flutuar na agua, olhar para quem esta perto e olhar em volta.
 		goalSelector.addGoal(0, new FloatGoal(this));
 		goalSelector.addGoal(1, new LookAtPlayerGoal(this, Player.class, 8.0F));
-		goalSelector.addGoal(2, new RandomLookAroundGoal(this));
+		goalSelector.addGoal(2, new OpenDoorGoal(this, true));
+		goalSelector.addGoal(3, new RandomLookAroundGoal(this));
 	}
 
 	public void setWorkerName(Component displayName) {
@@ -168,6 +172,10 @@ public class LaborCraftWorker extends PathfinderMob {
 			getMoveControl().setWantedPosition(getX(), getY(), getZ(), 0.0D);
 			setDeltaMovement(0.0D, getDeltaMovement().y, 0.0D);
 			getLookControl().setLookAt(attendingPlayer, 30.0F, 30.0F);
+			return;
+		}
+
+		if (workerRest.tick()) {
 			return;
 		}
 
@@ -302,6 +310,13 @@ public class LaborCraftWorker extends PathfinderMob {
 	}
 
 	public String taskKey() {
+		if (state == WorkerState.OFF_DUTY) {
+			if (isSleeping()) {
+				return "laborcraft.ui.worker.task.sleeping";
+			}
+			return workNotice.isBlank() ? "laborcraft.ui.worker.task.off_duty" : workNotice;
+		}
+
 		if (!hasJob()) {
 			return "laborcraft.ui.worker.task.none";
 		}

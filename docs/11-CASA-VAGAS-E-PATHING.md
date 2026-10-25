@@ -117,6 +117,15 @@ Comando usado: `/laborcraft home scan <x> <y> <z>` (gamemaster/console), apontan
 
 Anotado para depois: uma visão de cima das casas registradas, com nome, cama, vagas livres e o ocupante, servindo de seletor visual na aba **Casa** (em vez de só a lista). Pode reaproveitar o `LcAreaMap`/camadas do Posto, mas é só uma ideia; não entra nesta etapa.
 
+### 6.3 Descanso e expediente (MVP implementado)
+
+- `WorkerRest` usa o `WorkSchedule`: dentro do horário o `FarmerBrain` trabalha; fora, o trabalhador entra em **Fora do expediente**, para a IA e vai até a cama atribuída.
+- Anda até uma posição ao lado da cama, chama `startSleeping` (pose `SLEEPING` vanilla) e acorda com `stopSleeping` quando o expediente volta.
+- Sem casa/cama, casa em outro chunk não carregado ou caminho inalcançável: **espera no posto** com aviso; não teleporta.
+- Abre portas (`OpenDoorGoal`).
+- O padrão atual é o `schedule` global `daylight`; aceita `custom`/janelas que viram o dia. Perfis por cargo ficam preparados em `WorkSchedule.isWorking(jobId, time)`.
+- A pose de dormir do modelo de aldeão é a vanilla; validada em jogo, o visual fica a polir (modelo de aldeão deitado fica um pouco estranho).
+
 ## 7. Pathing — ideias
 
 Base do doc 08: chão, portas próprias, escadas de bloco, sem ladders, quarentena de alvo e aviso quando não há caminho. A casa adiciona:
@@ -140,7 +149,8 @@ Base do doc 08: chão, portas próprias, escadas de bloco, sem ladders, quarente
 - [x] Renomear e desvincular a casa pelo modal/comandos
 - [x] Abas no Empregado (Resumo / Emprego / Casa) e lista de casas
 - [ ] Mapa visual de casas (ideia anotada)
-- [ ] Trabalhador anda até a cama fora do expediente? (descanso/pathing)
+- [x] Trabalhador anda até a cama fora do expediente (descanso MVP) e espera no posto se a casa não estiver carregada.
+- [x] Pose de dormir vanilla validada (deita); [ ] polir o visual do modelo de aldeão.
 - [ ] Casa compartilhada entre jogadores (fora do MVP)
 
 ## 9. Impacto no código atual

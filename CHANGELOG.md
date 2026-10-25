@@ -8,7 +8,8 @@ Versionamento semântico a partir da primeira release pública.
 Base da casa do trabalhador: registrar o cômodo com nome, atribuir uma cama e aumentar o limite de
 trabalhadores. O Empregado ganhou abas e a casa agora tem modal de registro e lista de casas.
 O conflito de áreas passou ao modelo **zona-only**: a área máxima é só um limite e só a zona
-desenhada é exclusiva. Descanso, expediente e pathing até a cama continuam para a próxima etapa.
+desenhada é exclusiva. O trabalhador agora respeita o **expediente** e descansa na cama da casa
+(pose de dormir vanilla); se a casa não estiver carregada, espera no posto.
 
 ### Adicionado
 
@@ -22,6 +23,9 @@ desenhada é exclusiva. Descanso, expediente e pathing até a cama continuam par
 - `/laborcraft home list`, `home info`, `home remove` e `home revalidate` (gamemaster); o diagnóstico `home scan|measure` continua.
 - Revalidação automática a cada `housing.recheckSeconds`; casa quebrada suspende os slots, avisa o dono e volta quando o cômodo for consertado.
 - Dispensar ou remover um trabalhador libera automaticamente a cama.
+- **Expediente/descanso MVP**: fora do horário de trabalho o fazendeiro para a IA, anda até a cama da casa, deita com `startSleeping` (pose vanilla, validada em jogo; visual do aldeão a polir) e volta ao trabalho quando o expediente abre. Sem casa/cama ou com o chunk da casa descarregado, espera no posto; se a casa existe mas é inalcançável, também espera no posto.
+- Novo estado **Fora do expediente** com tarefas: indo para casa, dormindo, sem casa, casa longe/inalcançável. O trabalhador abre portas com `OpenDoorGoal`.
+- `WorkSchedule` preparado para perfis por cargo; por enquanto o fazendeiro segue o `schedule` global (padrão `daylight`, aceita `custom`/janelas que viram o dia).
 
 ### Alterado
 

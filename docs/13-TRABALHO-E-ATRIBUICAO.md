@@ -2,7 +2,7 @@
 
 **Status:** desenho para implementação. Substitui a parte de "área por tier" do [doc 08](08-AREA-CASA-HORARIO.md)
 como fonte principal do fluxo de trabalho. A base da casa (registro/claim, atribuição e vagas) está pronta;
-descanso, expediente e pathing até a cama continuam pendentes.
+descanso/expediente MVP implementado e validado (pose vanilla; visual do aldeão a polir); perfis de horário por cargo e pathing fino continuam pendentes.
 
 ## 1. O problema
 
@@ -98,7 +98,7 @@ IDLE ──expediente──► SCAN ──achou──► MOVE ──chegou──
 - **DEPOSIT**: leva o inventário ao baú de saída do posto; se estiver cheio, pausa e avisa.
 - **Sem alvo**: fica ocioso no posto; se a zona não tem nada plantado, avisa "sem plantação na zona".
 
-Fora do expediente (`schedule`): para de trabalhar, volta ao posto. Se tiver casa/cama atribuída, vai para a cama (descanso e pathing ainda pendentes).
+Fora do expediente (`schedule`): para de trabalhar e vai para a cama/casa se tiver; dorme com a pose vanilla e volta ao trabalho quando o expediente abre. Sem casa/cama ou com a casa em chunk não carregado, espera no posto. O fazendeiro usa o `schedule` global; perfis por cargo ficam preparados em `WorkSchedule.isWorking(jobId, time)`.
 
 ## 6. Por que posto + zona, e não só raio
 
@@ -167,8 +167,8 @@ Pendências:
 5. IA mínima do fazendeiro: SCAN → MOVE → WORK (colher e replantar).
 6. DEPOSIT no baú de saída + insumos.
 7. Casa: registro/claim, atribuição de cama e vagas (feito; ver doc 11).
-8. Descanso: trabalhador vai à cama, pose/animação e retomada (pendente).
-9. Expediente ligado à IA (parar/voltar), depois do descanso.
+8. Descanso: trabalhador vai à cama, dorme e retoma (MVP feito/validado; visual do aldeão a polir).
+9. Expediente ligado à IA (parar/voltar) — MVP feito no `WorkerRest`; perfis por cargo depois.
 
 ## 10. UI do Posto
 
@@ -327,12 +327,12 @@ passam de `seedSurplusForCompost`, leva o excedente à composteira mais próxima
 farinha (inclusive quando a composteira já está pronta, independente da contagem de sementes). Ele também
 **volta ao trabalho sozinho** quando a enxada/sementes/baú são resolvidos e **equipa automaticamente** uma
 enxada válida que estiver na mochila.
-Ainda faltam: expediente e coleta/colocação automática de água + layout 9x9 (baixa prioridade).
+Ainda faltam: perfis de expediente por cargo (o farmer já usa o global), polir o visual do aldeão dormindo e coleta/colocação automática de água + layout 9x9 (baixa prioridade).
 
 ## 12. Impacto no que já existe
 
 - `WorkArea`/`AreaShape` continuam válidos como fallback de raio.
-- `HousingValidator` e `HomeRegistry` cuidam do registro/claim e das vagas; descanso e pathing até a cama ainda faltam.
+- `HousingValidator` e `HomeRegistry` cuidam do registro/claim e das vagas; `WorkerRest` cuida do descanso/expediente MVP. A pose de dormir vanilla foi validada; o visual do aldeão dormindo ainda pode ser polido.
 - O posto **não usa block entity**: o estado vive no `StationRegistry` (JSON no mundo), então quebrar o bloco
   não apaga o vínculo — recolocar na mesma posição reata.
 - A tela de Empregado ainda não mostra o posto; isso entra quando o vínculo estiver estável.
