@@ -52,6 +52,10 @@ public class LaborCraftWorker extends PathfinderMob {
 	private Map<String, Integer> aptitudes = Map.of();
 	private Map<String, Long> mastery = Map.of();
 	private long upkeep = 0L;
+	private int billingPeriodDays = 1;
+	private long nextBillingTick = 0L;
+	private long billingDebt = 0L;
+	private int missedPayments = 0;
 	private int hunger = 20;
 	private int mood = 100;
 	private WorkerState state = WorkerState.ACTIVE;
@@ -109,6 +113,9 @@ public class LaborCraftWorker extends PathfinderMob {
 	public void hire(UUID newOwner) {
 		this.owner = newOwner;
 		this.state = WorkerState.ACTIVE;
+		this.nextBillingTick = 0L;
+		this.billingDebt = 0L;
+		this.missedPayments = 0;
 		setPersistenceRequired();
 	}
 
@@ -117,6 +124,9 @@ public class LaborCraftWorker extends PathfinderMob {
 		this.owner = null;
 		this.jobId = "";
 		this.state = WorkerState.ACTIVE;
+		this.nextBillingTick = 0L;
+		this.billingDebt = 0L;
+		this.missedPayments = 0;
 	}
 
 	public boolean isAttending() {
@@ -293,6 +303,45 @@ public class LaborCraftWorker extends PathfinderMob {
 		this.upkeep = Math.max(0L, upkeep);
 	}
 
+	public int billingPeriodDays() {
+		return Math.max(1, billingPeriodDays);
+	}
+
+	public void setBillingPeriodDays(int days) {
+		this.billingPeriodDays = Math.max(1, days);
+	}
+
+	public long nextBillingTick() {
+		return nextBillingTick;
+	}
+
+	public void setNextBillingTick(long nextBillingTick) {
+		this.nextBillingTick = Math.max(0L, nextBillingTick);
+	}
+
+	public void startBilling(long now, int periodDays) {
+		this.billingPeriodDays = Math.max(1, periodDays);
+		this.nextBillingTick = Math.max(0L, now) + this.billingPeriodDays * 24000L;
+		this.billingDebt = 0L;
+		this.missedPayments = 0;
+	}
+
+	public long billingDebt() {
+		return billingDebt;
+	}
+
+	public void setBillingDebt(long billingDebt) {
+		this.billingDebt = Math.max(0L, billingDebt);
+	}
+
+	public int missedPayments() {
+		return missedPayments;
+	}
+
+	public void setMissedPayments(int missedPayments) {
+		this.missedPayments = Math.max(0, missedPayments);
+	}
+
 	public int hunger() {
 		return hunger;
 	}
@@ -315,6 +364,10 @@ public class LaborCraftWorker extends PathfinderMob {
 				return "laborcraft.ui.worker.task.sleeping";
 			}
 			return workNotice.isBlank() ? "laborcraft.ui.worker.task.off_duty" : workNotice;
+		}
+
+		if (state == WorkerState.STRIKE) {
+			return workNotice.isBlank() ? "laborcraft.ui.worker.task.unpaid" : workNotice;
 		}
 
 		if (!hasJob()) {
@@ -415,6 +468,10 @@ public class LaborCraftWorker extends PathfinderMob {
 		output.putString("Aptitudes", WorkerAptitudes.serialize(aptitudes));
 		output.putString("Mastery", WorkerMastery.join(mastery));
 		output.putLong("Upkeep", upkeep);
+		output.putInt("BillingPeriodDays", billingPeriodDays);
+		output.putLong("NextBillingTick", nextBillingTick);
+		output.putLong("BillingDebt", billingDebt);
+		output.putInt("MissedPayments", missedPayments);
 		output.putInt("Hunger", hunger);
 		output.putInt("Mood", mood);
 		output.putString("WorkerState", state.name());
@@ -443,6 +500,10 @@ public class LaborCraftWorker extends PathfinderMob {
 		aptitudes = WorkerAptitudes.parse(input.getStringOr("Aptitudes", ""));
 		mastery = WorkerMastery.parse(input.getStringOr("Mastery", ""));
 		upkeep = input.getLongOr("Upkeep", 0L);
+		billingPeriodDays = Math.max(1, input.getIntOr("BillingPeriodDays", 1));
+		nextBillingTick = Math.max(0L, input.getLongOr("NextBillingTick", 0L));
+		billingDebt = Math.max(0L, input.getLongOr("BillingDebt", 0L));
+		missedPayments = Math.max(0, input.getIntOr("MissedPayments", 0));
 		hunger = Math.clamp(input.getIntOr("Hunger", 20), 0, 20);
 		mood = Math.clamp(input.getIntOr("Mood", 100), 0, 100);
 

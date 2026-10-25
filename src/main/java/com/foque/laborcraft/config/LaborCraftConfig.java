@@ -21,10 +21,6 @@ public final class LaborCraftConfig {
 	public int schemaVersion = 1;
 	public String currencyProvider = "laborcraft:ledger";
 	public boolean allowOwnerOverrides = true;
-	public boolean requirePaymentToWork = true;
-	public int missedPaymentGracePeriods = 1;
-	public double wageMultiplierPerTier = 1.5D;
-	public double wageMultiplierPerWorker = 1.1D;
 
 	public WorkerSettings worker = new WorkerSettings();
 	public OfferSettings offers = new OfferSettings();
@@ -34,6 +30,7 @@ public final class LaborCraftConfig {
 	public StorageSettings storage = new StorageSettings();
 	public ScheduleSettings schedule = new ScheduleSettings();
 	public PathingSettings pathing = new PathingSettings();
+	public BillingSettings billing = new BillingSettings();
 	public JobSettings farmer = JobSettings.farmer();
 
 	public static LaborCraftConfig get() {
@@ -177,6 +174,33 @@ public final class LaborCraftConfig {
 		public boolean allowDoors = true;
 
 		public PathingSettings() {
+		}
+	}
+
+	public static final class BillingSettings {
+		public boolean enabled = true;
+		public int checkTicks = 100;
+		public boolean useSchedule = true;
+		public boolean notifyOwner = true;
+		public boolean allowDebt = true;
+		/** Missed payments still worked; the next one after this pauses the worker. */
+		public int gracePeriods = 1;
+		/** 0 disables breaking the contract. */
+		public int dismissAfterMissed = 0;
+		public int missedMoodPenalty = 10;
+		public boolean useSalaryTable = true;
+		public int minimumDaily = 0;
+		public boolean useRankMultiplier = true;
+		public boolean useRarityMultiplier = true;
+		public boolean useBoostUpkeep = true;
+		/** Total multiplier cap (rank * rarity + boosts). */
+		public double boostCap = 2.5D;
+		/** Indexed by WorkerRank ordinal: COMUM, JUNIOR, PLENO, SENIOR. */
+		public double[] rankMultipliers = {1.00D, 1.25D, 1.60D, 2.00D};
+		/** Indexed by WorkerRarity ordinal: COMUM, INCOMUM, RARO, EPICO. */
+		public double[] rarityMultipliers = {1.00D, 1.05D, 1.10D, 1.20D};
+
+		public BillingSettings() {
 		}
 	}
 

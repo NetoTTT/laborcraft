@@ -1,6 +1,7 @@
 package com.foque.laborcraft.network;
 
 import com.foque.laborcraft.LaborCraft;
+import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import com.foque.laborcraft.housing.HomeRegistry;
 import com.foque.laborcraft.worker.Mastery;
@@ -41,7 +42,12 @@ public record OpenWorkerPayload(
 		boolean homeValid,
 		String homeFailure,
 		String homeName,
-		List<HouseSummary> houses
+		List<HouseSummary> houses,
+		String upkeepText,
+		int billingPeriodDays,
+		String debtText,
+		int missedPayments,
+		boolean hasDebt
 ) implements CustomPacketPayload {
 	public static final Type<OpenWorkerPayload> TYPE = new Type<>(LaborCraft.id("open_worker"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, OpenWorkerPayload> CODEC = StreamCodec.of(
@@ -87,6 +93,11 @@ public record OpenWorkerPayload(
 					buffer.writeVarInt(house.freeBedY());
 					buffer.writeVarInt(house.freeBedZ());
 				}
+				buffer.writeUtf(payload.upkeepText(), 64);
+				buffer.writeVarInt(payload.billingPeriodDays());
+				buffer.writeUtf(payload.debtText(), 64);
+				buffer.writeVarInt(payload.missedPayments());
+				buffer.writeBoolean(payload.hasDebt());
 			},
 			buffer -> {
 				UUID workerId = buffer.readUUID();
@@ -129,7 +140,12 @@ public record OpenWorkerPayload(
 						buffer.readBoolean(),
 						buffer.readUtf(32),
 						buffer.readUtf(48),
-						readHouses(buffer)
+						readHouses(buffer),
+						buffer.readUtf(64),
+						buffer.readVarInt(),
+						buffer.readUtf(64),
+						buffer.readVarInt(),
+						buffer.readBoolean()
 				);
 			}
 	);
@@ -210,7 +226,12 @@ public record OpenWorkerPayload(
 				home != null && home.valid(),
 				home == null ? "" : home.failure(),
 				home == null ? "" : home.name(),
-				List.copyOf(houses)
+				List.copyOf(houses),
+				CurrencyProviders.active().format(worker.upkeep()),
+				worker.billingPeriodDays(),
+				CurrencyProviders.active().format(worker.billingDebt()),
+				worker.missedPayments(),
+				worker.billingDebt() > 0L
 		);
 	}
 

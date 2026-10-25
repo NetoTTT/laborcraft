@@ -44,7 +44,7 @@ public final class WorkerOffers {
 					boosts,
 					WorkerAptitudes.roll(random),
 					price(config, rank, rarity),
-					upkeep(config, rank, boosts)
+					SalaryTable.periodWage(config, config.farmer, rank, rarity, boosts)
 			));
 		}
 
@@ -76,8 +76,4 @@ public final class WorkerOffers {
 		return Math.round(base * rank.priceMultiplier() * rarity.priceMultiplier());
 	}
 
-	private static long upkeep(LaborCraftConfig config, WorkerRank rank, List<WorkerBoost> boosts) {
-		double multiplier = Math.max(0.1D, rank.upkeepMultiplier() + WorkerBoost.total(boosts, WorkerBoostType.UPKEEP));
-		return Math.max(0L, Math.round(config.farmer.baseWage * multiplier));
-	}
 }

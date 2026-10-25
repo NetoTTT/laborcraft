@@ -157,7 +157,7 @@ public final class LaborCraftEmployeeScreen extends LaborCraftWorkerScreen {
 		LcButton backpack = new LcButton(
 				x + 128,
 				buttonsY,
-				110,
+				104,
 				24,
 				Component.translatable("laborcraft.ui.employee.backpack"),
 				LcButton.Variant.SECONDARY,
@@ -169,6 +169,24 @@ public final class LaborCraftEmployeeScreen extends LaborCraftWorkerScreen {
 				"/" + LaborCraftCommands.WORKER_INV_OPEN + " " + workerId()
 		));
 		addRenderableWidget(backpack);
+
+		if (worker.hasDebt()) {
+			LcButton pay = new LcButton(
+					x + 240,
+					buttonsY,
+					78,
+					24,
+					Component.translatable("laborcraft.ui.employee.pay"),
+					LcButton.Variant.PRIMARY,
+					this::payDebt
+			);
+			pay.tip(LcTooltips.of(
+					Component.translatable("laborcraft.ui.employee.pay"),
+					Component.translatable("laborcraft.ui.employee.pay.tip"),
+					"/" + LaborCraftCommands.WORKER_PAY + " " + workerId()
+			));
+			addRenderableWidget(pay);
+		}
 
 		LcButton close = new LcButton(
 				x + width - 90,
@@ -397,6 +415,31 @@ public final class LaborCraftEmployeeScreen extends LaborCraftWorkerScreen {
 				panelY + 260,
 				LcTheme.MUTED
 		);
+
+		graphics.text(
+				font,
+				Component.translatable(
+						"laborcraft.ui.employee.salary",
+						worker.upkeepText(),
+						worker.billingPeriodDays()
+				),
+				x,
+				panelY + 276,
+				LcTheme.TEXT
+		);
+		if (worker.missedPayments() > 0) {
+			graphics.text(
+					font,
+					Component.translatable(
+							"laborcraft.ui.employee.salary.debt",
+							worker.debtText(),
+							worker.missedPayments()
+					),
+					x,
+					panelY + 292,
+					LcTheme.DANGER
+			);
+		}
 	}
 
 	private void drawHouseHeader(GuiGraphicsExtractor graphics, int x, int width) {
@@ -456,6 +499,10 @@ public final class LaborCraftEmployeeScreen extends LaborCraftWorkerScreen {
 		}
 
 		LaborCraftUiActions.run(LaborCraftCommands.WORKER_DISMISS + " " + workerId());
+	}
+
+	private void payDebt() {
+		LaborCraftUiActions.run(LaborCraftCommands.WORKER_PAY + " " + workerId());
 	}
 
 	private void openBackpack() {

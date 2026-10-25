@@ -2,6 +2,7 @@ package com.foque.laborcraft.command;
 
 import com.foque.laborcraft.LaborCraft;
 import com.foque.laborcraft.config.LaborCraftConfig;
+import com.foque.laborcraft.contract.BillingManager;
 import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftEntities;
@@ -95,6 +96,13 @@ final class WorkerCommands {
 				.then(Commands.literal("dismiss")
 						.then(Commands.argument("worker", StringArgumentType.word())
 								.executes(context -> dismissWorker(
+										context.getSource(),
+										StringArgumentType.getString(context, "worker")
+								))))
+				.then(Commands.literal("pay")
+						.then(Commands.argument("worker", StringArgumentType.word())
+								.suggests(CommandSupport.ownedWorkerSuggestions())
+								.executes(context -> payWorker(
 										context.getSource(),
 										StringArgumentType.getString(context, "worker")
 								))))
@@ -347,6 +355,31 @@ final class WorkerCommands {
 				() -> Component.translatable("laborcraft.command.worker.assign.success", job.id(), worker.getName()),
 				false
 		);
+		return 1;
+	}
+
+	private static int payWorker(CommandSourceStack source, String workerId)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		LaborCraftWorker worker = CommandSupport.findWorker(source, workerId);
+		if (worker == null) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.not_found"));
+			return 0;
+		}
+		if (!worker.isOwnedBy(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.command.worker.not_owner"));
+			return 0;
+		}
+		if (worker.billingDebt() <= 0L) {
+			source.sendFailure(Component.translatable("laborcraft.billing.pay.no_debt"));
+			return 0;
+		}
+
+		if (BillingManager.pay(player, worker) <= 0) {
+			source.sendFailure(Component.translatable("laborcraft.billing.pay.no_money"));
+			return 0;
+		}
+		OpenWorkerPayload.open(player, worker);
 		return 1;
 	}
 

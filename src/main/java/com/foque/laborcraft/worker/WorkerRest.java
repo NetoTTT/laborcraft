@@ -50,7 +50,10 @@ public final class WorkerRest {
 			return false;
 		}
 
-		if (state == WorkerState.PAUSED || state == WorkerState.STORED || state == WorkerState.QUIT) {
+		if (state == WorkerState.STRIKE
+				|| state == WorkerState.PAUSED
+				|| state == WorkerState.STORED
+				|| state == WorkerState.QUIT) {
 			return false;
 		}
 

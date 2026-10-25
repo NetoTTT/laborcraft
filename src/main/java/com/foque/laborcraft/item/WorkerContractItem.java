@@ -1,5 +1,6 @@
 package com.foque.laborcraft.item;
 
+import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import com.foque.laborcraft.network.OpenWorkerPayload;
@@ -66,6 +67,7 @@ public class WorkerContractItem extends Item {
 		worker.setUpkeep(data.upkeep());
 		worker.setHunger(data.hunger());
 		worker.setMood(data.mood());
+		worker.startBilling(level.getGameTime(), LaborCraftConfig.get().farmer.billingPeriodDays);
 
 		// O contrato gera uma entidade: consumir sempre evita duplicar trabalhador no criativo,
 		// onde itens nao sao gastos por padrao (e o limite de trabalhadores seria furado).

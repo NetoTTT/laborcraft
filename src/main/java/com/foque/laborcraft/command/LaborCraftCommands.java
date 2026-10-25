@@ -25,6 +25,7 @@ public final class LaborCraftCommands {
 	public static final String WORKER_BUY = WORKER + " buy";
 	public static final String WORKER_ASSIGN = WORKER + " assign";
 	public static final String WORKER_DISMISS = WORKER + " dismiss";
+	public static final String WORKER_PAY = WORKER + " pay";
 	public static final String WORKER_OPEN = WORKER + " open";
 	public static final String WORKER_INV_OPEN = WORKER + " inv open";
 	public static final String WORKER_INV_TAKE = WORKER + " inv take";
@@ -75,6 +76,7 @@ public final class LaborCraftCommands {
 			root.then(HomeCommands.node());
 			root.then(LanguageCommands.node());
 			root.then(AdminCommands.node());
+			root.then(BillingAdminCommands.node());
 			dispatcher.register(root);
 		});
 	}

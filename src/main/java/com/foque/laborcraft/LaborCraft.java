@@ -3,6 +3,7 @@ package com.foque.laborcraft;
 import com.foque.laborcraft.block.LaborCraftBlocks;
 import com.foque.laborcraft.command.LaborCraftCommands;
 import com.foque.laborcraft.config.LaborCraftConfig;
+import com.foque.laborcraft.contract.BillingManager;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.housing.HomeRegistry;
@@ -65,11 +66,16 @@ public class LaborCraft implements ModInitializer {
 			HomeRegistry.clear();
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
-			int seconds = LaborCraftConfig.get().housing.recheckSeconds;
-			if (seconds <= 0 || server.getTickCount() % (seconds * 20) != 0) {
-				return;
+			LaborCraftConfig config = LaborCraftConfig.get();
+			int seconds = config.housing.recheckSeconds;
+			if (seconds > 0 && server.getTickCount() % (seconds * 20) == 0) {
+				HomeRegistry.revalidateAll(server);
 			}
-			HomeRegistry.revalidateAll(server);
+
+			int billingTicks = Math.max(20, config.billing.checkTicks);
+			if (config.billing.enabled && server.getTickCount() % billingTicks == 0) {
+				BillingManager.tick(server);
+			}
 		});
 
 		LOGGER.info(

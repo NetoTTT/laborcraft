@@ -1,52 +1,88 @@
 # 03 — Configuração
 
-## Período de cobrança
+## Período e salário
 
-| Valor | Duração (tempo de jogo) | Duração real aprox. |
-| --- | --- | --- |
-| `DAILY` | 24000 ticks | ~20 min |
-| `WEEKLY` | 168000 ticks (7 dias) | ~2h20 |
-| `MONTHLY` | 720000 ticks (30 dias) | ~10h |
+A cobrança é **por trabalhador**, a cada `billingPeriodDays` (padrão 1 dia de jogo; 24000 ticks por dia). O período usa **tempo de jogo**, não o relógio do sistema.
 
-Período é **tempo de jogo** (não depende do horário do relógio do sistema) e configura-se por emprego e/ou por contrato.
-
-## Salário
-
-Fórmula padrão do valor cobrado por período:
+Com `billing.useSalaryTable = true` (padrão), o valor de um período é:
 
 ```
-valor = baseWage
-      * wageMultiplierPerTier ^ (tier - 1)
-      * wageMultiplierPerWorker ^ (trabalhadoresAtivos - 1)
+baseDiaria = max(farmer.baseWage, billing.minimumDaily)
+multiplicador = (useRank ? rankMultiplier : 1)
+              * (useRarity ? rarityMultiplier : 1)
+multiplicador += useBoost ? bonusDeUpkeepDosBoosts : 0
+multiplicador = clamp(multiplicador, 0.1, billing.boostCap)
+salarioDiario = round(baseDiaria * multiplicador)
+salarioDoPeriodo = salarioDiario * farmer.billingPeriodDays
 ```
 
-- `baseWage`: por emprego (fazendeiro default 24).
-- `wageMultiplierPerTier` (default 1.5): cada tier custa mais — mais produção, mais salário.
-- `wageMultiplierPerWorker` (default 1.1): evita "spam de trabalhadores baratos"; o enésimo trabalhador custa mais.
-- Período maior pode ter desconto configurável (`periodDiscount`, futuro): pagar mês à vista sai mais barato que dia a dia.
+- `farmer.baseWage`: salário-base diário (padrão 24).
+- `billing.minimumDaily`: piso aplicado à base **antes** dos multiplicadores (padrão 0).
+- `billing.rankMultipliers`: `[COMUM, JUNIOR, PLENO, SENIOR]` (padrão `1.00 / 1.25 / 1.60 / 2.00`).
+- `billing.rarityMultipliers`: `[COMUM, INCOMUM, RARO, EPICO]` (padrão `1.00 / 1.05 / 1.10 / 1.20`).
+- `billing.boostCap`: teto do multiplicador total (padrão 2.5).
+- `billing.useRankMultiplier`, `useRarityMultiplier`, `useBoostUpkeep`: ligam/desligam cada parte.
+- `farmer.billingPeriodDays`: 1 = diário; 7 = semanal; 30 = mensal (aproximado em tempo de jogo).
 
-Justificativa de balanceamento: o custo tem que crescer mais rápido que a produção, senão automação vira dinheiro infinito.
+O modo legado (`billing.useSalaryTable = false`) usa apenas o multiplicador de rank + boosts, sem raridade nem teto:
+
+```
+salarioDiario = round(baseDiaria * max(0.1, rank.upkeepMultiplier + bonusDeUpkeep))
+```
+
+As ofertas novas usam a tabela automaticamente. Trabalhadores já contratados mantêm o salário que foi gravado no contrato; use `apply-salary` para recalcular os carregados. Dívida e faltas não são apagadas por esse recálculo.
 
 ## Falta de pagamento
 
+A cada `billing.checkTicks` (padrão 100 ticks), o mod tenta cobrar o período vencido:
+
 | Etapa | Comportamento |
 | --- | --- |
-| Cobrança falha | `missedPayments + 1`, aviso ao dono |
-| `missedPayments <= missedPaymentGracePeriods` | continua trabalhando (período de graça) |
-| passou da graça, ainda sem pagar | **pausa** (não produz, guarda pertences) |
-| nova falha após a pausa | contrato **rompido**, trabalhador vai embora com o inventário dele |
-| `requirePaymentToWork = false` | ignora falta de pagamento (modo admin/teste) |
+| Saldo suficiente | debita `salário + dívida`, zera dívida/faltas e retira o trabalhador da greve |
+| Saldo insuficiente | `missedPayments + 1`; a dívida cresce com o salário se `billing.allowDebt = true`; aplica `missedMoodPenalty` e avisa o dono |
+| `missedPayments <= billing.gracePeriods` | continua trabalhando (período de graça; padrão 1) |
+| `missedPayments > billing.gracePeriods` | entra em **greve** (`Em greve`): não produz e não sai do posto |
+| `billing.dismissAfterMissed > 0` e faltas atingem o limite | contrato é rompido; o trabalhador vai embora e a casa é desassociada |
+| `worker pay <trabalhador>` | quita a dívida, zera faltas, reinicia o próximo vencimento e retira da greve |
+| `billing.enabled = false` | desliga a cobrança (não altera dívidas/estados existentes) |
 
-Config extra prevista: `autoRenew` (renova sozinho ou exige confirmação), `noticeCharges` (chat a cada cobrança).
+- `billing.dismissAfterMissed = 0` desliga a dispensa automática (padrão).
+- `schedule.pauseBillingOffDuty = true` + `billing.useSchedule = true` adia o vencimento enquanto o trabalhador estiver fora do expediente.
+- `billing.notifyOwner = false` silencia os avisos de cobrança no chat.
+- A cobrança só enxerga trabalhadores **carregados** no mundo. Contratos em chunks descarregados não são processados até voltarem a carregar.
+- `billing.force` força uma checagem agora para os trabalhadores carregados; útil para testar dívida/greve.
+
+## Configuração live (admin)
+
+Comandos de **gamemaster**; salvam `config/laborcraft.json` imediatamente:
+
+```text
+/laborcraft billing set <campo> <valor>
+/laborcraft billing rank <rank> <multiplicador>
+/laborcraft billing rarity <raridade> <multiplicador>
+/laborcraft billing apply-salary
+/laborcraft billing force
+/laborcraft worker pay <trabalhador>
+/laborcraft admin market refresh
+```
+
+Campos de `billing set`:
+
+- `enabled`, `check-ticks`, `use-schedule`, `pause-off-duty`, `notify`, `debt`
+- `grace`, `dismiss-after`, `mood-penalty`
+- `use-table`, `minimum-daily`, `use-rank`, `use-rarity`, `use-boost`, `boost-cap`
+- `base-wage` (farmer), `price` (contrato), `period-days` (farmer)
+
+`rank` aceita `comum`, `junior`, `pleno`, `senior`; `rarity` aceita `comum`, `incomum`, `raro`, `epico`. Mudanças de salário, rank, raridade ou preço regeneram as ofertas do mercado automaticamente. `apply-salary` recalcula o salário dos trabalhadores já carregados e mantém a dívida/faltas. `admin market refresh` continua disponível para forçar uma rotação manual.
 
 ## Camadas de configuração
 
 Precedência, da mais baixa para a mais alta:
 
 1. `LaborCraftConfig` embutido (padrões do mod).
-2. `config/laborcraft-defaults.json` — default do modpack (não sobrescrito por update do mod).
+2. `config/laborcraft-defaults.json` — default do modpack (não sobrescrito por update do mod; planejado).
 3. `config/laborcraft.json` — configuração do servidor (autoridade final).
-4. Override do contrato pelo dono — permitido só se `allowOwnerOverrides = true`.
+4. Override do contrato pelo dono — previsto, ainda não implementado para cobrança.
 
 Campos atuais de `config/laborcraft.json`:
 
@@ -55,10 +91,6 @@ Campos atuais de `config/laborcraft.json`:
   "schemaVersion": 1,
   "currencyProvider": "laborcraft:ledger",
   "allowOwnerOverrides": true,
-  "requirePaymentToWork": true,
-  "missedPaymentGracePeriods": 1,
-  "wageMultiplierPerTier": 1.5,
-  "wageMultiplierPerWorker": 1.1,
   "worker": {
     "masteryLevelThresholds": [0, 100, 300, 700, 1500],
     "masteryXpPerHarvest": 1,
@@ -83,6 +115,8 @@ Campos atuais de `config/laborcraft.json`:
     "oneWorkerPerBed": true,
     "maxDistanceFromAnchor": 32,
     "maxVolume": 512,
+    "minInteriorSize": 5,
+    "maxBedsPerHouse": 4,
     "recheckSeconds": 60,
     "bonusRadius": 2,
     "bonusSpeed": 0.10,
@@ -107,6 +141,12 @@ Campos atuais de `config/laborcraft.json`:
     "useHouseBonus": true,
     "previewParticles": true
   },
+  "storage": {
+    "maxDistance": 8,
+    "maxContainers": 3,
+    "equipFromChest": false,
+    "workerSlots": 9
+  },
   "schedule": {
     "mode": "daylight",
     "startTick": 0,
@@ -120,6 +160,24 @@ Campos atuais de `config/laborcraft.json`:
     "maxPathFailures": 5,
     "allowLadders": false,
     "allowDoors": true
+  },
+  "billing": {
+    "enabled": true,
+    "checkTicks": 100,
+    "useSchedule": true,
+    "notifyOwner": true,
+    "allowDebt": true,
+    "gracePeriods": 1,
+    "dismissAfterMissed": 0,
+    "missedMoodPenalty": 10,
+    "useSalaryTable": true,
+    "minimumDaily": 0,
+    "useRankMultiplier": true,
+    "useRarityMultiplier": true,
+    "useBoostUpkeep": true,
+    "boostCap": 2.5,
+    "rankMultipliers": [1.00, 1.25, 1.60, 2.00],
+    "rarityMultipliers": [1.00, 1.05, 1.10, 1.20]
   },
   "farmer": {
     "enabled": true,
@@ -137,6 +195,8 @@ Campos atuais de `config/laborcraft.json`:
 
 - `farmer.waterPolicy`: `prefer` (padrão) planta mesmo em terra seca e avisa uma vez por minuto; `require` só planta/ara com água, avisa e espera (retoma sozinho ao irrigar); `ignore` desliga a validação.
 - `farmer.seedSurplusForCompost`: com `useComposter`, quantas sementes ele guarda; o excedente vai para a composteira (e define o estoque mantido no depósito).
+- `billing.rankMultipliers` é indexado por `WorkerRank`: COMUM, JUNIOR, PLENO, SENIOR.
+- `billing.rarityMultipliers` é indexado por `WorkerRarity`: COMUM, INCOMUM, RARO, EPICO.
 
 `config/laborcraft-ledger.json` guarda os saldos do provedor interno (`UUID` → valor). Não edite com o servidor rodando.
 
@@ -157,6 +217,7 @@ Campos atuais de `config/laborcraft.json`:
 | `housing.requireBed` / `requireRoof` / `requireDoor` / `requireEnclosure` | validação mínima da casa |
 | `housing.allowSharedHouse` / `oneWorkerPerBed` | cama compartilhada (adiada; default desliga a casa compartilhada) |
 | `housing.maxDistanceFromAnchor` / `maxVolume` / `recheckSeconds` | limite, custo e frequência da validação |
+| `housing.minInteriorSize` / `maxBedsPerHouse` | tamanho mínimo do interior e teto de camas por casa |
 | `housing.bonusRadius` / `bonusSpeed` / `bonusMaxWorkers` | bônus de casa válida |
 | `housing.comfortBlocks` / `comfortBonus*` | itens opcionais que dão bônus de desempenho |
 | `housing.speedPenaltyWithoutHome` | penalidade quando moradia não é obrigatória |
@@ -168,6 +229,10 @@ Campos atuais de `config/laborcraft.json`:
 | `schedule.startTick` / `endTick` | janela do modo `custom` (tempo de jogo) |
 | `schedule.workInRain` | trabalha na chuva |
 | `schedule.pauseBillingOffDuty` | pausa a cobrança fora do expediente |
+| `schedule.idleCheckTicks` | frequência da checagem de ócio do trabalhador |
+| `storage.maxDistance` / `maxContainers` | distância e quantidade de baús do posto |
+| `storage.equipFromChest` | retira ferramenta/insumo do baú automaticamente |
+| `storage.workerSlots` | slots do inventário do trabalhador (padrão 9) |
 | `pathing.maxPathLength` / `maxPathFailures` | limite e quarentena de caminhos |
 | `pathing.allowLadders` / `allowDoors` | escadas de mão (desligado: só escadas de blocos) e portas |
 | `acquisition.mode` | `purchase` ou `free` (craft/admin planejados) |
@@ -175,6 +240,7 @@ Campos atuais de `config/laborcraft.json`:
 | `acquisition.revenueAccount` | quem recebe: `server`, `government` ou UUID |
 | `acquisition.contractTradeable` | permite negociar o Contrato entre jogadores (planejado) |
 | `acquisition.keepProfileBackup` | mantém perfil no mundo para recuperação por admin |
+| `billing` | salário, dívida, graça, greve e notificações (ver tabela acima) |
 
 Detalhes e justificativas em [`07-TRABALHADOR.md`](07-TRABALHADOR.md).
 
@@ -184,15 +250,17 @@ Detalhes e justificativas em [`07-TRABALHADOR.md`](07-TRABALHADOR.md).
 | --- | --- |
 | Trocar moeda, preços, multiplicadores, travar overrides | operador do servidor (nível 2+) / modpack |
 | Contratar, demitir, definir área e baús | dono do contrato (jogador) |
-| Configurar salário/período além do padrão | dono, **se** `allowOwnerOverrides` |
-| Pagar salário de outro jogador | operador (modo admin) |
-| Recarregar config com o servidor rodando | operador, via comando futuro `/laborcraft reload` |
+| Configurar salário, rank, raridade e cobrança ao vivo | gamemaster (`/laborcraft billing ...`) |
+| Pagar a dívida do próprio trabalhador | dono (`/laborcraft worker pay`) |
+| Recarregar config com o servidor rodando | comandos `billing` salvam na hora; reload geral via comando futuro `/laborcraft reload` |
+
+O override de salário pelo dono (`allowOwnerOverrides`) ainda não está implementado para a cobrança; por enquanto a tabela é global e controlada pelo gamemaster.
 
 ## Como o modpack define tudo (receita)
 
 1. Escolher/criar a moeda: configurar `currencyProvider` (ex.: `laborcraft:item` com esmeralda ou scoreboard).
-2. Definir `baseWage` e multiplicadores conforme a escala de dinheiro do pack.
-3. Travar `allowOwnerOverrides = false` para preços previsíveis.
+2. Definir `farmer.baseWage`, `billing.rankMultipliers`, `billing.rarityMultipliers` e `boostCap` conforme a escala de dinheiro do pack.
+3. Travar `allowOwnerOverrides = false` para preços previsíveis (quando o override for implementado).
 4. (Futuro) embutir `laborcraft-defaults.json` no pack para que updates do mod não apaguem a configuração do autor do pack.
 
 ## Receita do Posto de Trabalho

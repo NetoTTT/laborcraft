@@ -3,6 +3,22 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.1.0-alpha.9] — 2026-10-25
+
+Base de cobrança/contrato: salário por período, dívida, greve por atraso e configuração live por comandos administrativos. A UI do painel admin continua pendente (doc 15).
+
+### Adicionado
+- Tabela salarial configurável (base diária, multiplicadores de rank/raridade, boosts, teto e mínimo) usada na geração de ofertas; modo antigo disponível por toggle.
+- Cobrança persistida por trabalhador (salário/período, próximo vencimento, dívida e faltas) com auto-pagamento pelo provedor de moeda, dívida/grace, greve e notificações.
+- `/laborcraft worker pay <trabalhador>` para quitar a dívida e retomar o contrato.
+- Alterações de salário, rank, raridade ou preço regeneram as ofertas do mercado automaticamente; `apply-salary` atualiza os contratos carregados.
+- Botão **Pagar** no resumo do Empregado quando há dívida; paga, retira da greve e atualiza a tela.
+- Configuração live por `/laborcraft billing set <campo> <valor>`, `/laborcraft billing rank|rarity <id> <multiplicador>` e `/laborcraft billing apply-salary` (recalcula os trabalhadores existentes); `/laborcraft billing force` força uma cobrança para testar. Campos: enabled, check-ticks, use-schedule, pause-off-duty, notify, debt, grace, dismiss-after, mood-penalty, use-table, minimum-daily, use-rank, use-rarity, use-boost, boost-cap, base-wage, price, period-days.
+- Estado **Em greve** e tarefa de salário atrasado; a linha de salário/dívida aparece no Resumo do Empregado.
+
+### Pendente
+- UI Admin de verdade (doc 15), testes de unidade do ciclo e a política de contratos antigos na UI.
+
 ## [0.1.0-alpha.8] — 2026-10-25
 
 Correção só de metadados: autor **NetoTTT** e links do GitHub (homepage/sources/issues) no
