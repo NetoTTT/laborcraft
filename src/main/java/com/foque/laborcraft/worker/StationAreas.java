@@ -17,6 +17,62 @@ public final class StationAreas {
 				&& a.pos().equals(b.pos());
 	}
 
+	/** True when (x,z) is inside one of the station's drawn zones. */
+	public static boolean zoneContains(StationRegistry.Station station, int x, int z) {
+		for (StationRegistry.Zone zone : station.zones()) {
+			if (inside(zone.from(), zone.to(), x, z)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** True when the block position is inside one of the station's drawn 3D zones. */
+	public static boolean zoneContains(StationRegistry.Station station, BlockPos pos) {
+		for (StationRegistry.Zone zone : station.zones()) {
+			BlockPos a = zone.from();
+			BlockPos b = zone.to();
+			if (pos.getX() >= Math.min(a.getX(), b.getX())
+					&& pos.getX() <= Math.max(a.getX(), b.getX())
+					&& pos.getY() >= Math.min(a.getY(), b.getY())
+					&& pos.getY() <= Math.max(a.getY(), b.getY())
+					&& pos.getZ() >= Math.min(a.getZ(), b.getZ())
+					&& pos.getZ() <= Math.max(a.getZ(), b.getZ())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** True when any drawn zone of the station overlaps the horizontal rectangle. */
+	public static boolean zoneOverlaps(StationRegistry.Station station, int minX, int maxX, int minZ, int maxZ) {
+		for (StationRegistry.Zone zone : station.zones()) {
+			int zoneMinX = Math.min(zone.from().getX(), zone.to().getX());
+			int zoneMaxX = Math.max(zone.from().getX(), zone.to().getX());
+			int zoneMinZ = Math.min(zone.from().getZ(), zone.to().getZ());
+			int zoneMaxZ = Math.max(zone.from().getZ(), zone.to().getZ());
+			if (zoneMinX <= maxX && zoneMaxX >= minX && zoneMinZ <= maxZ && zoneMaxZ >= minZ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** Horizontal spans of the station's drawn zones (used by the map); empty when unzoned. */
+	public static List<Span> zoneSpans(StationRegistry.Station station) {
+		List<Span> spans = new ArrayList<>();
+		for (StationRegistry.Zone zone : station.zones()) {
+			int minX = Math.min(zone.from().getX(), zone.to().getX());
+			int maxX = Math.max(zone.from().getX(), zone.to().getX());
+			int minZ = Math.min(zone.from().getZ(), zone.to().getZ());
+			int maxZ = Math.max(zone.from().getZ(), zone.to().getZ());
+			for (int z = minZ; z <= maxZ; z++) {
+				spans.add(new Span(z, minX, maxX));
+			}
+		}
+		return List.copyOf(spans);
+	}
+
 	public static boolean isHigherPriority(StationRegistry.Station a, StationRegistry.Station b) {
 		int byTime = Long.compare(a.createdAt(), b.createdAt());
 		if (byTime != 0) {

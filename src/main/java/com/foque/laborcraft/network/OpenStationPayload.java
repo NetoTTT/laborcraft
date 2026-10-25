@@ -3,7 +3,6 @@ package com.foque.laborcraft.network;
 import com.foque.laborcraft.LaborCraft;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
-import com.foque.laborcraft.worker.StationAreas;
 import com.foque.laborcraft.worker.StationRegistry;
 import com.foque.laborcraft.worker.WorkerOwnership;
 import java.util.ArrayList;
@@ -27,6 +26,7 @@ public record OpenStationPayload(
 		BlockPos pos,
 		String mode,
 		ZoneView zone,
+		List<ZoneView> zones,
 		int maxRadius,
 		int verticalRadius,
 		Summary bound,
@@ -45,6 +45,11 @@ public record OpenStationPayload(
 				if (payload.zone() != null) {
 					buffer.writeBlockPos(payload.zone().from());
 					buffer.writeBlockPos(payload.zone().to());
+				}
+				buffer.writeVarInt(payload.zones().size());
+				for (ZoneView zone : payload.zones()) {
+					buffer.writeBlockPos(zone.from());
+					buffer.writeBlockPos(zone.to());
 				}
 				buffer.writeVarInt(payload.maxRadius());
 				buffer.writeVarInt(payload.verticalRadius());
@@ -89,6 +94,11 @@ public record OpenStationPayload(
 				ZoneView zone = buffer.readBoolean()
 						? new ZoneView(buffer.readBlockPos(), buffer.readBlockPos())
 						: null;
+				int zoneCount = buffer.readVarInt();
+				List<ZoneView> zones = new ArrayList<>(zoneCount);
+				for (int index = 0; index < zoneCount; index++) {
+					zones.add(new ZoneView(buffer.readBlockPos(), buffer.readBlockPos()));
+				}
 				int maxRadius = buffer.readVarInt();
 				int verticalRadius = buffer.readVarInt();
 				Summary bound = buffer.readBoolean() ? readSummary(buffer) : null;
@@ -134,7 +144,7 @@ public record OpenStationPayload(
 					));
 				}
 				return new OpenStationPayload(
-						pos, mode, zone, maxRadius, verticalRadius, bound,
+						pos, mode, zone, List.copyOf(zones), maxRadius, verticalRadius, bound,
 						List.copyOf(workers), List.copyOf(ownAreas), List.copyOf(areas),
 						List.copyOf(otherPosts), List.copyOf(storage)
 				);
@@ -164,23 +174,28 @@ public record OpenStationPayload(
 			}
 		}
 
-		ZoneView zone = station.zones().isEmpty()
-				? null
-				: new ZoneView(station.zones().getFirst().from(), station.zones().getFirst().to());
+		List<ZoneView> zones = station.zones().stream()
+				.map(zone -> new ZoneView(zone.from(), zone.to()))
+				.toList();
+		ZoneView zone = zones.isEmpty() ? null : zones.getFirst();
 		int maxRadius = Math.max(4, LaborCraftConfig.get().area.maxRadius);
-		List<StationRegistry.Station> all = StationRegistry.all(player.level().getServer());
+		var server = player.level().getServer();
+		List<StationRegistry.Station> all = StationRegistry.all(server).stream()
+				.filter(candidate -> StationRegistry.isActive(server, candidate))
+				.toList();
 		List<StationRegistry.Station> nearby = nearbyStations(station, all);
 
 		return new OpenStationPayload(
 				station.pos(),
 				station.mode().name(),
 				zone,
+				zones,
 				maxRadius,
 				Math.max(1, LaborCraftConfig.get().area.verticalRadius),
 				bound,
 				List.copyOf(workers),
-				toAreaViews(station, StationAreas.effectiveSpans(station, all, maxRadius), false),
-				nearbyAreas(station, nearby, all, maxRadius),
+				zoneAreaViews(station, false),
+				nearbyAreas(nearby),
 				nearby.stream().map(StationRegistry.Station::pos).toList(),
 				storageViews(player, station)
 		);
@@ -226,38 +241,21 @@ public record OpenStationPayload(
 		return nearby.size() > 64 ? List.copyOf(nearby.subList(0, 64)) : List.copyOf(nearby);
 	}
 
-	private static List<AreaView> nearbyAreas(
-			StationRegistry.Station station,
-			List<StationRegistry.Station> nearby,
-			List<StationRegistry.Station> all,
-			int maxRadius
-	) {
+	private static List<AreaView> nearbyAreas(List<StationRegistry.Station> nearby) {
 		List<AreaView> areas = new ArrayList<>();
 		for (StationRegistry.Station other : nearby) {
-			areas.addAll(toAreaViews(
-					other,
-					StationAreas.effectiveSpans(other, all, maxRadius),
-					StationAreas.isHigherPriority(other, station)
-			));
+			// Only zones are exclusive. Other posts' maximum limits are not work areas and are
+			// not drawn as blocking areas.
+			areas.addAll(zoneAreaViews(other, true));
 		}
 
 		return List.copyOf(areas);
 	}
 
-	private static List<AreaView> toAreaViews(
-			StationRegistry.Station station,
-			List<StationAreas.Span> spans,
-			boolean blocksDraft
-	) {
-		List<AreaView> areas = new ArrayList<>(spans.size());
-		int y = station.pos().getY();
-		for (StationAreas.Span span : spans) {
-			areas.add(new AreaView(
-					"effective",
-					new BlockPos(span.x0(), y, span.z()),
-					new BlockPos(span.x1(), y, span.z()),
-					blocksDraft
-			));
+	private static List<AreaView> zoneAreaViews(StationRegistry.Station station, boolean blocksDraft) {
+		List<AreaView> areas = new ArrayList<>(station.zones().size());
+		for (StationRegistry.Zone zone : station.zones()) {
+			areas.add(new AreaView("zone", zone.from(), zone.to(), blocksDraft));
 		}
 		return List.copyOf(areas);
 	}

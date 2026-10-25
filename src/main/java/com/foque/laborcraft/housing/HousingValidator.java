@@ -2,15 +2,19 @@ package com.foque.laborcraft.housing;
 
 import com.foque.laborcraft.config.LaborCraftConfig;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -52,6 +56,7 @@ public final class HousingValidator {
 			if (!bedState.is(BlockTags.BEDS)) {
 				return HousingReport.invalid("not_a_bed", tick);
 			}
+			bedPos = canonicalBed(level, bedPos);
 		}
 
 		BlockPos seed = bedPos.above();
@@ -144,10 +149,29 @@ public final class HousingValidator {
 			}
 		}
 
-		bedPositions.add(bedPos);
+		// A bed has two halves; the canonical (foot) position avoids counting one bed as two.
+		Set<BlockPos> bedKeys = new HashSet<>();
+		for (BlockPos bed : bedPositions) {
+			if (insideInterior(bed, minX, maxX, minZ, maxZ, bedPos.getY())) {
+				bedKeys.add(canonicalBed(level, bed));
+			}
+		}
+		if (requireBed) {
+			bedKeys.add(canonicalBed(level, bedPos));
+		}
+
+		List<BlockPos> bedList = new ArrayList<>(bedKeys);
+		bedList.sort((left, right) -> {
+			int byX = Integer.compare(left.getX(), right.getX());
+			if (byX != 0) {
+				return byX;
+			}
+			int byZ = Integer.compare(left.getZ(), right.getZ());
+			return byZ != 0 ? byZ : Integer.compare(left.getY(), right.getY());
+		});
 
 		int doors = doorPositions.size();
-		int beds = bedPositions.size();
+		int beds = bedList.size();
 		int comfort = comfortPositions.size();
 		int minSize = Math.max(3, config.housing.minInteriorSize);
 		int maxBeds = Math.max(1, config.housing.maxBedsPerHouse);
@@ -179,8 +203,51 @@ public final class HousingValidator {
 				comfort,
 				comfortBonus,
 				tick,
-				failure
+				failure,
+				new BlockPos(minX, floorY, minZ),
+				new BlockPos(maxX, ceilingY, maxZ),
+				List.copyOf(bedList)
 		);
+	}
+
+	private static boolean insideInterior(
+			BlockPos pos,
+			int minX,
+			int maxX,
+			int minZ,
+			int maxZ,
+			int bedY
+	) {
+		return pos.getY() == bedY
+				&& pos.getX() >= minX
+				&& pos.getX() <= maxX
+				&& pos.getZ() >= minZ
+				&& pos.getZ() <= maxZ;
+	}
+
+	/**
+	 * Returns the foot of the bed (or the position itself when it is already the foot), so both
+	 * halves of the same bed produce the same key.
+	 */
+	public static BlockPos canonicalBed(ServerLevel level, BlockPos pos) {
+		BlockState state = level.getBlockState(pos);
+		if (!state.is(BlockTags.BEDS)
+				|| !state.hasProperty(BedBlock.PART)
+				|| state.getValue(BedBlock.PART) != BedPart.HEAD) {
+			return pos.immutable();
+		}
+
+		for (Direction direction : Direction.Plane.HORIZONTAL) {
+			BlockPos other = pos.relative(direction);
+			BlockState otherState = level.getBlockState(other);
+			if (otherState.is(BlockTags.BEDS)
+					&& otherState.hasProperty(BedBlock.PART)
+					&& otherState.getValue(BedBlock.PART) == BedPart.FOOT) {
+				return other.immutable();
+			}
+		}
+
+		return pos.immutable();
 	}
 
 	/** Uma celula "ve o ceu" quando esta na altura do heightmap ou acima dele. */

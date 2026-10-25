@@ -93,6 +93,12 @@ final class StationCommands {
 												context.getSource(),
 												BlockPosArgument.getLoadedBlockPos(context, "pos")
 										)))))
+				.then(Commands.literal("maxarea")
+						.then(Commands.argument("pos", BlockPosArgument.blockPos())
+								.executes(context -> stationZoneMax(
+										context.getSource(),
+										BlockPosArgument.getLoadedBlockPos(context, "pos")
+								))))
 				.then(Commands.literal("storage")
 						.then(Commands.literal("link")
 								.then(Commands.argument("pos", BlockPosArgument.blockPos())
@@ -311,6 +317,37 @@ final class StationCommands {
 		return 1;
 	}
 
+	private static int stationZoneMax(CommandSourceStack source, BlockPos pos)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = CommandSupport.stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		int result = StationRegistry.applyMaxZone(source.getServer(), station);
+		if (result == -1) {
+			source.sendFailure(Component.translatable("laborcraft.station.zone.max.blocked"));
+			return 0;
+		}
+		if (result == -2) {
+			source.sendFailure(Component.translatable("laborcraft.station.zone.max.too_complex"));
+			return 0;
+		}
+
+		OpenStationPayload.open(player, CommandSupport.stationAt(source, pos));
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.station.zone.max.applied", result),
+				false
+		);
+		return 1;
+	}
+
 	private static int stationZoneSet(CommandSourceStack source, BlockPos pos, BlockPos from, BlockPos to)
 			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();
@@ -324,26 +361,27 @@ final class StationCommands {
 			return 0;
 		}
 
-		String error = StationRegistry.validateZone(source.getServer(), station, from, to);
-		if (error != null) {
-			source.sendFailure(Component.translatable("laborcraft.station.zone.invalid." + error));
+		int result = StationRegistry.applyZone(source.getServer(), station, from, to);
+		if (result < 0) {
+			source.sendFailure(Component.translatable(zoneClipErrorKey(result)));
 			return 0;
 		}
 
-		int vertical = Math.max(1, LaborCraftConfig.get().area.verticalRadius);
-		BlockPos zoneFrom = new BlockPos(from.getX(), station.pos().getY() - vertical, from.getZ());
-		BlockPos zoneTo = new BlockPos(to.getX(), station.pos().getY() + vertical, to.getZ());
-		StationRegistry.setZone(source.getServer(), station, zoneFrom, zoneTo);
 		OpenStationPayload.open(player, CommandSupport.stationAt(source, pos));
 		source.sendSuccess(
-				() -> Component.translatable(
-						"laborcraft.stake.applied",
-						Math.abs(to.getX() - from.getX()) + 1,
-						Math.abs(to.getZ() - from.getZ()) + 1
-				),
+				() -> Component.translatable("laborcraft.station.zone.applied", result),
 				false
 		);
 		return 1;
+	}
+
+	private static String zoneClipErrorKey(int result) {
+		return switch (result) {
+			case -2 -> "laborcraft.station.zone.clip.too_complex";
+			case -3 -> "laborcraft.station.zone.invalid.too_large";
+			case -4 -> "laborcraft.station.zone.invalid.too_far";
+			default -> "laborcraft.station.zone.clip.blocked";
+		};
 	}
 
 	private static int stationStorageLink(CommandSourceStack source, BlockPos pos, BlockPos chest, String roleId)

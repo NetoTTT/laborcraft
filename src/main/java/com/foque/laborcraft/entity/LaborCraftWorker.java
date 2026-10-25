@@ -1,5 +1,6 @@
 package com.foque.laborcraft.entity;
 
+import com.foque.laborcraft.housing.HomeRegistry;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.worker.FarmerBrain;
 import com.foque.laborcraft.worker.WorkerAptitudes;
@@ -19,6 +20,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
@@ -367,6 +369,14 @@ public class LaborCraftWorker extends PathfinderMob {
 		}
 
 		return InteractionResult.SUCCESS_SERVER;
+	}
+
+	@Override
+	public void die(DamageSource damageSource) {
+		if (!level().isClientSide()) {
+			HomeRegistry.unassign(level().getServer(), getUUID());
+		}
+		super.die(damageSource);
 	}
 
 	@Override

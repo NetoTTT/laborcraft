@@ -445,7 +445,7 @@ public final class FarmerBrain {
 					if (pos.equals(ignored) && now < ignoredUntil) {
 						continue;
 					}
-					if (!level.hasChunkAt(pos)) {
+					if (!level.hasChunkAt(pos) || !StationAreas.zoneContains(station, pos)) {
 						continue;
 					}
 

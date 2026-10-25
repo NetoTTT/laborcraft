@@ -61,6 +61,7 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 	private final int maxRadius;
 	private final BlockPos savedFrom;
 	private final BlockPos savedTo;
+	private final List<OpenStationPayload.ZoneView> savedZones;
 	private final UUID boundWorkerId;
 	private final String boundWorkerName;
 	private final List<OpenStationPayload.AreaView> ownAreas;
@@ -87,6 +88,7 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 			BlockPos center, int maxRadius,
 			BlockPos from, BlockPos to,
 			BlockPos savedFrom, BlockPos savedTo,
+			List<OpenStationPayload.ZoneView> savedZones,
 			UUID boundWorkerId, String boundWorkerName,
 			List<OpenStationPayload.AreaView> ownAreas,
 			List<OpenStationPayload.AreaView> otherAreas,
@@ -99,6 +101,7 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 		this.to = to;
 		this.savedFrom = savedFrom;
 		this.savedTo = savedTo;
+		this.savedZones = savedZones == null ? List.of() : List.copyOf(savedZones);
 		this.boundWorkerId = boundWorkerId;
 		this.boundWorkerName = boundWorkerName;
 		this.ownAreas = ownAreas == null ? List.of() : List.copyOf(ownAreas);
@@ -152,6 +155,54 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 		return hasSelection() && selectionWidth() <= 32 && selectionDepth() <= 32;
 	}
 
+	/** True when the raw maximum square would overlap another post's drawn zone. */
+	public boolean maxAreaOverlapsOther() {
+		int minX = center.getX() - maxRadius;
+		int maxX = center.getX() + maxRadius;
+		int minZ = center.getZ() - maxRadius;
+		int maxZ = center.getZ() + maxRadius;
+		for (OpenStationPayload.AreaView area : otherAreas) {
+			if (area == null || !area.blocksDraft()) {
+				continue;
+			}
+
+			int areaMinX = Math.min(area.from().getX(), area.to().getX());
+			int areaMaxX = Math.max(area.from().getX(), area.to().getX());
+			int areaMinZ = Math.min(area.from().getZ(), area.to().getZ());
+			int areaMaxZ = Math.max(area.from().getZ(), area.to().getZ());
+			if (areaMinX <= maxX && areaMaxX >= minX && areaMinZ <= maxZ && areaMaxZ >= minZ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** True when the current selection overlaps another post's drawn zone. */
+	public boolean selectionOverlapsOther() {
+		if (!hasSelection()) {
+			return false;
+		}
+
+		int selMinX = Math.min(from.getX(), to.getX());
+		int selMaxX = Math.max(from.getX(), to.getX());
+		int selMinZ = Math.min(from.getZ(), to.getZ());
+		int selMaxZ = Math.max(from.getZ(), to.getZ());
+		for (OpenStationPayload.AreaView area : otherAreas) {
+			if (area == null || !area.blocksDraft()) {
+				continue;
+			}
+
+			int minX = Math.min(area.from().getX(), area.to().getX());
+			int maxX = Math.max(area.from().getX(), area.to().getX());
+			int minZ = Math.min(area.from().getZ(), area.to().getZ());
+			int maxZ = Math.max(area.from().getZ(), area.to().getZ());
+			if (minX <= selMaxX && maxX >= selMinX && minZ <= selMaxZ && maxZ >= selMinZ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	@Override
 	public void close() {
 		if (texture != null) {
@@ -195,15 +246,17 @@ public final class LcAreaMap extends AbstractWidget implements AutoCloseable {
 			// 3. Post limit (maximum area, not the work area)
 			drawRadiusLimit(graphics);
 
-			// 4/5. Only the drawn zone is the work area
-			if (savedFrom != null && savedTo != null) {
+			// 4/5. Only the drawn zones are the work area. Draw the union boundary once;
+			// per-rectangle dashes would create visible seams inside the clipped shape.
+			if (!ownAreas.isEmpty()) {
 				drawEffectiveAreas(graphics, ownAreas, SAVED_BORDER, SAVED_FILL);
+			} else if (savedFrom != null && savedTo != null) {
 				drawDashedZone(graphics, savedFrom, savedTo, 0x88FFC65A);
 			}
 		}
 
-		// 6. Current drag selection. The outline only turns red when the zone exceeds the limit;
-		// colliding with another post paints just the colliding cells, since the rest is still usable.
+		// 6. Current drag selection. Only the cells that overlap another zone are painted red;
+		// the server clips them out and keeps the rest.
 		if (hasSelection()) {
 			boolean fits = selectionFitsLimit();
 			int outline = fits ? SELECTION_BORDER : OVERLAP_BORDER;

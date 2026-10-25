@@ -32,9 +32,11 @@
 - [ ] Atribuir área por bloco âncora e baús de entrada/saída.
 - [x] Bloco `laborcraft:workstation` + item + receita (8 tábuas + baú).
 - [ ] Preview de área por partículas do posto.
-- [ ] Reivindicação de área e de cama (sem conflito entre trabalhadores).
-- [ ] Inventário do trabalhador + depósito real.
-- [ ] Validação de casa (cama + porta + enclausuramento limitado) com cache.
+- [x] Reivindicação de área e de cama (sem conflito entre trabalhadores).
+- [x] Inventário do trabalhador + depósito real.
+- [x] Validação de casa (cama + porta + enclausuramento limitado) com cache.
+- [x] **[ALTA] Conflito entre postos (zona-only)**: área máxima pode sobrepor; só a zona desenhada é exclusiva (doc 13 §8.1). Falta a política para empregos de área livre.
+- [ ] Descanso/rotina noturna + pathing até a cama.
 - [ ] Expediente (`WorkSchedule`) ligado ao tick do trabalhador.
 
 ### M3 — Fazendeiro MVP

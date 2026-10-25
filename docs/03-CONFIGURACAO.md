@@ -150,7 +150,7 @@ Campos atuais de `config/laborcraft.json`:
 | `worker.reassignmentFee` / `reassignmentCooldownDays` | custo e espera para trocar de emprego |
 | `worker.allowPickup` | permite guardar o trabalhador de volta no Contrato ("ovo") |
 | `worker.pickupRequiresEmptyInventory` | só guarda com inventário vazio |
-| `worker.maxWorkersPerPlayer` | limite de trabalhadores ativos + contratos ainda não usados por jogador; padrão 1, expansível no futuro por casas/upgrades |
+| `worker.maxWorkersPerPlayer` | limite **base** de trabalhadores ativos + contratos por jogador; padrão 1. O limite efetivo soma as camas válidas das casas registradas. 0 = ilimitado. |
 | `offers.offerCount` | quantas pessoas o mercado do servidor oferece por rotação (padrão 5, máx. 20) |
 | `offers.rotationDays` | de quantos em quantos dias do mundo o mercado troca o estoque (padrão 1) |
 | `housing.required` | exige moradia para trabalhar |

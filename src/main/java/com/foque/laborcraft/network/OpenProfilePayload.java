@@ -1,7 +1,6 @@
 package com.foque.laborcraft.network;
 
 import com.foque.laborcraft.LaborCraft;
-import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftWorker;
@@ -98,7 +97,7 @@ public record OpenProfilePayload(
 				provider.format(provider.balance(player.getUUID())),
 				summaries.size(),
 				WorkerOwnership.pendingContracts(player),
-				LaborCraftConfig.get().worker.maxWorkersPerPlayer,
+				WorkerOwnership.limit(player),
 				List.copyOf(summaries)
 		);
 	}

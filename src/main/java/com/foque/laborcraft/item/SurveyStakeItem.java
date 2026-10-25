@@ -1,6 +1,5 @@
 package com.foque.laborcraft.item;
 
-import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.network.OpenStationPayload;
 import com.foque.laborcraft.worker.StationRegistry;
 import java.util.HashMap;
@@ -64,6 +63,15 @@ public class SurveyStakeItem extends Item {
 		return InteractionResult.SUCCESS_SERVER;
 	}
 
+	private static String zoneClipErrorKey(int result) {
+		return switch (result) {
+			case -2 -> "laborcraft.station.zone.clip.too_complex";
+			case -3 -> "laborcraft.station.zone.invalid.too_large";
+			case -4 -> "laborcraft.station.zone.invalid.too_far";
+			default -> "laborcraft.station.zone.clip.blocked";
+		};
+	}
+
 	private void applyToStation(ServerLevel level, ServerPlayer player, String dimension, BlockPos clicked) {
 		StationRegistry.Station station = StationRegistry.get(level.getServer(), dimension, clicked);
 		if (station == null) {
@@ -82,24 +90,22 @@ public class SurveyStakeItem extends Item {
 			return;
 		}
 
-		String error = StationRegistry.validateZone(level.getServer(), station, selection.from(), selection.to());
-		if (error != null) {
-			player.sendSystemMessage(Component.translatable("laborcraft.station.zone.invalid." + error));
+		int result = StationRegistry.applyZone(
+				level.getServer(),
+				station,
+				selection.from(),
+				selection.to()
+		);
+		if (result < 0) {
+			player.sendSystemMessage(Component.translatable(zoneClipErrorKey(result)));
 			return;
 		}
 
-		int vertical = Math.max(1, LaborCraftConfig.get().area.verticalRadius);
-		BlockPos from = new BlockPos(selection.from().getX(), station.pos().getY() - vertical, selection.from().getZ());
-		BlockPos to = new BlockPos(selection.to().getX(), station.pos().getY() + vertical, selection.to().getZ());
-		StationRegistry.setZone(level.getServer(), station, from, to);
 		PENDING.remove(player.getUUID());
 
 		StationRegistry.Station updated = StationRegistry.get(level.getServer(), dimension, clicked);
 		OpenStationPayload.open(player, updated);
-
-		int width = Math.abs(to.getX() - from.getX()) + 1;
-		int depth = Math.abs(to.getZ() - from.getZ()) + 1;
-		player.sendSystemMessage(Component.translatable("laborcraft.stake.applied", width, depth));
+		player.sendSystemMessage(Component.translatable("laborcraft.station.zone.applied", result));
 	}
 
 	public record Selection(String dimension, BlockPos from, BlockPos to) {

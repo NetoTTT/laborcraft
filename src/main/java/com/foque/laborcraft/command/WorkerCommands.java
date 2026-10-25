@@ -6,6 +6,7 @@ import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.entity.LaborCraftWorker;
+import com.foque.laborcraft.housing.HomeRegistry;
 import com.foque.laborcraft.item.LaborCraftItems;
 import com.foque.laborcraft.item.WorkerContractData;
 import com.foque.laborcraft.job.JobEquipment;
@@ -232,7 +233,7 @@ final class WorkerCommands {
 		}
 
 		LaborCraftConfig config = LaborCraftConfig.get();
-		int limit = config.worker.maxWorkersPerPlayer;
+		int limit = WorkerOwnership.limit(player);
 		int total = WorkerOwnership.total(player);
 		if (limit > 0 && total >= limit) {
 			source.sendFailure(Component.translatable("laborcraft.command.worker.buy.limit", limit));
@@ -373,6 +374,7 @@ final class WorkerCommands {
 		ItemStack fallback = contract.copy();
 		boolean hasRoom = player.getInventory().getFreeSlot() >= 0;
 
+		HomeRegistry.unassign(player.level().getServer(), worker.getUUID());
 		worker.discard();
 		boolean stored = hasRoom && player.getInventory().add(contract);
 
@@ -441,6 +443,7 @@ final class WorkerCommands {
 		}
 
 		Component name = worker.getName();
+		HomeRegistry.unassign(source.getServer(), worker.getUUID());
 		worker.discard();
 		source.sendSuccess(
 				() -> Component.translatable("laborcraft.command.worker.removed", name),

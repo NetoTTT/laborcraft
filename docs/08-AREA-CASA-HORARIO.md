@@ -3,7 +3,8 @@
 Escopo: como o trabalhador sabe **onde** trabalhar, **onde mora** e **quando** trabalha. Tudo configurável; o fazendeiro é o caso concreto, mas o modelo serve para qualquer emprego.
 
 > O fluxo de atribuição (posto, zona desenhada e vínculo com o trabalhador) está em
-> [`13-TRABALHO-E-ATRIBUICAO.md`](13-TRABALHO-E-ATRIBUICAO.md). A parte de casa está pausada.
+> [`13-TRABALHO-E-ATRIBUICAO.md`](13-TRABALHO-E-ATRIBUICAO.md). A **base da casa** (registro/claim,
+> vagas e limite) está pronta; descanso, animações e pathing até a cama continuam pendentes.
 
 ## 1. Bloco âncora
 
@@ -261,7 +262,8 @@ Tempo real cria diferença entre servidores e fuso horário, e permite "trabalha
 
 1. Bloco posto + preview de área (partículas) + persistência simples.
 2. Cálculo de área por tier (já modelado em `WorkArea`/`AreaShape`).
-3. Validação de casa (flood fill limitado) + cache + recheck.
-4. Expansão por casa + bônus de conforto.
+3. ~~Validação de casa (flood fill limitado) + cache + recheck.~~ **Feito** (`HousingValidator`, `HomeRegistry`, recheck periódico).
+4. ~~Expansão por casa~~ **Feito para o limite** (`worker.maxWorkersPerPlayer` + camas válidas); bônus de conforto/raio/velocidade ainda pendentes.
 5. Expediente (`WorkSchedule`) ligado ao tick do trabalhador.
-6. Pathfinding multiandar + quarentena de alvos.
+6. Descanso: trabalhador vai até a cama, pose/animação e retomada.
+7. Pathfinding multiandar + quarentena de alvos.

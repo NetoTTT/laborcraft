@@ -125,10 +125,13 @@ public final class StationPreviewManager {
 			if (area == null) {
 				continue;
 			}
-			int z = area.from().getZ();
 			int x0 = Math.min(area.from().getX(), area.to().getX());
 			int x1 = Math.max(area.from().getX(), area.to().getX());
-			spans.add(new StationAreas.Span(z, x0, x1));
+			int z0 = Math.min(area.from().getZ(), area.to().getZ());
+			int z1 = Math.max(area.from().getZ(), area.to().getZ());
+			for (int z = z0; z <= z1; z++) {
+				spans.add(new StationAreas.Span(z, x0, x1));
+			}
 		}
 		return List.copyOf(spans);
 	}
@@ -188,9 +191,8 @@ public final class StationPreviewManager {
 	}
 
 	/**
-	 * Computes the cells a draft would actually own. Only older nearby posts clip the draft;
-	 * newer posts are overlapped by the current post, matching the server-side priority rule.
-	 * Post block positions are always excluded.
+	 * Computes the cells a draft would own for the particle preview. Only drawn zones block the
+	 * draft; maximum areas may overlap. Post block positions are excluded.
 	 */
 	public static List<StationAreas.Span> effectiveSpans(
 			BlockPos a,

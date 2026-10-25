@@ -455,6 +455,7 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 				selectionTo,
 				savedFrom,
 				savedTo,
+				station.zones(),
 				station.bound() != null ? station.bound().id() : null,
 				station.bound() != null ? station.bound().name() : null,
 				station.ownAreas(),
@@ -552,13 +553,7 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 	}
 
 	private void useMaxArea() {
-		int radius = Math.min(15, Math.max(1, station.maxRadius()));
-		BlockPos center = station.pos();
-		LaborCraftUiActions.run(
-				LaborCraftCommands.STATION_ZONE_SET + " " + posString()
-						+ " " + coordinates(new BlockPos(center.getX() - radius, center.getY(), center.getZ() - radius))
-						+ " " + coordinates(new BlockPos(center.getX() + radius, center.getY(), center.getZ() + radius))
-		);
+		LaborCraftUiActions.run(LaborCraftCommands.STATION_ZONE_MAX + " " + posString());
 	}
 
 	private void updateMapButton() {
@@ -993,7 +988,20 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 				selected || bound ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER
 		);
 
-		graphics.text(font, Component.literal(worker.name()), x + 10, y + 6, LcTheme.TITLE);
+		int eyeX = x + width - 24;
+		int eyeY = y + (height - 2 - 18) / 2;
+		Component warning = worker.boundElsewhere()
+				? Component.translatable("laborcraft.ui.station.bound_elsewhere")
+				: Component.empty();
+		int warningWidth = worker.boundElsewhere() ? font.width(warning) : 0;
+		int nameLimit = eyeX - 6 - (x + 10) - (warningWidth > 0 ? warningWidth + 8 : 0);
+		graphics.text(
+				font,
+				Component.literal(font.plainSubstrByWidth(worker.name(), Math.max(10, nameLimit))),
+				x + 10,
+				y + 6,
+				LcTheme.TITLE
+		);
 
 		Component detail = LcWorkerText.join(
 				java.util.List.of(
@@ -1005,17 +1013,9 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		graphics.text(font, detail, x + 10, y + 20, LcTheme.TEXT);
 
 		if (worker.boundElsewhere()) {
-			graphics.text(
-					font,
-					Component.translatable("laborcraft.ui.station.bound_elsewhere"),
-					x + width - 10 - font.width(Component.translatable("laborcraft.ui.station.bound_elsewhere")),
-					y + 6,
-					LcTheme.DANGER
-			);
+			graphics.text(font, warning, eyeX - 6 - warningWidth, y + 6, LcTheme.DANGER);
 		}
 
-		int eyeX = x + width - 24;
-		int eyeY = y + (height - 2 - 18) / 2;
 		boolean eyeHovered = mouseX >= eyeX && mouseX < eyeX + 18 && mouseY >= eyeY && mouseY < eyeY + 18;
 		graphics.fill(eyeX, eyeY, eyeX + 18, eyeY + 18, eyeHovered ? LcTheme.BUTTON_HOVER : LcTheme.BUTTON_BG);
 		LcRender.border(graphics, eyeX, eyeY, 18, 18, eyeHovered ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER);

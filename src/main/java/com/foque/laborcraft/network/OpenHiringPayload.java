@@ -1,7 +1,6 @@
 package com.foque.laborcraft.network;
 
 import com.foque.laborcraft.LaborCraft;
-import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.worker.WorkerBoost;
@@ -95,7 +94,6 @@ public record OpenHiringPayload(
 	);
 
 	public static OpenHiringPayload of(ServerPlayer player) {
-		LaborCraftConfig config = LaborCraftConfig.get();
 		CurrencyProvider provider = CurrencyProviders.active();
 		List<Offer> offers = new ArrayList<>();
 		for (WorkerOffer offer : WorkerMarket.offers(player.level().getServer())) {
@@ -120,7 +118,7 @@ public record OpenHiringPayload(
 				provider.format(balance),
 				WorkerOwnership.ownedWorkers(player),
 				WorkerOwnership.pendingContracts(player),
-				config.worker.maxWorkersPerPlayer,
+				WorkerOwnership.limit(player),
 				provider.id()
 		);
 	}

@@ -3,6 +3,45 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [Não lançado]
+
+Base da casa do trabalhador: registrar o cômodo com nome, atribuir uma cama e aumentar o limite de
+trabalhadores. O Empregado ganhou abas e a casa agora tem modal de registro e lista de casas.
+O conflito de áreas passou ao modelo **zona-only**: a área máxima é só um limite e só a zona
+desenhada é exclusiva. Descanso, expediente e pathing até a cama continuam para a próxima etapa.
+
+### Adicionado
+
+- Registro persistente de casas (`HomeRegistry`, `<mundo>/data/laborcraft/homes.json`): **nome**, dono, cama-âncora, limites internos, capacidade, camas e moradores.
+- **Modal de registro**: agachar + clique direito na cama com a mão vazia mostra os dados do cômodo (interno, portas, camas, vagas) e pede um nome; confirmar registra. `/laborcraft home set [pos] [nome]` continua disponível.
+- **Gerenciar casa**: no modal de uma casa já sua, **Renomear** (`/laborcraft home rename [pos] <nome>`) e **Desvincular casa** (dois cliques, `/laborcraft home remove [pos]`); desvincular deixa o cômodo livre para outro jogador reivindicar.
+- Abas **Resumo / Emprego / Casa** na tela Empregado: a aba Emprego lista os cargos (pronta para novos empregos) e a aba Casa lista as casas com nome, camas livres e validade, com **Atribuir** por casa e **Liberar casa**.
+- Âncora normalizada para o **pé da cama**, então uma cama de casal conta como uma vaga (não duas).
+- Slots da casa: `limite = worker.maxWorkersPerPlayer + camas válidas`, usado na compra, no contrato, na contratação e no perfil.
+- Atribuição de casa ao trabalhador por `/laborcraft home assign <trabalhador> [cama]` e pela aba Casa; `/laborcraft home unassign` remove o vínculo. Uma cama por trabalhador; atribuir em outra casa move o trabalhador.
+- `/laborcraft home list`, `home info`, `home remove` e `home revalidate` (gamemaster); o diagnóstico `home scan|measure` continua.
+- Revalidação automática a cada `housing.recheckSeconds`; casa quebrada suspende os slots, avisa o dono e volta quando o cômodo for consertado.
+- Dispensar ou remover um trabalhador libera automaticamente a cama.
+
+### Alterado
+
+- **Conflito entre postos (zona-only)**: a área máxima pode sobrepor a de outro posto; só a **zona desenhada** é exclusiva. Um posto pode ser colocado/claimado dentro da área máxima de outro, mas não dentro da zona; uma zona não pode cruzar outra zona nem conter outro posto.
+- O mapa não recorta mais a área máxima do posto selecionado; os outros postos aparecem pelas suas **zonas** (azul), não pela área máxima, e o limite tracejado continua inteiro.
+- **"Usar área máxima" e o desenho manual recortam automaticamente** a área contra zonas/blocos vizinhos, gravando vários retângulos no mesmo posto (até 32). Se não sobrar área ou o recorte passar do cap, recusa. As células que serão cortadas aparecem em vermelho, mas o **Confirmar** fica habilitado; a Estaca de Demarcação também recorta.
+- A IA do fazendeiro checa pertencimento à zona e não trabalha nos vazios; mapa e preview desenham a união, sem costuras internas.
+- A checagem de pertencimento roda a cada 10 ticks e é dominada pelos `getBlockState`/chunks; o recorte só roda no clique. Continua leve no uso normal.
+- Zona removida deixa o posto **sem área de trabalho** (o fazendeiro pausa com `need_zone`); a área máxima não é fallback.
+
+### Corrigido
+
+- **Postos órfãos** (registro no JSON com o bloco quebrado) não contam mais para conflito de área, recorte do máximo nem mapa; só postos com o bloco presente bloqueiam. Isso elimina os buracos/quadradinhos vazios deixados por registros antigos.
+- `HousingReport` agora expõe os limites internos e a lista canônica de camas; cama de casal não infla mais a contagem de camas.
+- O aviso **"Outro posto"** na lista de empregados do Posto não fica mais escondido atrás do botão de olho; o nome do trabalhador é truncado quando necessário.
+
+### Pendente
+
+- Política de conflito para empregos de **área livre** (sem zona); o único emprego atual é o fazendeiro. A lógica antiga de área efetiva continua disponível para essa análise.
+
 ## [0.1.0-alpha.6] — 2026-10-24
 
 Fazendeiro automatizado de ponta a ponta: área de trabalho obrigatória, colheita/replantio/plantio, água,

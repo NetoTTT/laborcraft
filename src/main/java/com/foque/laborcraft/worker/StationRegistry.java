@@ -1,6 +1,7 @@
 package com.foque.laborcraft.worker;
 
 import com.foque.laborcraft.LaborCraft;
+import com.foque.laborcraft.block.LaborCraftBlocks;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -16,6 +17,7 @@ import java.util.Locale;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
@@ -27,6 +29,7 @@ import net.minecraft.world.level.storage.LevelResource;
  */
 public final class StationRegistry {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+	private static final int MAX_ZONE_RECTANGLES = 32;
 	private static StationRegistry instance;
 
 	private final List<Station> stations = new ArrayList<>();
@@ -64,6 +67,30 @@ public final class StationRegistry {
 
 	public static List<Station> all(MinecraftServer server) {
 		return List.copyOf(load(server).stations);
+	}
+
+	/**
+	 * A station record can survive its block (so replacing the block reattaches). Area conflicts
+	 * and map overlays must ignore those orphan records until the block is placed again.
+	 */
+	public static boolean isActive(MinecraftServer server, Station station) {
+		if (server == null || station == null) {
+			return false;
+		}
+
+		ServerLevel level = level(server, station.dimension());
+		return level != null
+				&& level.isLoaded(station.pos())
+				&& level.getBlockState(station.pos()).is(LaborCraftBlocks.WORKSTATION);
+	}
+
+	private static ServerLevel level(MinecraftServer server, String dimension) {
+		for (ServerLevel level : server.getAllLevels()) {
+			if (level.dimension().identifier().toString().equals(dimension)) {
+				return level;
+			}
+		}
+		return null;
 	}
 
 	public static Station byWorker(MinecraftServer server, UUID worker) {
@@ -152,42 +179,37 @@ public final class StationRegistry {
 			return "too_far";
 		}
 
+		int minX = Math.min(from.getX(), to.getX());
+		int maxX = Math.max(from.getX(), to.getX());
+		int minZ = Math.min(from.getZ(), to.getZ());
+		int maxZ = Math.max(from.getZ(), to.getZ());
 		List<Station> all = load(server).stations;
 		for (Station other : all) {
-			if (other.pos().equals(station.pos()) || !other.dimension().equals(station.dimension())) {
+			if (other.pos().equals(station.pos()) || !other.dimension().equals(station.dimension())
+					|| !isActive(server, other)) {
 				continue;
+			}
+			// Only drawn zones are exclusive; maximum areas may overlap.
+			if (StationAreas.zoneOverlaps(other, minX, maxX, minZ, maxZ)) {
+				return "overlap";
 			}
 			if (insideHorizontal(from, to, other.pos())) {
 				return "overlap";
 			}
 		}
 
-		BlockPos min = new BlockPos(
-				Math.min(from.getX(), to.getX()),
-				Math.min(from.getY(), to.getY()),
-				Math.min(from.getZ(), to.getZ())
-		);
-		BlockPos max = new BlockPos(
-				Math.max(from.getX(), to.getX()),
-				Math.max(from.getY(), to.getY()),
-				Math.max(from.getZ(), to.getZ())
-		);
-		Station candidate = station.withZones(List.of(new Zone(min, max))).withMode(StationMode.ZONES);
-		if (!StationAreas.hasEffectiveCells(candidate, all, maxRadius)) {
-			return "overlap";
-		}
-
 		return null;
 	}
 
 	public static String validateNewPlacement(MinecraftServer server, String dimension, BlockPos pos) {
-		int maxRadius = Math.max(4, LaborCraftConfig.get().area.maxRadius);
 		List<Station> all = load(server).stations;
 		for (Station other : all) {
-			if (!other.dimension().equals(dimension) || other.pos().equals(pos)) {
+			if (!other.dimension().equals(dimension) || other.pos().equals(pos)
+					|| !isActive(server, other)) {
 				continue;
 			}
-			if (StationAreas.isEffective(other, all, maxRadius, pos.getX(), pos.getZ())) {
+			// A new post may sit inside another post's maximum area, never inside its drawn zone.
+			if (StationAreas.zoneContains(other, pos.getX(), pos.getZ())) {
 				return "occupied";
 			}
 		}
@@ -195,13 +217,15 @@ public final class StationRegistry {
 	}
 
 	public static String validateClaim(MinecraftServer server, Station station) {
-		int maxRadius = Math.max(4, LaborCraftConfig.get().area.maxRadius);
 		List<Station> all = load(server).stations;
-		if (StationAreas.centerOwnedByOther(station, all, maxRadius)) {
-			return "occupied";
-		}
-		if (!StationAreas.hasEffectiveCells(station, all, maxRadius)) {
-			return "occupied";
+		for (Station other : all) {
+			if (!other.dimension().equals(station.dimension()) || other.pos().equals(station.pos())
+					|| !isActive(server, other)) {
+				continue;
+			}
+			if (StationAreas.zoneContains(other, station.pos().getX(), station.pos().getZ())) {
+				return "occupied";
+			}
 		}
 		return null;
 	}
@@ -222,13 +246,154 @@ public final class StationRegistry {
 	public static void setZone(MinecraftServer server, Station station, BlockPos from, BlockPos to) {
 		BlockPos min = new BlockPos(Math.min(from.getX(), to.getX()), Math.min(from.getY(), to.getY()), Math.min(from.getZ(), to.getZ()));
 		BlockPos max = new BlockPos(Math.max(from.getX(), to.getX()), Math.max(from.getY(), to.getY()), Math.max(from.getZ(), to.getZ()));
+		setZones(server, station, List.of(new Zone(min, max)));
+	}
+
+	public static void setZones(MinecraftServer server, Station station, List<Zone> zones) {
 		StationRegistry registry = load(server);
-		boolean replaced = registry.replace(station
-				.withZones(List.of(new Zone(min, max)))
-				.withMode(StationMode.ZONES));
-		if (replaced) {
+		Station updated = station.withZones(List.copyOf(zones))
+				.withMode(zones.isEmpty() ? StationMode.FREE : StationMode.ZONES);
+		if (registry.replace(updated)) {
 			registry.save();
 		}
+	}
+
+	/**
+	 * Clips the station's maximum square against nearby posts/zones and stores the remaining free
+	 * area as non-overlapping rectangles. Returns the rectangle count, -1 when nothing is free, or
+	 * -2 when the decomposition exceeds {@link #MAX_ZONE_RECTANGLES}.
+	 */
+	public static int applyMaxZone(MinecraftServer server, Station station) {
+		int maxRadius = Math.min(15, Math.max(4, LaborCraftConfig.get().area.maxRadius));
+		BlockPos center = station.pos();
+		return applyClippedArea(
+				server,
+				station,
+				center.getX() - maxRadius,
+				center.getX() + maxRadius,
+				center.getZ() - maxRadius,
+				center.getZ() + maxRadius
+		);
+	}
+
+	/**
+	 * Clips an arbitrary drawn rectangle against nearby posts/zones and stores the free area.
+	 * Returns the rectangle count, -1 (no free area), -2 (too many rectangles), -3 (too large) or
+	 * -4 (outside the maximum radius).
+	 */
+	public static int applyZone(MinecraftServer server, Station station, BlockPos from, BlockPos to) {
+		int minX = Math.min(from.getX(), to.getX());
+		int maxX = Math.max(from.getX(), to.getX());
+		int minZ = Math.min(from.getZ(), to.getZ());
+		int maxZ = Math.max(from.getZ(), to.getZ());
+		if (maxX - minX + 1 > 32 || maxZ - minZ + 1 > 32) {
+			return -3;
+		}
+
+		int maxRadius = Math.max(4, LaborCraftConfig.get().area.maxRadius);
+		if (Math.abs(from.getX() - station.pos().getX()) > maxRadius
+				|| Math.abs(to.getX() - station.pos().getX()) > maxRadius
+				|| Math.abs(from.getZ() - station.pos().getZ()) > maxRadius
+				|| Math.abs(to.getZ() - station.pos().getZ()) > maxRadius) {
+			return -4;
+		}
+
+		return applyClippedArea(server, station, minX, maxX, minZ, maxZ);
+	}
+
+	private static int applyClippedArea(
+			MinecraftServer server,
+			Station station,
+			int minX,
+			int maxX,
+			int minZ,
+			int maxZ
+	) {
+		int vertical = Math.max(1, LaborCraftConfig.get().area.verticalRadius);
+		int width = maxX - minX + 1;
+		int depth = maxZ - minZ + 1;
+		int y0 = station.pos().getY() - vertical;
+		int y1 = station.pos().getY() + vertical;
+		boolean[][] blocked = new boolean[depth][width];
+
+		List<Station> all = load(server).stations;
+		for (Station other : all) {
+			if (other.pos().equals(station.pos()) || !other.dimension().equals(station.dimension())
+					|| !isActive(server, other)) {
+				continue;
+			}
+
+			for (Zone zone : other.zones()) {
+				int zoneMinX = Math.min(zone.from().getX(), zone.to().getX());
+				int zoneMaxX = Math.max(zone.from().getX(), zone.to().getX());
+				int zoneMinZ = Math.min(zone.from().getZ(), zone.to().getZ());
+				int zoneMaxZ = Math.max(zone.from().getZ(), zone.to().getZ());
+				int x0 = Math.max(minX, zoneMinX);
+				int x1 = Math.min(maxX, zoneMaxX);
+				int z0 = Math.max(minZ, zoneMinZ);
+				int z1 = Math.min(maxZ, zoneMaxZ);
+				for (int z = z0; z <= z1; z++) {
+					for (int x = x0; x <= x1; x++) {
+						blocked[z - minZ][x - minX] = true;
+					}
+				}
+			}
+
+			BlockPos otherPos = other.pos();
+			if (otherPos.getX() >= minX && otherPos.getX() <= maxX
+					&& otherPos.getZ() >= minZ && otherPos.getZ() <= maxZ) {
+				blocked[otherPos.getZ() - minZ][otherPos.getX() - minX] = true;
+			}
+		}
+
+		boolean[][] used = new boolean[depth][width];
+		List<Zone> zones = new ArrayList<>();
+		for (int z = 0; z < depth; z++) {
+			for (int x = 0; x < width; x++) {
+				if (blocked[z][x] || used[z][x]) {
+					continue;
+				}
+
+				int x1 = x;
+				while (x1 + 1 < width && !blocked[z][x1 + 1] && !used[z][x1 + 1]) {
+					x1++;
+				}
+
+				int z1 = z;
+				boolean canGrow = true;
+				while (z1 + 1 < depth && canGrow) {
+					for (int xx = x; xx <= x1; xx++) {
+						if (blocked[z1 + 1][xx] || used[z1 + 1][xx]) {
+							canGrow = false;
+							break;
+						}
+					}
+					if (canGrow) {
+						z1++;
+					}
+				}
+
+				for (int zz = z; zz <= z1; zz++) {
+					for (int xx = x; xx <= x1; xx++) {
+						used[zz][xx] = true;
+					}
+				}
+				zones.add(new Zone(
+						new BlockPos(minX + x, y0, minZ + z),
+						new BlockPos(minX + x1, y1, minZ + z1)
+				));
+				if (zones.size() > MAX_ZONE_RECTANGLES) {
+					return -2;
+				}
+			}
+		}
+
+		if (zones.isEmpty()) {
+			return -1;
+		}
+
+		setZones(server, station, zones);
+		return zones.size();
 	}
 
 	public static void clearZone(MinecraftServer server, Station station) {

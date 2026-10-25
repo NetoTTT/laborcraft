@@ -1,7 +1,8 @@
 # 13 — Trabalho: posto, zona e atribuição do empregado
 
 **Status:** desenho para implementação. Substitui a parte de "área por tier" do [doc 08](08-AREA-CASA-HORARIO.md)
-como fonte principal do fluxo de trabalho. Casa fica pausada.
+como fonte principal do fluxo de trabalho. A base da casa (registro/claim, atribuição e vagas) está pronta;
+descanso, expediente e pathing até a cama continuam pendentes.
 
 ## 1. O problema
 
@@ -97,7 +98,7 @@ IDLE ──expediente──► SCAN ──achou──► MOVE ──chegou──
 - **DEPOSIT**: leva o inventário ao baú de saída do posto; se estiver cheio, pausa e avisa.
 - **Sem alvo**: fica ocioso no posto; se a zona não tem nada plantado, avisa "sem plantação na zona".
 
-Fora do expediente (`schedule`): para de trabalhar, volta ao posto. Se tiver casa (fase futura), vai para a cama.
+Fora do expediente (`schedule`): para de trabalhar, volta ao posto. Se tiver casa/cama atribuída, vai para a cama (descanso e pathing ainda pendentes).
 
 ## 6. Por que posto + zona, e não só raio
 
@@ -135,6 +136,28 @@ oferece uma **zoning tool** opcional ("clique um canto, clique o oposto") para r
 - [ ] Zona usa Y do posto ± `verticalRadius` (recomendado) ou Y desenhado?
 - [ ] Vagas: 1 por posto agora (recomendado) e upgrade no futuro?
 
+## 8.1 Conflito entre postos — modelo zona-only (implementado)
+
+Decisão atual (fazendeiro e o único emprego existente): **a área máxima é apenas um limite**; a **zona desenhada** é a área de trabalho exclusiva. Implementado em `StationAreas`, `StationRegistry` (colocação/claim/zone), `OpenStationPayload`, mapa e preview.
+
+Regras em vigor:
+
+- A **área máxima pode sobrepor** a área máxima de outro posto; o mapa desenha o quadrado tracejado inteiro, sem recorte.
+- O **bloco do posto pode ficar dentro da área máxima** de outro, mas **não dentro da zona desenhada** de outro.
+- **Zonas salvas nunca se sobrepõem**: desenho manual e **Usar área máxima** recortam as células que cruzam zonas/blocos vizinhos; um posto não pode ser colocado nem claimado dentro de uma zona salva.
+- **Posto órfão** (registro no JSON, bloco quebrado) não conta para conflito nem para o mapa/recorte até o bloco ser recolocado; o registro continua para reatar o vínculo.
+- **Posto sem zona não tem área de trabalho**; o fazendeiro pausa com `need_zone`. A área máxima não é usada como fallback.
+- O mapa mostra **outras zonas** em azul e o limite do posto selecionado tracejado; as áreas máximas dos outros postos não são desenhadas como áreas de trabalho.
+- **"Usar área máxima" e o desenho manual recortam automaticamente**: a área pedida é dividida em retângulos livres ao redor das zonas/blocos vizinhos (até 32 retângulos); se não sobrar área ou o recorte passar do cap, a ação recusa. Os retângulos são gravados na lista `zones` do mesmo posto — não são postos nem workstations diferentes.
+- A **IA do fazendeiro checa pertencimento à zona** por célula; com o recorte, ela não trabalha nos vazios. O bounding box continua limitado ao quadrado máximo do posto.
+- O mapa/preview desenham **todos** os retângulos salvos (preenchimento + tracejado) e a área máxima tracejada inteira; a UI recebe a lista de zonas, não só a primeira.
+- Desempenho: o recorte roda só no clique (31×31 no máximo, cap 32 retângulos); a IA varre uma vez a cada 10 ticks e a checagem de pertencimento é alguns comparadores por célula, dominada pelos `getBlockState`/chunks. Continua leve no uso normal.
+- A lógica antiga de área efetiva (`isEffective`/`effectiveSpans`) fica disponível para empregos de **área livre**, que terão uma análise própria e uma política por emprego (`zone_only`/`full_area`), sem criar um workstation diferente por emprego.
+
+Pendências:
+- Política para empregos de área livre (sem zona) — analisar depois; por ora o único emprego é o fazendeiro.
+- O limite de 32 retângulos pode ser ajustado; acima disso o desenho manual é o fallback.
+
 ## 9. Ordem de implementação
 
 1. `StationRegistry` + vínculo trabalhador↔posto + comandos `station bind/list/remove`.
@@ -143,8 +166,9 @@ oferece uma **zoning tool** opcional ("clique um canto, clique o oposto") para r
 4. UI do Posto — aba Config com o mapa de seleção.
 5. IA mínima do fazendeiro: SCAN → MOVE → WORK (colher e replantar).
 6. DEPOSIT no baú de saída + insumos.
-7. Expediente ligado à IA (parar/voltar).
-8. Casa: cama e rotina noturna (retomar o doc 11).
+7. Casa: registro/claim, atribuição de cama e vagas (feito; ver doc 11).
+8. Descanso: trabalhador vai à cama, pose/animação e retomada (pendente).
+9. Expediente ligado à IA (parar/voltar), depois do descanso.
 
 ## 10. UI do Posto
 
@@ -188,11 +212,11 @@ Interagir com o posto abre `LaborCraftStationScreen` (mesmo tamanho das outras, 
   trabalhador agir; sem zona ele pausa (“Desenhe a área de trabalho no Posto”).
 - Sem zona: o texto fica em vermelho (“Sem zona · limite do posto 25x25 (não trabalha)”) e aparece o
   botão **Usar área máxima** para definir o quadrado máximo de uma vez.
-- Com zona: mostra `Zona WxD` e o botão **Limpar zona** (volta a pausar até desenhar outra).
-- **Desenhar área** abre o mapa; **Usar área máxima** envia `station zone set` já com as bordas do limite.
+- Com zona: mostra `Zona WxD` (pode haver vários retângulos) e o botão **Limpar zona** (volta a pausar até desenhar outra).
+- **Desenhar área** abre o mapa; **Confirmar** envia `station zone set` e o servidor também **recorta** a seleção contra zonas/blocos vizinhos. **Usar área máxima** faz o mesmo com o quadrado máximo (até 32 retângulos; se passar, recusa).
 - O armazenamento fica na aba **Baús** (vínculos, papéis e detecção), detalhada no [doc 14](14-ARMAZENAMENTO.md).
 - **Ajuda**: botão **?** no topo abre um overlay explicando área de trabalho, baús, mochila, olho e comandos.
-- **Visualizar**: fecha a tela e mostra a borda efetiva recortada com partículas por 10 s; um contador fica logo acima da hotbar. Também existe um botão compacto **Visualizar área** no topo da caixa da aba Config para rever a área já confirmada, sem reabrir o desenho.
+- **Visualizar**: fecha a tela e mostra todas as zonas salvas (todos os retângulos) com partículas por 10 s; um contador fica logo acima da hotbar. Também existe um botão compacto **Visualizar área** no topo da caixa da aba Config para rever a área já confirmada, sem reabrir o desenho.
 
 ### Mapa de seleção (`LcAreaMap`)
 
@@ -203,7 +227,7 @@ Ao clicar em **Desenhar área**, a própria tela abre o mapa:
 - Botões: **Confirmar** (envia `station zone set`), **Cancelar**, **Visualizar** (fecha a UI e marca a área com partículas por 10 s, com contador acima da hotbar).
 - Colunas fora dos chunks carregados aparecem como “?” e não podem ser selecionadas.
 
-- Na aba Config sem abrir o desenho, o mapa aparece em modo leitura: área efetiva em âmbar; sem zona, o raio livre recortado; outros postos próximos em azul; parte da seleção que invade outro Posto em vermelho. No desenho, só as células em conflito ficam vermelhas: o resto da seleção continua na cor normal porque ainda pode ser usado.
+- Na aba Config sem abrir o desenho, o mapa aparece em modo leitura: **todas as zonas salvas** em âmbar (contorno da união); sem zona, nenhuma área de trabalho; outras zonas próximas em azul; na seleção manual, as células que serão **recortadas** ficam vermelhas, mas o **Confirmar** continua habilitado. Desenho manual e **Usar área máxima** gravam os retângulos livres.
 
 **Como o mapa é desenhado (e por que funciona no cliente):**
 
@@ -246,11 +270,12 @@ O botão **Camada** (ao lado das abas) alterna `Auto → Superfície → Subsolo
 ### Validação no servidor
 
 - Só o **dono** do posto configura.
-- Zona máxima 32x32 na horizontal, dentro de `area.maxRadius` do posto, volume limitado.
-- A área efetiva é recortada pelas áreas mais antigas; o Posto mais antigo vence. O mapa desenha a máscara recortada e mantém o retângulo original tracejado.
-- Zona desenhada não pode conter o bloco de outro Posto; raio livre pode encostar, mas o bloco do Posto vizinho fica excluído da área efetiva.
-- Colocar ou reivindicar um Posto cujo centro já pertence à área efetiva de outro Posto é recusado.
-- Zona recusada = mensagem clara no chat, sem alterar nada.
+- Zona máxima 32x32 na horizontal, dentro de `area.maxRadius` do posto.
+- **Só zonas são exclusivas**: uma zona não pode cruzar outra zona nem conter o bloco de outro posto; a área máxima pode sobrepor a de outro posto.
+- Colocar ou reivindicar um Posto cujo bloco está dentro da zona de outro Posto é recusado; dentro da área máxima, permitido.
+- Postos **sem o bloco presente** são ignorados na validação, no recorte e no mapa (registro órfão).
+- **Desenho manual e Usar área máxima** recortam contra zonas/blocos vizinhos em até 32 retângulos; sem área livre ou acima do cap, recusa. Zonas salvas nunca se sobrepõem.
+- Zona inválida/recorte recusado = mensagem clara no chat, sem alterar nada.
 
 ## 11. Status da implementação
 
@@ -261,13 +286,14 @@ O botão **Camada** (ao lado das abas) alterna `Auto → Superfície → Subsolo
 | Interagir com o posto abre a tela (payload `open_station`) | ✅ |
 | Aba Trabalho: lista de empregados, vaga do posto, vincular/desvincular/chamar/retomar | ✅ |
 | Aba Config: modo, mapa interativo, seleção por arraste, zoom, pré-visualização e confirmação da zona | ✅ |
-| Aba Config: mapa read-only com área efetiva, outros postos próximos e destaque de invasão | ✅ |
+| Aba Config: mapa read-only com todas as zonas, outras zonas próximas e destaque do que será recortado | ✅ |
 | Aba Config: **Visualizar área** da zona confirmada, 10 s com contador acima da hotbar | ✅ |
 | Mapa: camadas Auto/Superfície/Subsolo com floor-scan para cavernas e bases subterrâneas | ✅ |
-| `StationAreas`: área efetiva por células, prioridade pelo Posto mais antigo, recorte de borda | ✅ |
+| `StationAreas`: zonas exclusivas, checagem de pertencimento na IA, área máxima não recortada | ✅ |
+| `StationRegistry.applyMaxZone` / `applyZone`: recorte do máximo e do desenho manual em até 32 retângulos livres | ✅ |
 | Comandos `station bind/unbind/recall/pause/resume/open/info` | ✅ |
 | Desenho da zona (mapa interativo e estaca como alternativa) | ✅ |
-| Remover zona e voltar ao raio livre (`station zone clear`) | ✅ |
+| Remover zona (`station zone clear`); posto fica sem área até desenhar outra | ✅ |
 | Baús: vínculo, papéis (mixed/output/input/tools) e aba **Baús** | ✅ |
 | Mochila do trabalhador e protocolo de saque/depósito | ⏳ ([doc 14](14-ARMAZENAMENTO.md)) |
 | IA do fazendeiro (SCAN/MOVE/WORK/DEPOSIT) | ✅ MVP em `FarmerBrain` (colhe, replanta, deposita, pausa com aviso) |
@@ -276,10 +302,10 @@ O que já dá para testar em jogo: colocar o posto, abrir a tela, vincular um em
 o estado na tela. Para desenhar uma área, abra a aba Config e clique em **Desenhar área**. O mapa abre
 com zoom ajustado ao limite do posto; arraste para selecionar e use o scroll para ajustar o zoom.
 **Visualizar** fecha a tela e mostra a área no mundo por 10 s (contador acima da hotbar); reabra o posto para **Confirmar** ou
-**Cancelar**. **Confirmar** salva a zona pelo comando validado no servidor. A Estaca de Demarcação continua
+**Cancelar**. **Confirmar** salva a zona recortada pelo servidor. A Estaca de Demarcação também recorta e continua
 como alternativa. O comando
-`/laborcraft station zone clear <x> <y> <z>` remove a zona e restaura o raio livre. Chunks descarregados ficam
-marcados com `?`. Na aba Config, sem abrir o desenho, o mapa já mostra a área efetiva em âmbar, o raio livre recortado quando não há zona, outros postos próximos em azul e a parte da seleção que invade outro Posto em vermelho.
+`/laborcraft station zone clear <x> <y> <z>` remove as zonas e deixa o posto sem área de trabalho. Chunks descarregados ficam
+marcados com `?`. Na aba Config, sem abrir o desenho, o mapa mostra todas as zonas em âmbar, outras zonas próximas em azul e, na seleção manual, as células que serão recortadas em vermelho; desenho manual e **Usar área máxima** aplicam o recorte.
 
 ### Status da IA (MVP)
 
@@ -306,7 +332,7 @@ Ainda faltam: expediente e coleta/colocação automática de água + layout 9x9 
 ## 12. Impacto no que já existe
 
 - `WorkArea`/`AreaShape` continuam válidos como fallback de raio.
-- `HousingValidator` não muda; casa fica pausada.
+- `HousingValidator` e `HomeRegistry` cuidam do registro/claim e das vagas; descanso e pathing até a cama ainda faltam.
 - O posto **não usa block entity**: o estado vive no `StationRegistry` (JSON no mundo), então quebrar o bloco
   não apaga o vínculo — recolocar na mesma posição reata.
 - A tela de Empregado ainda não mostra o posto; isso entra quando o vínculo estiver estável.

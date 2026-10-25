@@ -1,7 +1,10 @@
 package com.foque.laborcraft.worker;
 
+import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
+import com.foque.laborcraft.housing.HomeRegistry;
 import com.foque.laborcraft.item.LaborCraftItems;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.ArrayList;
@@ -50,5 +53,20 @@ public final class WorkerOwnership {
 
 	public static int total(ServerPlayer player) {
 		return ownedWorkers(player) + pendingContracts(player);
+	}
+
+	/**
+	 * Total worker limit for the player: the base config plus one slot per valid house bed.
+	 * A base of 0 (or less) means unlimited.
+	 */
+	public static int limit(ServerPlayer player) {
+		int base = LaborCraftConfig.get().worker.maxWorkersPerPlayer;
+		if (base <= 0) {
+			return base;
+		}
+
+		MinecraftServer server = player.level().getServer();
+		int houseSlots = server == null ? 0 : HomeRegistry.slots(server, player.getUUID());
+		return base + houseSlots;
 	}
 }

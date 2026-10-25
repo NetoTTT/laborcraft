@@ -34,6 +34,14 @@ public final class LaborCraftCommands {
 	public static final String WORKER_INV_WITHDRAW = WORKER + " inv withdraw";
 	public static final String WORKER_STORAGE_DEPOSIT = WORKER + " storage deposit";
 	public static final String WORKER_STORAGE_WITHDRAW = WORKER + " storage withdraw";
+	public static final String HOME = "laborcraft home";
+	public static final String HOME_SET = HOME + " set";
+	public static final String HOME_REMOVE = HOME + " remove";
+	public static final String HOME_RENAME = HOME + " rename";
+	public static final String HOME_ASSIGN = HOME + " assign";
+	public static final String HOME_UNASSIGN = HOME + " unassign";
+	public static final String HOME_LIST = HOME + " list";
+	public static final String HOME_INFO = HOME + " info";
 	public static final String STATION = "laborcraft station";
 	public static final String STATION_BIND = STATION + " bind";
 	public static final String STATION_UNBIND = STATION + " unbind";
@@ -41,6 +49,7 @@ public final class LaborCraftCommands {
 	public static final String STATION_RESUME = STATION + " resume";
 	public static final String STATION_ZONE_SET = STATION + " zone set";
 	public static final String STATION_ZONE_CLEAR = STATION + " zone clear";
+	public static final String STATION_ZONE_MAX = STATION + " maxarea";
 	public static final String STATION_STORAGE_LINK = STATION + " storage link";
 	public static final String STATION_STORAGE_UNLINK = STATION + " storage unlink";
 	public static final String STATION_STORAGE_ROLE = STATION + " storage role";

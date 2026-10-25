@@ -1,6 +1,5 @@
 package com.foque.laborcraft.item;
 
-import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import com.foque.laborcraft.network.OpenWorkerPayload;
@@ -37,7 +36,7 @@ public class WorkerContractItem extends Item {
 			return InteractionResult.FAIL;
 		}
 
-		int limit = LaborCraftConfig.get().worker.maxWorkersPerPlayer;
+		int limit = WorkerOwnership.limit(serverPlayer);
 		int owned = WorkerOwnership.ownedWorkers(serverPlayer);
 		if (limit > 0 && owned >= limit) {
 			serverPlayer.sendSystemMessage(Component.translatable(
