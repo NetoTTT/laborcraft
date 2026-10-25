@@ -26,6 +26,8 @@ public final class LaborCraftCommands {
 	public static final String WORKER_ASSIGN = WORKER + " assign";
 	public static final String WORKER_DISMISS = WORKER + " dismiss";
 	public static final String WORKER_PAY = WORKER + " pay";
+	public static final String WORKER_PAY_PROFILE = WORKER + " payprofile";
+	public static final String WORKER_PAY_STATION = WORKER + " paystation";
 	public static final String WORKER_OPEN = WORKER + " open";
 	public static final String WORKER_INV_OPEN = WORKER + " inv open";
 	public static final String WORKER_INV_TAKE = WORKER + " inv take";
@@ -63,6 +65,7 @@ public final class LaborCraftCommands {
 	public static final String ADMIN_SET_WAGE = "laborcraft admin set wage";
 	public static final String ADMIN_SET_PROVIDER = "laborcraft admin set provider";
 	public static final String ADMIN_SET_BALANCE = "laborcraft admin set balance";
+	public static final String ADMIN_SET_BUBBLE_WALLS = "laborcraft admin set bubble-walls";
 	public static final String ADMIN_MARKET_REFRESH = "laborcraft admin market refresh";
 	public static final String BILLING = "laborcraft billing";
 	public static final String BILLING_SET = BILLING + " set";

@@ -44,6 +44,8 @@ public record OpenProfilePayload(
 					buffer.writeFloat(summary.maxHealth());
 					buffer.writeVarInt(summary.hunger());
 					buffer.writeVarInt(summary.mood());
+					buffer.writeUtf(summary.debtText(), 64);
+					buffer.writeBoolean(summary.hasDebt());
 				}
 			},
 			buffer -> {
@@ -66,7 +68,9 @@ public record OpenProfilePayload(
 							buffer.readFloat(),
 							buffer.readFloat(),
 							buffer.readVarInt(),
-							buffer.readVarInt()
+							buffer.readVarInt(),
+							buffer.readUtf(64),
+							buffer.readBoolean()
 					));
 				}
 				return new OpenProfilePayload(playerName, balanceText, workers, pending, limit, List.copyOf(summaries));
@@ -88,7 +92,9 @@ public record OpenProfilePayload(
 					worker.getHealth(),
 					worker.getMaxHealth(),
 					worker.hunger(),
-					worker.mood()
+					worker.mood(),
+					provider.format(worker.billingDebt()),
+					worker.billingDebt() > 0L
 			));
 		}
 
@@ -131,7 +137,9 @@ public record OpenProfilePayload(
 			float health,
 			float maxHealth,
 			int hunger,
-			int mood
+			int mood,
+			String debtText,
+			boolean hasDebt
 	) {
 	}
 }

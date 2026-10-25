@@ -3,6 +3,7 @@ package com.foque.laborcraft.worker;
 import com.foque.laborcraft.LaborCraft;
 import com.foque.laborcraft.block.LaborCraftBlocks;
 import com.foque.laborcraft.config.LaborCraftConfig;
+import com.foque.laborcraft.entity.LaborCraftWorker;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.IOException;
@@ -108,7 +109,12 @@ public final class StationRegistry {
 	}
 
 	public static boolean bind(MinecraftServer server, Station station, UUID worker) {
-		if (station == null || worker == null || station.worker() != null) {
+		if (station == null || worker == null) {
+			return false;
+		}
+
+		// A dismissed worker leaves a stale UUID behind; allow the owner to replace that ghost.
+		if (station.worker() != null && LaborCraftWorker.find(server, station.worker()) != null) {
 			return false;
 		}
 
@@ -137,6 +143,14 @@ public final class StationRegistry {
 		}
 
 		return replaced;
+	}
+
+	/** Clears any station pointing at this worker (dismiss/remove/auto-dismiss). */
+	public static void unbindWorker(MinecraftServer server, UUID worker) {
+		Station station = byWorker(server, worker);
+		if (station != null) {
+			unbind(server, station);
+		}
 	}
 
 	/** Assume um posto sem dono (bloco colocado por /setblock ou anterior a este recurso). */

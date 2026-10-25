@@ -1,11 +1,15 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.LaborCraftUiActions;
 import com.foque.laborcraft.client.ui.LcRender;
 import com.foque.laborcraft.client.ui.LcTheme;
+import com.foque.laborcraft.client.ui.LcTooltips;
 import com.foque.laborcraft.client.ui.LcWorkerText;
+import com.foque.laborcraft.client.ui.WorkerListFilter;
 import com.foque.laborcraft.client.ui.widget.LcButton;
 import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.foque.laborcraft.client.ui.widget.LcScrollList;
+import com.foque.laborcraft.command.LaborCraftCommands;
 import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
 import com.foque.laborcraft.network.OpenProfilePayload;
@@ -21,12 +25,18 @@ import net.minecraft.world.item.Items;
 public final class LaborCraftProfileScreen extends LaborCraftScreen {
 	private static final ItemStack EYE_ICON = new ItemStack(Items.ENDER_EYE);
 
+	private static WorkerListFilter pendingFilter;
+
 	private final OpenProfilePayload profile;
+	private WorkerListFilter filter;
+	private LcButton filterButton;
 	private LcScrollList<OpenProfilePayload.WorkerSummary> workers;
 
 	public LaborCraftProfileScreen(OpenProfilePayload profile) {
 		super(Component.translatable("laborcraft.ui.profile.title"), 460, 360);
 		this.profile = profile;
+		this.filter = pendingFilter == null ? WorkerListFilter.ALL : pendingFilter;
+		pendingFilter = null;
 	}
 
 	@Override
@@ -49,10 +59,42 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 				(summary, index) -> {
 				}
 		);
-		workers.replaceItems(profile.summaries());
+		workers.replaceItems(visibleWorkers());
 		addRenderableWidget(workers);
 
+		filterButton = new LcButton(
+				x + width - 108,
+				panelY + 118,
+				108,
+				18,
+				Component.translatable(filter.labelKey()),
+				LcButton.Variant.GHOST,
+				this::cycleFilter
+		);
+		filterButton.tip(LcTooltips.of(
+				Component.translatable("laborcraft.ui.filter.label"),
+				Component.translatable("laborcraft.ui.filter.tip"),
+				null
+		));
+		addRenderableWidget(filterButton);
+
 		addRenderableWidget(closeButton(this::onClose));
+	}
+
+	private void cycleFilter() {
+		filter = filter.next();
+		workers.replaceItems(visibleWorkers());
+		filterButton.setMessage(Component.translatable(filter.labelKey()));
+	}
+
+	private List<OpenProfilePayload.WorkerSummary> visibleWorkers() {
+		return profile.summaries().stream()
+				.filter(summary -> filter.matches(summary.state(), summary.hasDebt()))
+				.toList();
+	}
+
+	private void rememberFilter() {
+		pendingFilter = filter;
 	}
 
 	@Override
@@ -88,10 +130,13 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 				LcTheme.TEXT
 		);
 
-		if (profile.summaries().isEmpty()) {
+		if (workers != null && workers.isEmpty()) {
+			Component empty = profile.summaries().isEmpty()
+					? Component.translatable("laborcraft.ui.profile.empty")
+					: Component.translatable("laborcraft.ui.filter.empty");
 			graphics.centeredText(
 					font,
-					Component.translatable("laborcraft.ui.profile.empty"),
+					empty,
 					x + width / 2,
 					panelY + 206,
 					LcTheme.MUTED
@@ -163,6 +208,10 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 		);
 		LcRender.border(graphics, x, y, width, height - 2, hovered ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER);
 
+		int payWidth = 58;
+		int payX = x + width - 202;
+		int payY = y + 32;
+		int payHeight = 16;
 		graphics.item(jobIcon(summary.jobId()), x + 9, y + 8);
 		String name = font.plainSubstrByWidth(summary.name(), Math.max(0, width - 124));
 		graphics.text(
@@ -178,9 +227,13 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 				stateLabel(summary.state())
 		);
 		graphics.text(font, LcWorkerText.join(status, LcWorkerText.SEPARATOR), x + 32, y + 22, LcTheme.TEXT);
+		int taskLimit = summary.hasDebt() ? Math.max(10, payX - (x + 32) - 6) : width - 44;
 		graphics.text(
 				font,
-				Component.translatable(summary.taskKey()),
+				Component.literal(font.plainSubstrByWidth(
+						Component.translatable(summary.taskKey()).getString(),
+						taskLimit
+				)),
 				x + 32,
 				y + 36,
 				LcTheme.MUTED
@@ -198,6 +251,22 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 		graphics.text(font, hunger, statsX - font.width(hunger), y + 22, LcTheme.MUTED);
 		graphics.text(font, mood, statsX - font.width(mood), y + 36, LcTheme.MUTED);
 
+		if (summary.hasDebt()) {
+			boolean payHovered = mouseX >= payX && mouseX < payX + payWidth
+					&& mouseY >= payY && mouseY < payY + payHeight;
+			graphics.fill(payX, payY, payX + payWidth, payY + payHeight,
+					payHovered ? LcTheme.PRIMARY_BG : LcTheme.BUTTON_BG);
+			LcRender.border(graphics, payX, payY, payWidth, payHeight,
+					payHovered ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER);
+			graphics.centeredText(
+					font,
+					Component.translatable("laborcraft.ui.employee.pay"),
+					payX + payWidth / 2,
+					payY + 4,
+					payHovered ? LcTheme.TITLE : LcTheme.TEXT
+			);
+		}
+
 		int eyeX = x + width - 26;
 		int eyeY = y + (52 - 2 - 18) / 2;
 		boolean eyeHovered = mouseX >= eyeX && mouseX < eyeX + 18 && mouseY >= eyeY && mouseY < eyeY + 18;
@@ -211,18 +280,33 @@ public final class LaborCraftProfileScreen extends LaborCraftScreen {
 		if (workers != null) {
 			int index = workers.rowAt(event.x(), event.y());
 			if (index >= 0) {
+				OpenProfilePayload.WorkerSummary summary = workers.get(index);
 				int rowY = workers.rowTop(index);
+				int payX = workers.getX() + workers.rowWidth() - 202;
+				int payY = rowY + 32;
+				if (summary.hasDebt()
+						&& event.x() >= payX && event.x() < payX + 58
+						&& event.y() >= payY && event.y() < payY + 16) {
+					payWorker(summary);
+					return true;
+				}
+
 				int eyeX = workers.getX() + workers.rowWidth() - 26;
 				int eyeY = rowY + (52 - 2 - 18) / 2;
 				if (event.x() >= eyeX && event.x() < eyeX + 18
 						&& event.y() >= eyeY && event.y() < eyeY + 18) {
-					highlightWorker(profile.summaries().get(index).id());
+					highlightWorker(summary.id());
 					return true;
 				}
 			}
 		}
 
 		return super.mouseClicked(event, doubleClick);
+	}
+
+	private void payWorker(OpenProfilePayload.WorkerSummary summary) {
+		rememberFilter();
+		LaborCraftUiActions.run(LaborCraftCommands.WORKER_PAY_PROFILE + " " + summary.id());
 	}
 
 	private void highlightWorker(java.util.UUID id) {

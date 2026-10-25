@@ -10,6 +10,7 @@ import com.foque.laborcraft.housing.HomeRegistry;
 import com.foque.laborcraft.housing.HousingInteractions;
 import com.foque.laborcraft.item.LaborCraftItems;
 import com.foque.laborcraft.job.JobTypes;
+import com.foque.laborcraft.network.BubbleSettingsPayload;
 import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.network.OpenConfigPayload;
@@ -27,6 +28,7 @@ import com.foque.laborcraft.worker.StationRegistry;
 import com.foque.laborcraft.worker.WorkerMarket;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
@@ -53,6 +55,7 @@ public class LaborCraft implements ModInitializer {
 		OpenProfilePayload.bootstrap();
 		OpenStationPayload.bootstrap();
 		OpenWorkerPayload.bootstrap();
+		BubbleSettingsPayload.bootstrap();
 		OpenWorkerInventoryPayload.bootstrap();
 		SetLanguagePayload.bootstrap();
 		CloseScreenPayload.bootstrap();
@@ -60,6 +63,7 @@ public class LaborCraft implements ModInitializer {
 		WorkerScreenStatePayload.registerReceiver();
 		LaborCraftCommands.bootstrap();
 		HousingInteractions.bootstrap();
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> BubbleSettingsPayload.send(handler.getPlayer()));
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			WorkerMarket.clear();
 			StationRegistry.clear();

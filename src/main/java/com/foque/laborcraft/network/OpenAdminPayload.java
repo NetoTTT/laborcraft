@@ -29,6 +29,7 @@ public record OpenAdminPayload(
 		boolean useRankMultiplier,
 		boolean useRarityMultiplier,
 		boolean useBoostUpkeep,
+		boolean bubbleThroughWalls,
 		double boostCap,
 		double[] rankMultipliers,
 		double[] rarityMultipliers
@@ -53,6 +54,7 @@ public record OpenAdminPayload(
 				buffer.writeBoolean(payload.useRankMultiplier());
 				buffer.writeBoolean(payload.useRarityMultiplier());
 				buffer.writeBoolean(payload.useBoostUpkeep());
+				buffer.writeBoolean(payload.bubbleThroughWalls());
 				buffer.writeDouble(payload.boostCap());
 				writeMultipliers(buffer, payload.rankMultipliers());
 				writeMultipliers(buffer, payload.rarityMultipliers());
@@ -66,6 +68,7 @@ public record OpenAdminPayload(
 					buffer.readVarInt(),
 					buffer.readVarInt(),
 					buffer.readVarInt(),
+					buffer.readBoolean(),
 					buffer.readBoolean(),
 					buffer.readBoolean(),
 					buffer.readBoolean(),
@@ -102,6 +105,7 @@ public record OpenAdminPayload(
 				billing.useRankMultiplier,
 				billing.useRarityMultiplier,
 				billing.useBoostUpkeep,
+				config.speech.bubbleThroughWalls,
 				billing.boostCap,
 				multipliers(
 						billing.rankMultipliers,

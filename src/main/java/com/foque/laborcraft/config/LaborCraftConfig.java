@@ -30,6 +30,7 @@ public final class LaborCraftConfig {
 	public StorageSettings storage = new StorageSettings();
 	public ScheduleSettings schedule = new ScheduleSettings();
 	public PathingSettings pathing = new PathingSettings();
+	public SpeechSettings speech = new SpeechSettings();
 	public BillingSettings billing = new BillingSettings();
 	public JobSettings farmer = JobSettings.farmer();
 
@@ -174,6 +175,14 @@ public final class LaborCraftConfig {
 		public boolean allowDoors = true;
 
 		public PathingSettings() {
+		}
+	}
+
+	public static final class SpeechSettings {
+		/** False by default: bubbles are hidden when a wall blocks the line of sight. */
+		public boolean bubbleThroughWalls = false;
+
+		public SpeechSettings() {
 		}
 	}
 

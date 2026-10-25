@@ -153,8 +153,8 @@ public final class WorkerRest {
 		}
 		if (worker.workerState() == WorkerState.OFF_DUTY) {
 			worker.setWorkerState(WorkerState.ACTIVE);
+			worker.setWorkNotice("");
 		}
-		worker.setWorkNotice("");
 		reset();
 	}
 

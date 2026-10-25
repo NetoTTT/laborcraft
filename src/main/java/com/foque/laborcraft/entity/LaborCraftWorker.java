@@ -10,12 +10,16 @@ import com.foque.laborcraft.worker.WorkerRank;
 import com.foque.laborcraft.worker.WorkerRarity;
 import com.foque.laborcraft.worker.WorkerRest;
 import com.foque.laborcraft.worker.WorkerState;
+import com.foque.laborcraft.worker.WorkerThoughts;
 import com.foque.laborcraft.worker.WorkerTraits;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -39,6 +43,9 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 public class LaborCraftWorker extends PathfinderMob {
+	private static final EntityDataAccessor<String> DATA_WORK_NOTICE =
+			SynchedEntityData.defineId(LaborCraftWorker.class, EntityDataSerializers.STRING);
+
 	public static final int STORAGE_SLOTS = 9;
 	public static final int TOOL_SLOT = 9;
 	public static final int SLOT_COUNT = STORAGE_SLOTS + 1;
@@ -63,6 +70,8 @@ public class LaborCraftWorker extends PathfinderMob {
 	private final FarmerBrain farmerBrain = new FarmerBrain(this);
 	private final WorkerRest workerRest = new WorkerRest(this);
 	private String workNotice = "";
+	private long noticeUntil;
+	private long nextThoughtTick;
 	/**
 	 * Jogador que esta com a tela deste trabalhador aberta. Enquanto isso o trabalhador fica parado,
 	 * olhando para ele, sem executar nenhuma acao. Nao e persistido.
@@ -72,6 +81,12 @@ public class LaborCraftWorker extends PathfinderMob {
 	public LaborCraftWorker(EntityType<? extends LaborCraftWorker> type, Level level) {
 		super(type, level);
 		setPersistenceRequired();
+	}
+
+	@Override
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		super.defineSynchedData(builder);
+		builder.define(DATA_WORK_NOTICE, "");
 	}
 
 	public static AttributeSupplier.Builder createAttributes() {
@@ -116,6 +131,8 @@ public class LaborCraftWorker extends PathfinderMob {
 		this.nextBillingTick = 0L;
 		this.billingDebt = 0L;
 		this.missedPayments = 0;
+		this.nextThoughtTick = 0L;
+		setWorkNotice("");
 		setPersistenceRequired();
 	}
 
@@ -127,6 +144,8 @@ public class LaborCraftWorker extends PathfinderMob {
 		this.nextBillingTick = 0L;
 		this.billingDebt = 0L;
 		this.missedPayments = 0;
+		this.nextThoughtTick = 0L;
+		setWorkNotice("");
 	}
 
 	public boolean isAttending() {
@@ -170,6 +189,13 @@ public class LaborCraftWorker extends PathfinderMob {
 			return;
 		}
 
+		if (noticeUntil > 0L && level().getGameTime() >= noticeUntil) {
+			noticeUntil = 0L;
+			if (state == WorkerState.ACTIVE) {
+				setWorkNotice("");
+			}
+		}
+
 		if (attendingPlayer != null) {
 			if (attendingPlayer.isRemoved()
 					|| attendingPlayer.level() != level()
@@ -189,6 +215,7 @@ public class LaborCraftWorker extends PathfinderMob {
 			return;
 		}
 
+		maybeThink();
 		farmerBrain.tick();
 	}
 
@@ -395,17 +422,44 @@ public class LaborCraftWorker extends PathfinderMob {
 
 	public void setWorkerState(WorkerState state) {
 		this.state = state;
+		this.nextThoughtTick = 0L;
 		if (state == WorkerState.ACTIVE || state == WorkerState.STORED) {
-			this.workNotice = "";
+			setWorkNotice("");
 		}
 	}
 
 	public String workNotice() {
-		return workNotice;
+		return level().isClientSide() ? entityData.get(DATA_WORK_NOTICE) : workNotice;
 	}
 
 	public void setWorkNotice(String notice) {
 		this.workNotice = notice == null ? "" : notice;
+		this.noticeUntil = 0L;
+		entityData.set(DATA_WORK_NOTICE, this.workNotice);
+	}
+
+	/** Shows a temporary bubble for an active worker (warnings that do not pause the job). */
+	public void announce(String notice, int seconds) {
+		setWorkNotice(notice);
+		this.noticeUntil = level().getGameTime() + Math.max(1, seconds) * 20L;
+	}
+
+	private void maybeThink() {
+		if (state != WorkerState.ACTIVE || !hasJob() || !workNotice.isBlank()) {
+			return;
+		}
+
+		long now = level().getGameTime();
+		if (nextThoughtTick <= 0L) {
+			nextThoughtTick = now + 20L * (20 + getRandom().nextInt(41));
+			return;
+		}
+		if (now < nextThoughtTick) {
+			return;
+		}
+
+		announce(WorkerThoughts.pick(this), 5);
+		nextThoughtTick = now + 20L * (60 + getRandom().nextInt(91));
 	}
 
 	@Override
@@ -475,6 +529,7 @@ public class LaborCraftWorker extends PathfinderMob {
 		output.putInt("Hunger", hunger);
 		output.putInt("Mood", mood);
 		output.putString("WorkerState", state.name());
+		output.putString("WorkNotice", workNotice);
 		output.store("Inventory", ItemStack.OPTIONAL_CODEC.listOf(), inventory);
 	}
 
@@ -512,6 +567,17 @@ public class LaborCraftWorker extends PathfinderMob {
 			state = WorkerState.valueOf(storedState);
 		} catch (IllegalArgumentException exception) {
 			state = WorkerState.ACTIVE;
+		}
+		String savedNotice = input.getStringOr("WorkNotice", "");
+		if (state == WorkerState.ACTIVE) {
+			setWorkNotice("");
+		} else {
+			if (savedNotice.isBlank() && state == WorkerState.PAUSED) {
+				savedNotice = "laborcraft.ui.worker.task.paused";
+			} else if (savedNotice.isBlank() && state == WorkerState.STRIKE) {
+				savedNotice = "laborcraft.ui.worker.task.unpaid";
+			}
+			setWorkNotice(savedNotice);
 		}
 
 		input.read("Inventory", ItemStack.OPTIONAL_CODEC.listOf()).ifPresent(stacks -> {

@@ -548,16 +548,13 @@ public final class FarmerBrain {
 			return;
 		}
 		lastWaterWarning = now;
+		worker.announce(notice, 10);
 
 		ServerPlayer owner = worker.owner() == null
 				? null
 				: level.getServer().getPlayerList().getPlayer(worker.owner());
 		if (owner != null) {
-			owner.sendSystemMessage(Component.translatable(
-					"laborcraft.notification.worker",
-					worker.getName(),
-					Component.translatable(notice)
-			));
+			owner.sendSystemMessage(WorkerChat.say(worker, Component.translatable(notice)));
 		}
 	}
 
@@ -926,11 +923,7 @@ public final class FarmerBrain {
 					? null
 					: level.getServer().getPlayerList().getPlayer(worker.owner());
 			if (owner != null) {
-				owner.sendSystemMessage(Component.translatable(
-						"laborcraft.notification.worker",
-						worker.getName(),
-						Component.translatable(notice)
-				));
+				owner.sendSystemMessage(WorkerChat.say(worker, Component.translatable(notice)));
 			}
 		}
 

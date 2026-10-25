@@ -10,6 +10,8 @@ import com.foque.laborcraft.item.LaborCraftItems;
 import com.foque.laborcraft.item.WorkerContractData;
 import com.foque.laborcraft.schedule.WorkSchedule;
 import com.foque.laborcraft.worker.SalaryTable;
+import com.foque.laborcraft.worker.StationRegistry;
+import com.foque.laborcraft.worker.WorkerChat;
 import com.foque.laborcraft.worker.WorkerState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -111,7 +113,7 @@ public final class BillingManager {
 				worker.setWorkNotice("");
 				notify(config, owner, Component.translatable(
 						"laborcraft.billing.paid_resumed",
-						worker.getName(),
+						WorkerChat.name(worker),
 						provider.format(total)
 				));
 			}
@@ -124,7 +126,7 @@ public final class BillingManager {
 		worker.setMood(worker.mood() - Math.max(0, config.billing.missedMoodPenalty));
 		notify(config, owner, Component.translatable(
 				"laborcraft.billing.unpaid",
-				worker.getName(),
+				WorkerChat.name(worker),
 				provider.format(wage),
 				provider.format(worker.billingDebt()),
 				missed
@@ -154,11 +156,12 @@ public final class BillingManager {
 					config.acquisition.contractTradeable ? null : owner.getUUID(),
 					data
 			);
-			Component name = data.displayName();
+			Component name = WorkerChat.name(worker);
 
 			ItemStack fallback = contract.copy();
 			boolean hasRoom = owner.getInventory().getFreeSlot() >= 0;
 
+			StationRegistry.unbindWorker(worker.level().getServer(), worker.getUUID());
 			HomeRegistry.unassign(worker.level().getServer(), worker.getUUID());
 			worker.discard();
 			if ((!hasRoom || !owner.getInventory().add(contract)) && owner.level() instanceof ServerLevel level) {
@@ -172,7 +175,7 @@ public final class BillingManager {
 		if (postStrikeMisses == threshold - 1) {
 			notify(config, owner, Component.translatable(
 					"laborcraft.billing.final_warning",
-					worker.getName(),
+					WorkerChat.name(worker),
 					threshold - postStrikeMisses
 			));
 		}
@@ -192,7 +195,7 @@ public final class BillingManager {
 		worker.setWorkNotice("laborcraft.ui.worker.task.unpaid");
 		notify(config, serverPlayer(worker), Component.translatable(
 				"laborcraft.billing.strike",
-				worker.getName()
+				WorkerChat.name(worker)
 		));
 	}
 
@@ -222,7 +225,7 @@ public final class BillingManager {
 		}
 		player.sendSystemMessage(Component.translatable(
 				"laborcraft.billing.pay.success",
-				worker.getName(),
+				WorkerChat.name(worker),
 				provider.format(debt)
 		));
 		return 1;

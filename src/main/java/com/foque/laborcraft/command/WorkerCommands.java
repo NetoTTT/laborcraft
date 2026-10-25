@@ -15,6 +15,8 @@ import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
 import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenHiringPayload;
+import com.foque.laborcraft.network.OpenProfilePayload;
+import com.foque.laborcraft.network.OpenStationPayload;
 import com.foque.laborcraft.network.OpenWorkerInventoryPayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.worker.FarmerStorage;
@@ -33,6 +35,7 @@ import java.util.stream.Collectors;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -106,6 +109,22 @@ final class WorkerCommands {
 										context.getSource(),
 										StringArgumentType.getString(context, "worker")
 								))))
+				.then(Commands.literal("payprofile")
+						.then(Commands.argument("worker", StringArgumentType.word())
+								.suggests(CommandSupport.ownedWorkerSuggestions())
+								.executes(context -> payWorkerProfile(
+										context.getSource(),
+										StringArgumentType.getString(context, "worker")
+								))))
+				.then(Commands.literal("paystation")
+						.then(Commands.argument("worker", StringArgumentType.word())
+								.suggests(CommandSupport.ownedWorkerSuggestions())
+								.then(Commands.argument("pos", BlockPosArgument.blockPos())
+										.executes(context -> payWorkerStation(
+												context.getSource(),
+												StringArgumentType.getString(context, "worker"),
+												BlockPosArgument.getLoadedBlockPos(context, "pos")
+										)))))
 				.then(Commands.literal("inv")
 						.then(Commands.literal("open")
 								.then(Commands.argument("worker", StringArgumentType.word())
@@ -358,8 +377,30 @@ final class WorkerCommands {
 		return 1;
 	}
 
+	private enum PayView {
+		EMPLOYEE,
+		PROFILE,
+		STATION
+	}
+
 	private static int payWorker(CommandSourceStack source, String workerId)
 			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		return payWorker(source, workerId, PayView.EMPLOYEE, null);
+	}
+
+	private static int payWorkerProfile(CommandSourceStack source, String workerId)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		return payWorker(source, workerId, PayView.PROFILE, null);
+	}
+
+	private static int payWorkerStation(CommandSourceStack source, String workerId, BlockPos pos)
+			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		return payWorker(source, workerId, PayView.STATION, pos);
+	}
+
+	private static int payWorker(
+			CommandSourceStack source, String workerId, PayView view, BlockPos stationPos
+	) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();
 		LaborCraftWorker worker = CommandSupport.findWorker(source, workerId);
 		if (worker == null) {
@@ -379,7 +420,21 @@ final class WorkerCommands {
 			source.sendFailure(Component.translatable("laborcraft.billing.pay.no_money"));
 			return 0;
 		}
-		OpenWorkerPayload.open(player, worker);
+
+		switch (view) {
+			case EMPLOYEE -> OpenWorkerPayload.open(player, worker);
+			case PROFILE -> OpenProfilePayload.open(player);
+			case STATION -> {
+				StationRegistry.Station station = stationPos == null
+						? null
+						: CommandSupport.stationAt(source, stationPos);
+				if (station != null) {
+					OpenStationPayload.open(player, station);
+				} else {
+					OpenProfilePayload.open(player);
+				}
+			}
+		}
 		return 1;
 	}
 
@@ -407,6 +462,7 @@ final class WorkerCommands {
 		ItemStack fallback = contract.copy();
 		boolean hasRoom = player.getInventory().getFreeSlot() >= 0;
 
+		StationRegistry.unbindWorker(player.level().getServer(), worker.getUUID());
 		HomeRegistry.unassign(player.level().getServer(), worker.getUUID());
 		worker.discard();
 		boolean stored = hasRoom && player.getInventory().add(contract);
@@ -476,6 +532,7 @@ final class WorkerCommands {
 		}
 
 		Component name = worker.getName();
+		StationRegistry.unbindWorker(source.getServer(), worker.getUUID());
 		HomeRegistry.unassign(source.getServer(), worker.getUUID());
 		worker.discard();
 		source.sendSuccess(

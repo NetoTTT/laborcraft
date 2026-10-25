@@ -6,8 +6,10 @@ import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
+import com.foque.laborcraft.network.BubbleSettingsPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.worker.WorkerMarket;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -56,6 +58,12 @@ final class AdminCommands {
 										.executes(context -> setBalance(
 												context.getSource(),
 												LongArgumentType.getLong(context, "value")
+										))))
+						.then(Commands.literal("bubble-walls")
+								.then(Commands.argument("value", BoolArgumentType.bool())
+										.executes(context -> setBubbleWalls(
+												context.getSource(),
+												BoolArgumentType.getBool(context, "value")
 										)))));
 	}
 
@@ -160,6 +168,22 @@ final class AdminCommands {
 		config.save();
 		source.sendSuccess(
 				() -> Component.translatable("laborcraft.command.admin.set.provider", provider.id()),
+				true
+		);
+		ServerPlayer player = source.getPlayer();
+		if (player != null) {
+			OpenAdminPayload.open(player);
+		}
+		return 1;
+	}
+
+	private static int setBubbleWalls(CommandSourceStack source, boolean value) {
+		LaborCraftConfig config = LaborCraftConfig.get();
+		config.speech.bubbleThroughWalls = value;
+		config.save();
+		BubbleSettingsPayload.sendAll(source.getServer());
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.command.admin.set.bubble_walls", value),
 				true
 		);
 		ServerPlayer player = source.getPlayer();

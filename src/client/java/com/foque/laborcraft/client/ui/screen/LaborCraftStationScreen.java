@@ -7,6 +7,7 @@ import com.foque.laborcraft.client.ui.LcRender;
 import com.foque.laborcraft.client.ui.LcTheme;
 import com.foque.laborcraft.client.ui.LcTooltips;
 import com.foque.laborcraft.client.ui.LcWorkerText;
+import com.foque.laborcraft.client.ui.WorkerListFilter;
 import com.foque.laborcraft.client.ui.widget.LcButton;
 
 import com.foque.laborcraft.client.ui.widget.LcScrollList;
@@ -35,8 +36,12 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		STORAGE
 	}
 
+	private static WorkerListFilter pendingFilter;
+
 	private final OpenStationPayload station;
 	private Tab tab = Tab.WORK;
+	private WorkerListFilter filter = pendingFilter == null ? WorkerListFilter.ALL : pendingFilter;
+	private LcButton filterButton;
 	private LcScrollList<OpenStationPayload.Summary> workers;
 	private int selectedIndex = -1;
 	private LcButton primary;
@@ -73,6 +78,7 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 			this.tab = Tab.CONFIG;
 			this.mapOpen = true;
 		}
+		pendingFilter = null;
 	}
 
 	public BlockPos stationPos() {
@@ -224,8 +230,24 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 					updateButtons();
 				}
 		);
-		workers.replaceItems(station.workers());
+		workers.replaceItems(visibleWorkers());
 		addRenderableWidget(workers);
+
+		filterButton = new LcButton(
+				x + 128,
+				panelY + 78,
+				80,
+				16,
+				Component.translatable(filter.labelKey()),
+				LcButton.Variant.GHOST,
+				this::cycleFilter
+		);
+		filterButton.tip(LcTooltips.of(
+				Component.translatable("laborcraft.ui.filter.label"),
+				Component.translatable("laborcraft.ui.filter.tip"),
+				null
+		));
+		addRenderableWidget(filterButton);
 
 		int buttonsY = panelY + panelHeight() - 50;
 		primary = new LcButton(x, buttonsY, 170, 24, Component.empty(), LcButton.Variant.PRIMARY, this::primaryAction);
@@ -236,6 +258,27 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		addRenderableWidget(secondary);
 		addRenderableWidget(close);
 		updateButtons();
+	}
+
+	private void cycleFilter() {
+		filter = filter.next();
+		workers.replaceItems(visibleWorkers());
+		selectedIndex = -1;
+		filterButton.setMessage(Component.translatable(filter.labelKey()));
+		updateButtons();
+	}
+
+	private java.util.List<OpenStationPayload.Summary> visibleWorkers() {
+		return station.workers().stream()
+				.filter(summary -> filter.matches(summary.state(), summary.hasDebt()))
+				.toList();
+	}
+
+	private void payWorker(OpenStationPayload.Summary summary) {
+		pendingFilter = filter;
+		LaborCraftUiActions.run(
+				LaborCraftCommands.WORKER_PAY_STATION + " " + summary.id() + " " + posString()
+		);
 	}
 
 	private void buildConfigTab(int x, int width) {
@@ -591,12 +634,22 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		if (tab == Tab.WORK && workers != null) {
 			int index = workers.rowAt(event.x(), event.y());
 			if (index >= 0) {
+				OpenStationPayload.Summary summary = workers.get(index);
 				int rowY = workers.rowTop(index);
 				int eyeX = workers.getX() + workers.rowWidth() - 24;
+				int payX = eyeX - 54;
+				int payY = rowY + 10;
+				if (summary.hasDebt()
+						&& event.x() >= payX && event.x() < payX + 46
+						&& event.y() >= payY && event.y() < payY + 16) {
+					payWorker(summary);
+					return true;
+				}
+
 				int eyeY = rowY + (36 - 2 - 18) / 2;
 				if (event.x() >= eyeX && event.x() < eyeX + 18
 						&& event.y() >= eyeY && event.y() < eyeY + 18) {
-					highlightWorker(workers.get(index).id());
+					highlightWorker(summary.id());
 					return true;
 				}
 			}
@@ -720,11 +773,11 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 	}
 
 	private OpenStationPayload.Summary selectedWorker() {
-		if (selectedIndex < 0 || selectedIndex >= station.workers().size()) {
+		if (workers == null || selectedIndex < 0 || selectedIndex >= workers.size()) {
 			return null;
 		}
 
-		return station.workers().get(selectedIndex);
+		return workers.get(selectedIndex);
 	}
 
 	@Override
@@ -761,10 +814,13 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 		int cardY = panelY + 96;
 		int cardWidth = width - 222;
 
-		if (station.workers().isEmpty()) {
+		if (workers != null && workers.isEmpty()) {
+			Component empty = station.workers().isEmpty()
+					? Component.translatable("laborcraft.ui.station.workers.empty")
+					: Component.translatable("laborcraft.ui.filter.empty");
 			graphics.textWithWordWrap(
 					font,
-					Component.translatable("laborcraft.ui.station.workers.empty"),
+					empty,
 					x + 10,
 					panelY + 168,
 					188,
@@ -990,11 +1046,15 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 
 		int eyeX = x + width - 24;
 		int eyeY = y + (height - 2 - 18) / 2;
+		int payWidth = 46;
+		int payX = eyeX - 54;
+		int payY = y + 10;
+		int trailingX = worker.hasDebt() ? payX : eyeX;
 		Component warning = worker.boundElsewhere()
 				? Component.translatable("laborcraft.ui.station.bound_elsewhere")
 				: Component.empty();
 		int warningWidth = worker.boundElsewhere() ? font.width(warning) : 0;
-		int nameLimit = eyeX - 6 - (x + 10) - (warningWidth > 0 ? warningWidth + 8 : 0);
+		int nameLimit = trailingX - 6 - (x + 10) - (warningWidth > 0 ? warningWidth + 8 : 0);
 		graphics.text(
 				font,
 				Component.literal(font.plainSubstrByWidth(worker.name(), Math.max(10, nameLimit))),
@@ -1010,10 +1070,33 @@ public final class LaborCraftStationScreen extends LaborCraftScreen {
 				),
 				LcWorkerText.SEPARATOR
 		);
-		graphics.text(font, detail, x + 10, y + 20, LcTheme.TEXT);
+		int detailLimit = worker.hasDebt() ? Math.max(10, payX - (x + 10) - 6) : width - 20;
+		graphics.text(
+				font,
+				Component.literal(font.plainSubstrByWidth(detail.getString(), detailLimit)),
+				x + 10,
+				y + 20,
+				LcTheme.TEXT
+		);
 
 		if (worker.boundElsewhere()) {
-			graphics.text(font, warning, eyeX - 6 - warningWidth, y + 6, LcTheme.DANGER);
+			graphics.text(font, warning, trailingX - 6 - warningWidth, y + 6, LcTheme.DANGER);
+		}
+
+		if (worker.hasDebt()) {
+			boolean payHovered = mouseX >= payX && mouseX < payX + payWidth
+					&& mouseY >= payY && mouseY < payY + 16;
+			graphics.fill(payX, payY, payX + payWidth, payY + 16,
+					payHovered ? LcTheme.PRIMARY_BG : LcTheme.BUTTON_BG);
+			LcRender.border(graphics, payX, payY, payWidth, 16,
+					payHovered ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER);
+			graphics.centeredText(
+					font,
+					Component.translatable("laborcraft.ui.employee.pay"),
+					payX + payWidth / 2,
+					payY + 4,
+					payHovered ? LcTheme.TITLE : LcTheme.TEXT
+			);
 		}
 
 		boolean eyeHovered = mouseX >= eyeX && mouseX < eyeX + 18 && mouseY >= eyeY && mouseY < eyeY + 18;

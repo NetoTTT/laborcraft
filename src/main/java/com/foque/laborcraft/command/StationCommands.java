@@ -181,7 +181,7 @@ final class StationCommands {
 			return 0;
 		}
 
-		if (station.worker() != null) {
+		if (station.worker() != null && LaborCraftWorker.find(source.getServer(), station.worker()) != null) {
 			source.sendFailure(Component.translatable("laborcraft.station.full"));
 			return 0;
 		}

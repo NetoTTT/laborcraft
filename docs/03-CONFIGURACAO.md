@@ -162,6 +162,9 @@ Campos atuais de `config/laborcraft.json`:
     "allowLadders": false,
     "allowDoors": true
   },
+  "speech": {
+    "bubbleThroughWalls": false
+  },
   "billing": {
     "enabled": true,
     "checkTicks": 100,
@@ -242,6 +245,7 @@ Campos atuais de `config/laborcraft.json`:
 | `acquisition.contractTradeable` | permite negociar o Contrato entre jogadores (planejado) |
 | `acquisition.keepProfileBackup` | mantém perfil no mundo para recuperação por admin |
 | `billing` | salário, dívida, graça, greve e notificações (ver tabela acima) |
+| `speech.bubbleThroughWalls` | mostra balões de fala através de paredes; padrão `false` (oculto), controlável pelo painel Admin ou `/laborcraft admin set bubble-walls <true/false>` |
 
 Detalhes e justificativas em [`07-TRABALHADOR.md`](07-TRABALHADOR.md).
 

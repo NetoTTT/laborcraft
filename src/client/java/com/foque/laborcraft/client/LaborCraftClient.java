@@ -1,7 +1,9 @@
 package com.foque.laborcraft.client;
 
 import com.foque.laborcraft.LaborCraft;
+import com.foque.laborcraft.client.hud.BubbleSettings;
 import com.foque.laborcraft.client.hud.TargetIndicatorHud;
+import com.foque.laborcraft.client.hud.WorkerSpeechHud;
 import com.foque.laborcraft.client.render.LaborCraftWorkerRenderer;
 import com.foque.laborcraft.client.render.StationPreviewManager;
 import com.foque.laborcraft.client.render.WorldHighlightManager;
@@ -16,6 +18,7 @@ import com.foque.laborcraft.client.ui.screen.LaborCraftPlayersScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftProfileScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftStationScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftWorkerInventoryScreen;
+import com.foque.laborcraft.network.BubbleSettingsPayload;
 import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.network.OpenConfigPayload;
@@ -49,11 +52,18 @@ public class LaborCraftClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(StationPreviewManager::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(WorldHighlightManager::tick);
 		HudElementRegistry.addLast(LaborCraft.id("target_indicator"), new TargetIndicatorHud());
+		HudElementRegistry.addLast(LaborCraft.id("worker_speech"), new WorkerSpeechHud());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			LcValuePrompt.cancelActive();
 			StationPreviewManager.resetAll();
 			WorldHighlightManager.reset();
+			WorkerSpeechHud.clear();
+			BubbleSettings.update(false);
 		});
+
+		ClientPlayNetworking.registerGlobalReceiver(BubbleSettingsPayload.TYPE, (payload, context) ->
+				context.client().execute(() -> BubbleSettings.update(payload.throughWalls()))
+		);
 
 		ClientPlayNetworking.registerGlobalReceiver(OpenAdminPayload.TYPE, (payload, context) -> {
 			Minecraft client = context.client();

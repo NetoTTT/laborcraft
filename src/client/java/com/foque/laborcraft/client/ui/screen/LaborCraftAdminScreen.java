@@ -251,6 +251,30 @@ public final class LaborCraftAdminScreen extends LaborCraftScreen {
 				x, y + 150, width, "laborcraft.ui.admin.market", LaborCraftCommands.ADMIN_MARKET_REFRESH
 		));
 
+		LcButton bubble = new LcButton(
+				x,
+				y + 180,
+				width,
+				24,
+				label("laborcraft.ui.admin.bubble_walls", Component.translatable(state.bubbleThroughWalls()
+						? "laborcraft.ui.admin.state.on"
+						: "laborcraft.ui.admin.state.off").getString()),
+				state.bubbleThroughWalls() ? LcButton.Variant.PRIMARY : LcButton.Variant.SECONDARY,
+				() -> {
+					rememberTab(tab);
+					LaborCraftUiActions.run(
+							LaborCraftCommands.ADMIN_SET_BUBBLE_WALLS + " " + !state.bubbleThroughWalls()
+					);
+				}
+		);
+		bubble.selected(state.bubbleThroughWalls());
+		bubble.tip(LcTooltips.of(
+				Component.translatable("laborcraft.ui.admin.bubble_walls"),
+				Component.translatable("laborcraft.ui.admin.bubble_walls.tip"),
+				"/" + LaborCraftCommands.ADMIN_SET_BUBBLE_WALLS + " " + !state.bubbleThroughWalls()
+		));
+		addRenderableWidget(bubble);
+
 		LcButton config = new LcButton(
 				panelX + panelWidth() - 100,
 				panelY + 8,
@@ -475,7 +499,7 @@ public final class LaborCraftAdminScreen extends LaborCraftScreen {
 					font,
 					Component.translatable("laborcraft.ui.admin.note"),
 					x,
-					panelY + 272,
+					panelY + 300,
 					width,
 					LcTheme.MUTED
 			);

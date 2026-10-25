@@ -2,6 +2,7 @@ package com.foque.laborcraft.network;
 
 import com.foque.laborcraft.LaborCraft;
 import com.foque.laborcraft.config.LaborCraftConfig;
+import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import com.foque.laborcraft.worker.StationRegistry;
 import com.foque.laborcraft.worker.WorkerOwnership;
@@ -165,7 +166,9 @@ public record OpenStationPayload(
 					worker.jobId(),
 					worker.workerState().name(),
 					worker.taskKey(),
-					elsewhere
+					elsewhere,
+					CurrencyProviders.active().format(worker.billingDebt()),
+					worker.billingDebt() > 0L
 			);
 			workers.add(summary);
 
@@ -286,6 +289,8 @@ public record OpenStationPayload(
 		buffer.writeUtf(summary.state(), 32);
 		buffer.writeUtf(summary.taskKey(), 128);
 		buffer.writeBoolean(summary.boundElsewhere());
+		buffer.writeUtf(summary.debtText(), 64);
+		buffer.writeBoolean(summary.hasDebt());
 	}
 
 	private static Summary readSummary(RegistryFriendlyByteBuf buffer) {
@@ -296,6 +301,8 @@ public record OpenStationPayload(
 				buffer.readUtf(128),
 				buffer.readUtf(32),
 				buffer.readUtf(128),
+				buffer.readBoolean(),
+				buffer.readUtf(64),
 				buffer.readBoolean()
 		);
 	}
@@ -328,7 +335,9 @@ public record OpenStationPayload(
 			String jobId,
 			String state,
 			String taskKey,
-			boolean boundElsewhere
+			boolean boundElsewhere,
+			String debtText,
+			boolean hasDebt
 	) {
 		public boolean idle() {
 			return "PAUSED".equals(state);

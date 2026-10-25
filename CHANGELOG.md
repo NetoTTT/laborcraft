@@ -3,6 +3,34 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.1.0-alpha.12] — 2026-10-25
+
+Balões de fala acima dos trabalhadores e chat de trabalhador com identidade visual própria.
+
+### Adicionado
+- Balão de fala acima da cabeça enquanto o trabalhador tem um aviso importante ativo (falta de ferramenta, sementes, zona, salário atrasado etc.); o texto permanece enquanto o bloqueio existir e desaparece ao voltar ao trabalho.
+- Pensamentos ocasionais para trabalhadores ativos (a cada 60–150 s), sem poluir o chat; avisos de bloqueio continuam sempre visíveis.
+- Balão com raio máximo de **10 blocos**, fade suave, flutuação e posição interpolada/suavizada para não tremer durante o movimento.
+- Ocultação por paredes **ligada por padrão**; o admin pode liberar para todos os jogadores no painel (Sistema) ou com `admin set bubble-walls true/false`.
+- O aviso é sincronizado pela entidade (`SynchedEntityData`) e persiste no save.
+- Corrigido: o descanso limpava o aviso de bloqueio de um trabalhador `PAUSED`, fazendo o balão sumir (ex.: falta de enxada).
+- Chat de trabalhador no formato `[Empregado] Nome: mensagem`, com o nome na cor da raridade.
+- Mensagens de cobrança também usam o nome colorido do trabalhador.
+
+## [0.1.0-alpha.11] — 2026-10-25
+
+Pagamento por trabalhador também no **Posto** e no **Perfil**, com filtro compartilhado das listas.
+
+### Corrigido
+- Posto com vínculo órfão de um trabalhador que rompeu/foi dispensado não bloqueia mais a contratação: o vínculo morto pode ser substituído.
+- Dispensar, remover ou romper contrato agora desvincula o trabalhador do Posto.
+
+### Adicionado
+- Botão **Pagar** em cada linha de trabalhador com dívida no Posto e no Perfil.
+- Comandos internos `worker payprofile` e `worker paystation`; após pagar, a tela correspondente é reaberta já atualizada.
+- Filtro de lista: **Todos → Dívida → Greve → Pausa**, mantendo o filtro ao pagar e recarregar a tela.
+- Mensagem de lista vazia para filtros sem resultado.
+
 ## [0.1.0-alpha.10] — 2026-10-25
 
 Painel admin inicial: estado server-authoritative, abas **Salário**, **Cobrança** e **Sistema**, edição de valores por prompt e atualização automática do painel após cada comando.
