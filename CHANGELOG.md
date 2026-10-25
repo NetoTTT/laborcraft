@@ -3,6 +3,24 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.1.0-alpha.10] — 2026-10-25
+
+Painel admin inicial: estado server-authoritative, abas **Salário**, **Cobrança** e **Sistema**, edição de valores por prompt e atualização automática do painel após cada comando.
+
+### Adicionado
+- `OpenAdminPayload` agora carrega o snapshot da economia (base, período, preço, graça, dívida, multiplicadores e toggles).
+- Aba **Salário**: base diária, período, preço, mínimo, teto de boost, toggles da tabela e multiplicadores de rank/raridade.
+- Aba **Cobrança**: ativa, intervalo de checagem, graça, dispensa, humor, dívida, notificações e expediente.
+- Ações: aplicar tabela aos existentes, forçar cobrança e atualizar mercado; abas e valores permanecem após o refresh.
+- `LcValuePrompt` ganhou entrada decimal (aceita vírgula e normaliza para ponto).
+
+### Alterado
+- `dismiss-after` agora conta faltas **depois da greve**, e não faltas totais; o dono recebe um aviso final antes do rompimento.
+- O rompimento automático devolve o Contrato de Trabalhador ao dono em vez de apagar a pessoa; se o dono estiver offline, a dispensa é adiada.
+
+### Pendente
+- Abas Expediente/Área/Casa/Mercado completas e auditoria das mudanças; testar o painel em jogo.
+
 ## [0.1.0-alpha.9] — 2026-10-25
 
 Base de cobrança/contrato: salário por período, dívida, greve por atraso e configuração live por comandos administrativos. A UI do painel admin continua pendente (doc 15).

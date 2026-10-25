@@ -1,9 +1,9 @@
-# 15 — Painel Admin (pendente)
+# 15 — Painel Admin (inicial)
 
-**Status:** prioridade alta. A base de cobrança e a configuração live por comandos já existem
-(`/laborcraft billing ...`), mas a UI do painel ainda não. Hoje o Admin é um menu de atalhos
-(`LaborCraftAdminScreen`) e o `config` só troca idioma. O painel será a camada validada em cima do
-`LaborCraftConfig` + comandos atuais.
+**Status:** primeira versão na `alpha.10`. O painel abre por `/laborcraft ui`, recebe um snapshot
+server-authoritative e tem as abas **Salário**, **Cobrança** e **Sistema**. A edição passa pelos
+comandos atuais; o servidor valida, salva e devolve o estado. Expediente/Área/Casa/Mercado completos,
+auditoria e testes ainda pendentes.
 
 ## Objetivo
 
@@ -23,7 +23,13 @@ salário-base, multiplicadores por rank/raridade, período, graça/faltas, exped
   - `/laborcraft billing force`
   - `/laborcraft worker pay <trabalhador>`
 - Mudanças de salário/rank/raridade/preço regeneram as ofertas; `admin market refresh` força rotação.
-- Snapshot: trabalhadores existentes só mudam com `apply-salary`; a UI deve deixar isso explícito.
+- Snapshot: trabalhadores existentes só mudam com `apply-salary`; a UI mostra isso nas ações.
+- Painel inicial (`LaborCraftAdminScreen`):
+  - abas Salário, Cobrança e Sistema;
+  - valores atuais via `OpenAdminPayload`;
+  - prompts inteiro/decimal e toggles;
+  - ações “Aplicar existentes”, “Forçar cobrança”, “Atualizar mercado”;
+  - refresh automático da aba após cada comando.
 
 ## O que a UI precisa resolver
 
@@ -81,7 +87,7 @@ provedor e cobrança de contratos em chunks descarregados.
 - [x] Motor de cobrança + contrato persistido no trabalhador
 - [x] Tabela salarial configurável (mínimo/rank/raridade/boosts/período)
 - [x] Comandos live e `apply-salary`/`force`
-- [ ] UI Admin live (Economia/Expediente/Área/Casa/Sistema)
+- [x] UI Admin inicial (Salário/Cobrança/Sistema); abas restantes pendentes
 - [x] Aplicar aos contratos existentes por comando (falta UI com confirmação)
 - [x] Notificações de cobrança
 - [ ] Auditoria e testes de unidade do ciclo

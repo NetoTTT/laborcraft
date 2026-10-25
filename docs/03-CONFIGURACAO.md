@@ -42,11 +42,12 @@ A cada `billing.checkTicks` (padrão 100 ticks), o mod tenta cobrar o período v
 | Saldo insuficiente | `missedPayments + 1`; a dívida cresce com o salário se `billing.allowDebt = true`; aplica `missedMoodPenalty` e avisa o dono |
 | `missedPayments <= billing.gracePeriods` | continua trabalhando (período de graça; padrão 1) |
 | `missedPayments > billing.gracePeriods` | entra em **greve** (`Em greve`): não produz e não sai do posto |
-| `billing.dismissAfterMissed > 0` e faltas atingem o limite | contrato é rompido; o trabalhador vai embora e a casa é desassociada |
+| `billing.dismissAfterMissed > 0` e faltas **após a greve** atingem o limite | contrato é rompido; o Contrato de Trabalhador volta para o dono (ou cai no chão) e a casa é desassociada |
 | `worker pay <trabalhador>` | quita a dívida, zera faltas, reinicia o próximo vencimento e retira da greve |
 | `billing.enabled = false` | desliga a cobrança (não altera dívidas/estados existentes) |
 
-- `billing.dismissAfterMissed = 0` desliga a dispensa automática (padrão).
+- `billing.dismissAfterMissed = 0` desliga a dispensa automática (padrão). O valor conta **faltas depois que o trabalhador já está em greve**, não faltas totais; na véspera do limite o dono recebe um aviso. Se o dono estiver offline, a dispensa é adiada e o trabalhador continua em greve.
+- Antes do rompimento o trabalhador permanece em greve (não produz); o contrato devolvido preserva rank, raridade, cargo, boosts, aptidões e maestria.
 - `schedule.pauseBillingOffDuty = true` + `billing.useSchedule = true` adia o vencimento enquanto o trabalhador estiver fora do expediente.
 - `billing.notifyOwner = false` silencia os avisos de cobrança no chat.
 - A cobrança só enxerga trabalhadores **carregados** no mundo. Contratos em chunks descarregados não são processados até voltarem a carregar.

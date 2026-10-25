@@ -12,6 +12,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
 
 /** Root-level screens: ui, config, test items, players, profile and hire. */
 final class UiCommands {
@@ -19,7 +20,9 @@ final class UiCommands {
 	}
 
 	static void attach(LiteralArgumentBuilder<CommandSourceStack> root) {
-		root.then(Commands.literal("ui").executes(context -> openUi(context.getSource())))
+		root.then(Commands.literal("ui")
+				.requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+				.executes(context -> openUi(context.getSource())))
 				.then(Commands.literal("config").executes(context -> openConfig(context.getSource())))
 				.then(Commands.literal("test")
 						.then(Commands.literal("items").executes(context -> openItemTest(context.getSource()))))
@@ -31,8 +34,7 @@ final class UiCommands {
 	private static int openUi(CommandSourceStack source)
 			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();
-		if (ServerPlayNetworking.canSend(player, OpenAdminPayload.TYPE)) {
-			ServerPlayNetworking.send(player, new OpenAdminPayload());
+		if (OpenAdminPayload.open(player)) {
 			return 1;
 		}
 

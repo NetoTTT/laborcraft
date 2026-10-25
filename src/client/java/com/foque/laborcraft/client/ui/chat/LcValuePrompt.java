@@ -3,6 +3,7 @@ package com.foque.laborcraft.client.ui.chat;
 import com.foque.laborcraft.command.LaborCraftCommands;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.ChatComponent;
@@ -15,6 +16,7 @@ import net.minecraft.network.chat.Style;
 public final class LcValuePrompt {
 	private enum Kind {
 		INTEGER,
+		DECIMAL,
 		TEXT,
 		CHOICE
 	}
@@ -27,8 +29,8 @@ public final class LcValuePrompt {
 	private final Kind kind;
 	private final Component label;
 	private final String command;
-	private final int min;
-	private final int max;
+	private final double min;
+	private final double max;
 	private final int maxLength;
 	private final List<String> choices;
 	private final List<Quick> quick = new ArrayList<>();
@@ -36,7 +38,7 @@ public final class LcValuePrompt {
 	private String cancelCommand = LaborCraftCommands.UI;
 	private long ignoreCancelUntil;
 
-	private LcValuePrompt(Kind kind, Component label, String command, int min, int max, int maxLength,
+	private LcValuePrompt(Kind kind, Component label, String command, double min, double max, int maxLength,
 			List<String> choices) {
 		this.kind = kind;
 		this.label = label;
@@ -52,6 +54,13 @@ public final class LcValuePrompt {
 			throw new IllegalArgumentException("min must be <= max");
 		}
 		return new LcValuePrompt(Kind.INTEGER, label, command, min, max, 0, List.of());
+	}
+
+	public static LcValuePrompt decimal(Component label, String command, double min, double max) {
+		if (min > max) {
+			throw new IllegalArgumentException("min must be <= max");
+		}
+		return new LcValuePrompt(Kind.DECIMAL, label, command, min, max, 0, List.of());
 	}
 
 	public static LcValuePrompt text(Component label, String command, int maxLength) {
@@ -81,6 +90,8 @@ public final class LcValuePrompt {
 	public LcValuePrompt quick(String label, String value) {
 		if (kind == Kind.INTEGER) {
 			Integer.parseInt(value);
+		} else if (kind == Kind.DECIMAL) {
+			Double.parseDouble(value.replace(',', '.'));
 		}
 		quick.add(new Quick(label, value));
 		return this;
@@ -139,7 +150,7 @@ public final class LcValuePrompt {
 		}
 
 		active = null;
-		sendCommand(command + value);
+		sendCommand(command + (kind == Kind.DECIMAL ? value.replace(',', '.') : value));
 	}
 
 	private Component validate(String value) {
@@ -148,11 +159,22 @@ public final class LcValuePrompt {
 				try {
 					int parsed = Integer.parseInt(value);
 					if (parsed < min || parsed > max) {
-						yield Component.translatable("laborcraft.prompt.invalid.range", min, max);
+						yield Component.translatable("laborcraft.prompt.invalid.range", number(min), number(max));
 					}
 					yield null;
 				} catch (NumberFormatException exception) {
 					yield Component.translatable("laborcraft.prompt.invalid.integer");
+				}
+			}
+			case DECIMAL -> {
+				try {
+					double parsed = Double.parseDouble(value.replace(',', '.'));
+					if (parsed < min || parsed > max) {
+						yield Component.translatable("laborcraft.prompt.invalid.range", number(min), number(max));
+					}
+					yield null;
+				} catch (NumberFormatException exception) {
+					yield Component.translatable("laborcraft.prompt.invalid.decimal");
 				}
 			}
 			case TEXT -> {
@@ -232,7 +254,8 @@ public final class LcValuePrompt {
 
 	private Component hint() {
 		return switch (kind) {
-			case INTEGER -> Component.translatable("laborcraft.prompt.integer", min, max);
+			case INTEGER -> Component.translatable("laborcraft.prompt.integer", number(min), number(max));
+			case DECIMAL -> Component.translatable("laborcraft.prompt.decimal", number(min), number(max));
 			case TEXT -> Component.translatable("laborcraft.prompt.text", maxLength);
 			case CHOICE -> Component.translatable("laborcraft.prompt.choice");
 		};
@@ -254,6 +277,13 @@ public final class LcValuePrompt {
 				.withClickEvent(click)
 				.withHoverEvent(new HoverEvent.ShowText(tip));
 		return label.copy().withStyle(style);
+	}
+
+	private static String number(double value) {
+		if (value == Math.rint(value)) {
+			return Long.toString((long) value);
+		}
+		return String.format(Locale.ROOT, "%.2f", value);
 	}
 
 	private static String normalize(String command) {

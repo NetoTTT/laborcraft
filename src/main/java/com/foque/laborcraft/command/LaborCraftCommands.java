@@ -63,6 +63,13 @@ public final class LaborCraftCommands {
 	public static final String ADMIN_SET_WAGE = "laborcraft admin set wage";
 	public static final String ADMIN_SET_PROVIDER = "laborcraft admin set provider";
 	public static final String ADMIN_SET_BALANCE = "laborcraft admin set balance";
+	public static final String ADMIN_MARKET_REFRESH = "laborcraft admin market refresh";
+	public static final String BILLING = "laborcraft billing";
+	public static final String BILLING_SET = BILLING + " set";
+	public static final String BILLING_RANK = BILLING + " rank";
+	public static final String BILLING_RARITY = BILLING + " rarity";
+	public static final String BILLING_APPLY = BILLING + " apply-salary";
+	public static final String BILLING_FORCE = BILLING + " force";
 
 	private LaborCraftCommands() {
 	}

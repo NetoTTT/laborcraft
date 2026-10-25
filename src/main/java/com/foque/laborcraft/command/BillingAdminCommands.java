@@ -3,6 +3,7 @@ package com.foque.laborcraft.command;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.config.LaborCraftConfig.BillingSettings;
 import com.foque.laborcraft.contract.BillingManager;
+import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.worker.WorkerMarket;
 import com.foque.laborcraft.worker.WorkerRank;
 import com.foque.laborcraft.worker.WorkerRarity;
@@ -15,6 +16,7 @@ import java.util.Set;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 
 /** `/laborcraft billing ...`: configuração live do salário e da cobrança. */
@@ -147,6 +149,7 @@ final class BillingAdminCommands {
 				() -> Component.translatable("laborcraft.command.billing.set", field, value),
 				true
 		);
+		refreshPanel(source);
 		return 1;
 	}
 
@@ -166,6 +169,7 @@ final class BillingAdminCommands {
 				() -> Component.translatable("laborcraft.command.billing.rank", rank.id(), value),
 				true
 		);
+		refreshPanel(source);
 		return 1;
 	}
 
@@ -185,6 +189,7 @@ final class BillingAdminCommands {
 				() -> Component.translatable("laborcraft.command.billing.rarity", rarity.id(), value),
 				true
 		);
+		refreshPanel(source);
 		return 1;
 	}
 
@@ -194,6 +199,7 @@ final class BillingAdminCommands {
 				() -> Component.translatable("laborcraft.command.billing.force", count),
 				true
 		);
+		refreshPanel(source);
 		return count;
 	}
 
@@ -203,7 +209,15 @@ final class BillingAdminCommands {
 				() -> Component.translatable("laborcraft.command.billing.apply", changed),
 				true
 		);
+		refreshPanel(source);
 		return changed;
+	}
+
+	private static void refreshPanel(CommandSourceStack source) {
+		ServerPlayer player = source.getPlayer();
+		if (player != null) {
+			OpenAdminPayload.open(player);
+		}
 	}
 
 	private static boolean parseBoolean(String value) {

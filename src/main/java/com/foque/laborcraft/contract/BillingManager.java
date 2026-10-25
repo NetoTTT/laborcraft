@@ -6,6 +6,8 @@ import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import com.foque.laborcraft.housing.HomeRegistry;
+import com.foque.laborcraft.item.LaborCraftItems;
+import com.foque.laborcraft.item.WorkerContractData;
 import com.foque.laborcraft.schedule.WorkSchedule;
 import com.foque.laborcraft.worker.SalaryTable;
 import com.foque.laborcraft.worker.WorkerState;
@@ -14,6 +16,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
 
 /**
  * Recurring salary billing. Each worker carries its own snapshot (wage per period, period days,
@@ -128,12 +131,50 @@ public final class BillingManager {
 		));
 
 		applyStrike(config, worker);
+		applyDismissal(config, owner, worker, missed);
+	}
 
-		if (config.billing.dismissAfterMissed > 0 && missed >= config.billing.dismissAfterMissed) {
-			Component name = worker.getName();
+	private static void applyDismissal(
+			LaborCraftConfig config, ServerPlayer owner, LaborCraftWorker worker, int missed
+	) {
+		int threshold = config.billing.dismissAfterMissed;
+		if (threshold <= 0 || owner == null) {
+			return;
+		}
+
+		int strikeAt = config.billing.gracePeriods + 1;
+		int postStrikeMisses = missed - strikeAt;
+		if (postStrikeMisses < 0) {
+			return;
+		}
+
+		if (postStrikeMisses >= threshold) {
+			WorkerContractData data = WorkerContractData.fromWorker(worker);
+			ItemStack contract = LaborCraftItems.newContract(
+					config.acquisition.contractTradeable ? null : owner.getUUID(),
+					data
+			);
+			Component name = data.displayName();
+
+			ItemStack fallback = contract.copy();
+			boolean hasRoom = owner.getInventory().getFreeSlot() >= 0;
+
 			HomeRegistry.unassign(worker.level().getServer(), worker.getUUID());
 			worker.discard();
+			if ((!hasRoom || !owner.getInventory().add(contract)) && owner.level() instanceof ServerLevel level) {
+				owner.spawnAtLocation(level, fallback);
+			}
+
 			notify(config, owner, Component.translatable("laborcraft.billing.dismissed", name));
+			return;
+		}
+
+		if (postStrikeMisses == threshold - 1) {
+			notify(config, owner, Component.translatable(
+					"laborcraft.billing.final_warning",
+					worker.getName(),
+					threshold - postStrikeMisses
+			));
 		}
 	}
 

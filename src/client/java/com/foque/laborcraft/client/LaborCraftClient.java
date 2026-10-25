@@ -59,7 +59,7 @@ public class LaborCraftClient implements ClientModInitializer {
 			Minecraft client = context.client();
 			client.execute(() -> {
 				LcValuePrompt.cancelActive();
-				client.setScreenAndShow(new LaborCraftAdminScreen());
+				client.setScreenAndShow(new LaborCraftAdminScreen(payload));
 			});
 		});
 

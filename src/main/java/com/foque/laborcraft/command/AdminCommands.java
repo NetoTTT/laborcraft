@@ -6,6 +6,7 @@ import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
+import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.worker.WorkerMarket;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
@@ -71,6 +72,10 @@ final class AdminCommands {
 				),
 				true
 		);
+		ServerPlayer player = source.getPlayer();
+		if (player != null) {
+			OpenAdminPayload.open(player);
+		}
 		return 1;
 	}
 
@@ -82,6 +87,10 @@ final class AdminCommands {
 				() -> Component.translatable("laborcraft.command.admin.reload", config.currencyProvider, jobs),
 				true
 		);
+		ServerPlayer player = source.getPlayer();
+		if (player != null) {
+			OpenAdminPayload.open(player);
+		}
 		return 1;
 	}
 
@@ -153,6 +162,10 @@ final class AdminCommands {
 				() -> Component.translatable("laborcraft.command.admin.set.provider", provider.id()),
 				true
 		);
+		ServerPlayer player = source.getPlayer();
+		if (player != null) {
+			OpenAdminPayload.open(player);
+		}
 		return 1;
 	}
 }
