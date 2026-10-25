@@ -17,6 +17,7 @@
 - [x] UI nativa base (tema, painel, botão, tooltip) e `/laborcraft ui`.
 - [x] Prompt de valor no chat (int/texto/escolha) com botões clicáveis e comando acessível.
 - [x] Edição de salário base e provedor de moeda pela UI/comandos admin.
+- [ ] **[ALTA] Painel Admin in-game (live config)**: economia/salário, expediente, área/casa e sistema sem reboot/JSON — ver [doc 15](15-PAINEL-ADMIN.md).
 - [ ] Provedor de moeda por scoreboard e por item.
 - [ ] Gerente de contratos com persistência no mundo.
 - [ ] Motor de cobrança por período + eventos de pausa/rompimento.

@@ -3,7 +3,7 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
-## [Não lançado]
+## [0.1.0-alpha.7] — 2026-10-25
 
 Base da casa do trabalhador: registrar o cômodo com nome, atribuir uma cama e aumentar o limite de
 trabalhadores. O Empregado ganhou abas e a casa agora tem modal de registro e lista de casas.
@@ -45,6 +45,7 @@ desenhada é exclusiva. O trabalhador agora respeita o **expediente** e descansa
 ### Pendente
 
 - Política de conflito para empregos de **área livre** (sem zona); o único emprego atual é o fazendeiro. A lógica antiga de área efetiva continua disponível para essa análise.
+- **[ALTA] Painel Admin in-game (live config)**: editar economia/salário, expediente, área/casa e sistema sem reboot/JSON; requer o motor de cobrança e a política para contratos existentes — ver [doc 15](docs/15-PAINEL-ADMIN.md).
 
 ## [0.1.0-alpha.6] — 2026-10-24
 
