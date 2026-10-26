@@ -1,6 +1,6 @@
 # 17 — Compatibilidade MineLab (prioridade alta)
 
-**Status:** prioridade alta; pesquisa inicial feita, implementação pendente.
+**Status:** prioridade alta; primeiro adaptador implementado em `alpha.14`. Ainda falta validar em servidor com o MineLab real e evoluir para outros provedores.
 **Fonte:** `compatibilidade/MineLab-mods-codigo/` (código de outro servidor, de Kaue; **não modificar/redistribuir**).
 **Objetivo:** permitir que o LaborCraft use o dinheiro do MineLab sem criar jar novo deles e sem depender das classes internas deles.
 
@@ -34,12 +34,29 @@
    - objective renomeado: mudar só a config;
    - MineLab atualizado: recompilar sem erros porque não há dependência das classes internas.
 
+## Implementado
+
+- `minelab:plims` registrado como `CurrencyProvider` no registro de moedas.
+- Lê/escreve o objective `plims` via API vanilla de scoreboard; não importa classes `dev.kauedev.minelab.*`.
+- Resolve jogadores online e offline pelo cache de perfis do servidor.
+- Fallback para o Ledger quando o objective/jogador não está disponível (configurável).
+- Objective, formato e fallback ficam no JSON (`compatibility.mineLab*`).
+- O provedor aparece no seletor de provedor do painel Admin; a seleção ainda é por `currencyProvider` (JSON/painel).
+
+## Risco: scoreboard é leitura, não necessariamente a verdade
+
+No código de `minelab-ponte` não há escrita no objective `plims`: `Ec.java` e `Mercado.java` só leem o score; `Loja.java` formata um saldo que veio do bot. As compras/pagamentos chamam `MineLabPonte.pedido(...)`, que apenas enfileira um evento JSON para o bot/API; o bot/API pode então executar `/comando` (inclusive `scoreboard players ...`) ou mexer no banco. O banco e o bot não estão neste repositório, então não dá para provar qual é o centro da verdade só por ele.
+
+Consequência prática: uma escrita direta no `plims` feita por outro mod pode ser sobrescrita na próxima reconciliação/transação do bot. O scoreboard serve bem para leitura ao vivo, mas não é um contrato transacional seguro. O adaptador `minelab:plims` atual escreve direto; isso deve ser validado com o bot real.
+
+Teste decisivo: (1) coloque um valor conhecido no `plims`; (2) faça uma compra/pagamento pelo bot; (3) veja se o valor externo foi mantido ou reescrito. Se for reescrito, precisamos de um endpoint de transação do bot (get/add/remove/set) e o adaptador deve passar a usá-lo, mantendo o scoreboard apenas como leitura.
+
 ## O que ainda falta
 
-- Confirmar na versão 26.3 a API exata de escrita de score (`Scoreboard#getOrCreatePlayerScore`/equivalente).
-- Adicionar `compat.mineLab` ao `LaborCraftConfig` e ao painel Admin (Sistema).
-- Criar o provider/adaptador e os testes de integração.
-- Validar com o mod real num mundo de teste e documentar o fluxo de seleção do provedor.
+- ~~Confirmar a API de escrita de score~~ (feito com `Scoreboard#getOrCreatePlayerScore`).
+- Validar saldo/débito/crédito num servidor com o MineLab real.
+- Persistir/migrar saldos do fallback Ledger se o objective `plims` aparecer depois.
+- Adicionar o adaptador a outros provedores (Vault/outros) atrás do mesmo SPI.
 - **Não** alterar o jar, o código ou a licença do MineLab; toda adaptação fica no nosso lado.
 
 ## Decisão de arquitetura

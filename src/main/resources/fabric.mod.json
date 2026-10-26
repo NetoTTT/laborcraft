@@ -28,5 +28,8 @@
 		"minecraft": "~26.3",
 		"java": ">=25",
 		"fabric-api": "*"
+	},
+	"suggests": {
+		"quillui": ">=0.2.0-alpha.2"
 	}
 }

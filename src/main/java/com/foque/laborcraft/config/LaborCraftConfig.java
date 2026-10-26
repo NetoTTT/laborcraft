@@ -31,6 +31,7 @@ public final class LaborCraftConfig {
 	public ScheduleSettings schedule = new ScheduleSettings();
 	public PathingSettings pathing = new PathingSettings();
 	public SpeechSettings speech = new SpeechSettings();
+	public CompatibilitySettings compatibility = new CompatibilitySettings();
 	public BillingSettings billing = new BillingSettings();
 	public JobSettings farmer = JobSettings.farmer();
 
@@ -177,6 +178,18 @@ public final class LaborCraftConfig {
 		public boolean allowDoors = true;
 
 		public PathingSettings() {
+		}
+	}
+
+	public static final class CompatibilitySettings {
+		/** MineLab scoreboard objective used by minelab-ponte/minelab-bancos. */
+		public String mineLabObjective = "plims";
+		/** Format used for MineLab balances; %d/%,d are accepted. */
+		public String mineLabFormat = "%,d plims";
+		/** If the MineLab objective/name is unavailable, use the internal ledger instead. */
+		public boolean mineLabFallbackToLedger = true;
+
+		public CompatibilitySettings() {
 		}
 	}
 

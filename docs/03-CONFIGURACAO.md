@@ -166,6 +166,11 @@ Campos atuais de `config/laborcraft.json`:
   "speech": {
     "bubbleThroughWalls": false
   },
+  "compatibility": {
+    "mineLabObjective": "plims",
+    "mineLabFormat": "%,d plims",
+    "mineLabFallbackToLedger": true
+  },
   "billing": {
     "enabled": true,
     "checkTicks": 100,
@@ -248,6 +253,7 @@ Campos atuais de `config/laborcraft.json`:
 | `acquisition.keepProfileBackup` | mantém perfil no mundo para recuperação por admin |
 | `billing` | salário, dívida, graça, greve e notificações (ver tabela acima) |
 | `speech.bubbleThroughWalls` | mostra balões de fala através de paredes; padrão `false` (oculto), controlável pelo painel Admin ou `/laborcraft admin set bubble-walls <true/false>` |
+| `compatibility.mineLabObjective` / `mineLabFormat` / `mineLabFallbackToLedger` | objective, formato e fallback do provedor `minelab:plims`; o provedor é escolhido em `currencyProvider` |
 
 Detalhes e justificativas em [`07-TRABALHADOR.md`](07-TRABALHADOR.md).
 

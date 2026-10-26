@@ -46,7 +46,9 @@ Ainda **não** existe: IA de trabalho do fazendeiro (e portanto o efeito de prod
 Baixe o jar mais recente em [**Releases**](https://github.com/NetoTTT/laborcraft/releases).
 
 As builds alpha são para **Minecraft 26.3** com **Fabric Loader 0.19.5+** e **Fabric API 0.164.0+26.3**
-(Java 25). Coloque o jar em `mods/` junto com a Fabric API — nenhuma outra dependência é necessária.
+(Java 25). Coloque o jar em `mods/` junto com a Fabric API. No **cliente**, instale também o
+[**Quill UI**](https://github.com/NetoTTT/quill-ui) `0.2.0-alpha.2` (`quill-ui-0.2.0-alpha.2.jar`); servidores
+dedicados não precisam do Quill UI.
 
 ## Requisitos
 

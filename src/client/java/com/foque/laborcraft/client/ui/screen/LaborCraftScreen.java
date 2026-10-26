@@ -47,19 +47,20 @@ public abstract class LaborCraftScreen extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-		graphics.fill(panelX + 12, panelY + 14, panelX + 15, panelY + 32, LcTheme.ACCENT);
+		LcRender.header(graphics, panelX, panelY, panelWidth, 48);
+		graphics.fill(panelX + 12, panelY + 14, panelX + 15, panelY + 34, LcTheme.ACCENT);
 		graphics.text(font, title, panelX + 22, panelY + 14, LcTheme.TITLE);
-		graphics.text(font, subtitle(), panelX + 22, panelY + 29, LcTheme.MUTED);
-		LcRender.divider(graphics, panelX + 20, panelY + 47, panelWidth - 40);
+		graphics.text(font, subtitle(), panelX + 22, panelY + 29, LcTheme.TEXT_SOFT);
 
 		super.extractRenderState(graphics, mouseX, mouseY, delta);
 
+		LcRender.divider(graphics, panelX + 20, panelY + panelHeight - 28, panelWidth - 40);
 		graphics.centeredText(
 				font,
 				Component.translatable("laborcraft.ui.footer"),
 				panelX + panelWidth / 2,
 				panelY + panelHeight - 16,
-				LcTheme.MUTED
+				LcTheme.MUTED_DARK
 		);
 	}
 

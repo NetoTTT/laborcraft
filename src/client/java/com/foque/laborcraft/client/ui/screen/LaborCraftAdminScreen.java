@@ -1,6 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
+import com.foque.laborcraft.client.ui.LcRender;
 import com.foque.laborcraft.client.ui.LcTheme;
 import com.foque.laborcraft.client.ui.LcTooltips;
 import com.foque.laborcraft.client.ui.chat.LcValuePrompt;
@@ -667,6 +668,17 @@ public final class LaborCraftAdminScreen extends LaborCraftScreen {
 		super.extractBackground(graphics, mouseX, mouseY, delta);
 		int x = panelX + 22;
 		int width = panelWidth() - 44;
+
+		LcRender.tabStrip(graphics, x - 4, panelY + 50, width + 8, 28);
+		if (tab == Tab.SYSTEM) {
+			LcRender.section(graphics, x - 6, panelY + 82, width + 12, 230);
+		} else {
+			int left = width / 2 - 8;
+			int rightX = x + left + 16;
+			int right = width - left - 16;
+			LcRender.section(graphics, x - 6, panelY + 82, left + 12, 230);
+			LcRender.section(graphics, rightX - 6, panelY + 82, right + 12, 230);
+		}
 
 		if (tab == Tab.SALARY) {
 			int left = width / 2 - 8;

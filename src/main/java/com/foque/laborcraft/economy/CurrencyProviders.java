@@ -44,5 +44,6 @@ public final class CurrencyProviders {
 	public static void bootstrap() {
 		LedgerCurrency.get().load();
 		register(LedgerCurrency.get());
+		register(MineLabCurrency.get());
 	}
 }
