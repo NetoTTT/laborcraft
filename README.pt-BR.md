@@ -133,6 +133,7 @@ docs/                         desenho, decisões e roadmap
 | [docs/04-ROADMAP.md](docs/04-ROADMAP.md) | marcos M0–M5 e política de portabilidade |
 | [docs/05-DECISOES.md](docs/05-DECISOES.md) | decisões abertas e ADRs |
 | [docs/06-COMPATIBILIDADE.md](docs/06-COMPATIBILIDADE.md) | moedas, tags, datapacks, mods de terceiros |
+| [docs/RELEASING.md](docs/RELEASING.md) | estrutura padrão das notas de release em inglês |
 
 ## Licença
 

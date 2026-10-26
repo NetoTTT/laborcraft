@@ -137,6 +137,7 @@ The design docs are currently in Portuguese and will be translated over time.
 | [docs/04-ROADMAP.md](docs/04-ROADMAP.md) | milestones M0–M5 and portability policy |
 | [docs/05-DECISOES.md](docs/05-DECISOES.md) | open decisions and ADRs |
 | [docs/06-COMPATIBILIDADE.md](docs/06-COMPATIBILIDADE.md) | currencies, tags, datapacks, third-party mods |
+| [docs/RELEASING.md](docs/RELEASING.md) | standard English release-note structure |
 
 ## License
 
