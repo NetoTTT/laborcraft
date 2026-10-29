@@ -18,7 +18,7 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.network.chat.Component;
 
 /** Server-authoritative admin panel: salary table, billing policy and system actions. */
-public final class LaborCraftAdminScreen extends LaborCraftScreen {
+public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen {
 	private enum Tab {
 		SALARY,
 		BILLING,

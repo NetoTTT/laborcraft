@@ -29,7 +29,7 @@ import net.minecraft.world.item.Items;
  * Tela do Posto de Trabalho. Aba Trabalho: empregados do jogador e a vaga do posto com as acoes.
  * Aba Config: modo de area (raio livre ou zona) — o desenho do mapa entra depois.
  */
-public final class LaborCraftStationScreen extends LaborCraftScreen {
+public final class LaborCraftStationScreen extends com.quillui.screen.QuillScreen {
 	public enum Tab {
 		WORK,
 		CONFIG,

@@ -27,7 +27,7 @@ import net.minecraft.world.item.ItemStack;
  * two panels. Stacks with more than one item open a quantity prompt. Every transfer is a command,
  * so the server stays authoritative.
  */
-public final class LaborCraftWorkerInventoryScreen extends LaborCraftScreen {
+public final class LaborCraftWorkerInventoryScreen extends com.quillui.screen.QuillScreen {
 	private static final int SLOT = 32;
 	private static final int STEP = 34;
 	private static final int TOOL_SLOT = 9;
