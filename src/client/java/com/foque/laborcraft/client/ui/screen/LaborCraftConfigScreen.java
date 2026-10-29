@@ -1,18 +1,23 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
+
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
-import com.foque.laborcraft.client.ui.LcRender;
-import com.foque.laborcraft.client.ui.LcTheme;
-import com.foque.laborcraft.client.ui.LcTooltips;
-import com.foque.laborcraft.client.ui.widget.LcButton;
 import com.foque.laborcraft.command.LaborCraftCommands;
+import com.quillui.layout.QuillFlexBox;
+import com.quillui.render.QuillTooltips;
+import com.quillui.screen.QuillScreen;
+import com.quillui.theme.QuillSpacing;
+import com.quillui.widget.QuillButton;
+import com.quillui.widget.QuillCardBox;
+import com.quillui.widget.QuillNodes;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
-public final class LaborCraftConfigScreen extends LaborCraftScreen {
+/** Language and client preferences. Rebuilt with the measured Quill API. */
+public final class LaborCraftConfigScreen extends QuillScreen {
 	public LaborCraftConfigScreen() {
-		super(Component.translatable("laborcraft.ui.config.title"), 420, 250);
+		super(Component.translatable("laborcraft.ui.config.title"), 420, 260);
 	}
 
 	@Override
@@ -22,106 +27,78 @@ public final class LaborCraftConfigScreen extends LaborCraftScreen {
 
 	@Override
 	protected void buildContent() {
-		int x = panelX + 22;
-		int y = panelY + 64;
-		int width = panelWidth() - 44;
-		int gap = 8;
-		int half = (width - 24 - gap) / 2;
-
 		String current = Minecraft.getInstance().getLanguageManager().getSelected();
 		boolean portuguese = current.startsWith("pt");
 		boolean english = current.startsWith("en");
 
-		LcButton pt = new LcButton(
-				x + 12,
-				y + 58,
-				half,
-				26,
+		QuillFlexBox languages = QuillNodes.row(QuillSpacing.SPACE_2);
+		languages.add(QuillNodes.flexible(control(languageButton(
 				Component.translatable("laborcraft.ui.config.language.pt"),
-				LcButton.Variant.SECONDARY,
-				() -> LaborCraftUiActions.run(LaborCraftCommands.LANGUAGE_PT_BR)
-		);
-		pt.selected(portuguese);
-		pt.tip(LcTooltips.of(
-				Component.translatable("laborcraft.ui.config.language.pt"),
-				Component.translatable("laborcraft.ui.config.language.desc"),
-				"/" + LaborCraftCommands.LANGUAGE_PT_BR
-		));
-		addRenderableWidget(pt);
+				portuguese,
+				LaborCraftCommands.LANGUAGE_PT_BR
+		))));
+		languages.add(QuillNodes.flexible(control(languageButton(
+				Component.translatable("laborcraft.ui.config.language.en"),
+				english,
+				LaborCraftCommands.LANGUAGE_EN_US
+		))));
 
-		LcButton en = new LcButton(
-				x + 12 + half + gap,
-				y + 58,
-				half,
+		QuillFlexBox body = QuillNodes.column(QuillSpacing.SPACE_2);
+		body.add(text(
+				Component.translatable("laborcraft.ui.config.language.desc"),
+				MUTED
+		));
+		body.add(languages);
+
+		QuillFlexBox actions = QuillNodes.row(QuillSpacing.SPACE_2);
+		actions.add(QuillNodes.widget(backButton(), 90, 24));
+		actions.add(QuillNodes.flexible(QuillNodes.spacer()));
+
+		QuillFlexBox root = QuillNodes.column(QuillSpacing.SPACE_3);
+		root.add(new QuillCardBox(
+				Component.translatable("laborcraft.ui.config.language"),
+				body
+		));
+		root.add(actions);
+
+		setContent(root);
+		addRenderableWidget(closeButton(this::onClose));
+	}
+
+	private QuillButton languageButton(Component label, boolean selected, String command) {
+		QuillButton button = new QuillButton(
+				0,
+				0,
+				120,
 				26,
-				Component.translatable("laborcraft.ui.config.language.en"),
-				LcButton.Variant.SECONDARY,
-				() -> LaborCraftUiActions.run(LaborCraftCommands.LANGUAGE_EN_US)
+				label,
+				QuillButton.Variant.SECONDARY,
+				() -> LaborCraftUiActions.run(command)
 		);
-		en.selected(english);
-		en.tip(LcTooltips.of(
-				Component.translatable("laborcraft.ui.config.language.en"),
+		button.selected(selected);
+		button.tip(QuillTooltips.of(
+				label,
 				Component.translatable("laborcraft.ui.config.language.desc"),
-				"/" + LaborCraftCommands.LANGUAGE_EN_US
+				"/" + command
 		));
-		addRenderableWidget(en);
+		return button;
+	}
 
-		LcButton back = new LcButton(
-				x,
-				panelY + panelHeight() - 46,
+	private QuillButton backButton() {
+		QuillButton back = new QuillButton(
+				0,
+				0,
 				90,
 				24,
 				Component.translatable("laborcraft.ui.config.back"),
-				LcButton.Variant.GHOST,
+				QuillButton.Variant.GHOST,
 				() -> LaborCraftUiActions.run(LaborCraftCommands.UI)
 		);
-		back.tip(LcTooltips.of(
+		back.tip(QuillTooltips.of(
 				Component.translatable("laborcraft.ui.config.back"),
 				Component.translatable("laborcraft.ui.config.back.tip"),
 				"/" + LaborCraftCommands.UI
 		));
-		addRenderableWidget(back);
-
-		LcButton close = new LcButton(
-				panelX + panelWidth() - 30,
-				panelY + 8,
-				20,
-				20,
-				Component.literal("X"),
-				LcButton.Variant.GHOST,
-				this::onClose
-		);
-		close.tip(LcTooltips.of(
-				Component.translatable("laborcraft.ui.config.close"),
-				Component.translatable("laborcraft.ui.config.close.tip"),
-				null
-		));
-		addRenderableWidget(close);
-	}
-
-	@Override
-	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-		super.extractBackground(graphics, mouseX, mouseY, delta);
-
-		int x = panelX + 22;
-		int y = panelY + 64;
-		int width = panelWidth() - 44;
-		graphics.fill(x, y, x + width, y + 96, 0x401B232D);
-		LcRender.border(graphics, x, y, width, 96, LcTheme.DIVIDER);
-		graphics.text(
-				font,
-				Component.translatable("laborcraft.ui.config.language"),
-				x + 12,
-				y + 10,
-				LcTheme.TEXT
-		);
-		graphics.textWithWordWrap(
-				font,
-				Component.translatable("laborcraft.ui.config.language.desc"),
-				x + 12,
-				y + 24,
-				width - 24,
-				LcTheme.MUTED
-		);
+		return back;
 	}
 }
