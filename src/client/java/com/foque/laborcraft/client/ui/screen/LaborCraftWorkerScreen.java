@@ -13,7 +13,9 @@ import java.util.Locale;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
-public abstract class LaborCraftWorkerScreen extends LaborCraftScreen {
+import com.quillui.screen.QuillScreen;
+
+public abstract class LaborCraftWorkerScreen extends QuillScreen {
 	protected final OpenWorkerPayload worker;
 
 	protected LaborCraftWorkerScreen(OpenWorkerPayload worker, Component title, int panelWidth, int panelHeight) {
@@ -114,23 +116,5 @@ public abstract class LaborCraftWorkerScreen extends LaborCraftScreen {
 		graphics.fill(center - 7, y + 9, center + 7, y + 23, 0xFF445367);
 		graphics.fill(center - 14, y + 27, center + 14, y + size - 8, 0xFF2E3947);
 		graphics.fill(center - 14, y + size - 8, center + 14, y + size - 5, LcTheme.ACCENT);
-	}
-
-	protected LcButton closeButton(Runnable action) {
-		LcButton close = new LcButton(
-				panelX + panelWidth() - 30,
-				panelY + 8,
-				20,
-				20,
-				Component.literal("X"),
-				LcButton.Variant.GHOST,
-				action
-		);
-		close.tip(LcTooltips.of(
-				Component.translatable("laborcraft.ui.worker.close"),
-				Component.translatable("laborcraft.ui.worker.close.tip"),
-				null
-		));
-		return close;
 	}
 }

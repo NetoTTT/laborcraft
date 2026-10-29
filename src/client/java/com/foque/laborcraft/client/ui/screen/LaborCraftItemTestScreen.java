@@ -1,22 +1,24 @@
 package com.foque.laborcraft.client.ui.screen;
 
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
-import com.foque.laborcraft.client.ui.LcTheme;
-import com.foque.laborcraft.client.ui.LcTooltips;
 import com.foque.laborcraft.client.ui.component.LcPagination;
-import com.foque.laborcraft.client.ui.widget.LcButton;
 import com.foque.laborcraft.client.ui.widget.LcItemGrid;
 import com.foque.laborcraft.command.LaborCraftCommands;
+import com.quillui.layout.QuillFlexBox;
+import com.quillui.render.QuillTooltips;
+import com.quillui.screen.QuillScreen;
+import com.quillui.theme.QuillSpacing;
+import com.quillui.widget.QuillButton;
+import com.quillui.widget.QuillNodes;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
-public final class LaborCraftItemTestScreen extends LaborCraftScreen {
+public final class LaborCraftItemTestScreen extends QuillScreen {
 	private static final int PAGE_SIZE = 50;
 	private static final int COLUMNS = 10;
 	private static final int ROWS = 5;
@@ -24,9 +26,6 @@ public final class LaborCraftItemTestScreen extends LaborCraftScreen {
 	private static final int GAP = 4;
 
 	private final LcPagination<ItemEntry> pagination;
-	private LcItemGrid<ItemEntry> grid;
-	private LcButton previousButton;
-	private LcButton nextButton;
 
 	public LaborCraftItemTestScreen() {
 		this(0);
@@ -45,13 +44,9 @@ public final class LaborCraftItemTestScreen extends LaborCraftScreen {
 
 	@Override
 	protected void buildContent() {
-		int gridWidth = COLUMNS * CELL + (COLUMNS - 1) * GAP;
-		int gridX = panelX + (panelWidth() - gridWidth) / 2;
-		int gridY = panelY + 68;
-
-		grid = new LcItemGrid<>(
-				gridX,
-				gridY,
+		LcItemGrid<ItemEntry> grid = new LcItemGrid<>(
+				0,
+				0,
 				COLUMNS,
 				ROWS,
 				CELL,
@@ -60,110 +55,86 @@ public final class LaborCraftItemTestScreen extends LaborCraftScreen {
 				ItemEntry::amount,
 				this::openItem
 		);
-		addRenderableWidget(grid);
+		grid.setEntries(pagination.pageItems());
 
-		previousButton = new LcButton(
-				panelX + 22,
-				panelY + 232,
-				80,
-				24,
+		QuillFlexBox centered = QuillNodes.row(0);
+		centered.add(QuillNodes.flexible(QuillNodes.spacer()));
+		centered.add(QuillNodes.sized(
+				COLUMNS * CELL + (COLUMNS - 1) * GAP,
+				ROWS * CELL + (ROWS - 1) * GAP,
+				control(grid)
+		));
+		centered.add(QuillNodes.flexible(QuillNodes.spacer()));
+
+		QuillFlexBox pageRow = QuillNodes.row(0);
+		pageRow.add(QuillNodes.flexible(QuillNodes.spacer()));
+		pageRow.add(text(Component.translatable(
+				"laborcraft.test.page",
+				pagination.pageIndex() + 1,
+				pagination.pageCount()
+		)));
+		pageRow.add(QuillNodes.flexible(QuillNodes.spacer()));
+
+		QuillFlexBox root = QuillNodes.column(QuillSpacing.SPACE_2);
+		root.add(centered);
+		root.add(pageRow);
+		root.add(actions());
+		setContent(root);
+		addRenderableWidget(closeButton(this::onClose));
+	}
+
+	private QuillFlexBox actions() {
+		QuillFlexBox row = QuillNodes.row(QuillSpacing.SPACE_2);
+
+		QuillButton previous = new QuillButton(
+				0, 0, 80, 24,
 				Component.literal("<"),
-				LcButton.Variant.SECONDARY,
-				this::previousPage
-		);
-		previousButton.tip(LcTooltips.of(
+				QuillButton.Variant.SECONDARY,
+				() -> {
+					if (pagination.previous()) {
+						refreshContent();
+					}
+				}
+		).enabled(pagination.hasPrevious());
+		previous.tip(QuillTooltips.of(
 				Component.translatable("laborcraft.test.previous"),
 				Component.translatable("laborcraft.test.previous.tip"),
 				null
 		));
-		addRenderableWidget(previousButton);
+		row.add(QuillNodes.widget(previous, 80, 24));
 
-		nextButton = new LcButton(
-				panelX + panelWidth() - 102,
-				panelY + 232,
-				80,
-				24,
-				Component.literal(">"),
-				LcButton.Variant.SECONDARY,
-				this::nextPage
-		);
-		nextButton.tip(LcTooltips.of(
-				Component.translatable("laborcraft.test.next"),
-				Component.translatable("laborcraft.test.next.tip"),
-				null
-		));
-		addRenderableWidget(nextButton);
-
-		LcButton admin = new LcButton(
-				panelX + panelWidth() - 100,
-				panelY + 8,
-				64,
-				20,
+		QuillButton admin = new QuillButton(
+				0, 0, 64, 24,
 				Component.translatable("laborcraft.test.admin"),
-				LcButton.Variant.GHOST,
+				QuillButton.Variant.GHOST,
 				() -> LaborCraftUiActions.run(LaborCraftCommands.UI)
 		);
-		admin.tip(LcTooltips.of(
+		admin.tip(QuillTooltips.of(
 				Component.translatable("laborcraft.test.admin"),
 				Component.translatable("laborcraft.test.admin.tip"),
 				"/" + LaborCraftCommands.UI
 		));
-		addRenderableWidget(admin);
+		row.add(QuillNodes.flexible(QuillNodes.spacer()));
+		row.add(QuillNodes.widget(admin, 64, 24));
 
-		LcButton close = new LcButton(
-				panelX + panelWidth() - 30,
-				panelY + 8,
-				20,
-				20,
-				Component.literal("X"),
-				LcButton.Variant.GHOST,
-				this::onClose
-		);
-		close.tip(LcTooltips.of(
-				Component.translatable("laborcraft.test.close"),
-				Component.translatable("laborcraft.test.close.tip"),
+		QuillButton next = new QuillButton(
+				0, 0, 80, 24,
+				Component.literal(">"),
+				QuillButton.Variant.SECONDARY,
+				() -> {
+					if (pagination.next()) {
+						refreshContent();
+					}
+				}
+		).enabled(pagination.hasNext());
+		next.tip(QuillTooltips.of(
+				Component.translatable("laborcraft.test.next"),
+				Component.translatable("laborcraft.test.next.tip"),
 				null
 		));
-		addRenderableWidget(close);
-
-		refreshPage();
+		row.add(QuillNodes.widget(next, 80, 24));
+		return row;
 	}
-
-	@Override
-	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-		super.extractBackground(graphics, mouseX, mouseY, delta);
-
-		graphics.centeredText(
-				font,
-				Component.translatable(
-						"laborcraft.test.page",
-						pagination.pageIndex() + 1,
-						pagination.pageCount()
-				),
-				panelX + panelWidth() / 2,
-				panelY + 220,
-				LcTheme.MUTED
-		);
-	}
-
-	private void previousPage() {
-		if (pagination.previous()) {
-			refreshPage();
-		}
-	}
-
-	private void nextPage() {
-		if (pagination.next()) {
-			refreshPage();
-		}
-	}
-
-	private void refreshPage() {
-		grid.setEntries(pagination.pageItems());
-		previousButton.active = pagination.hasPrevious();
-		nextButton.active = pagination.hasNext();
-	}
-
 	private void openItem(ItemEntry entry) {
 		Minecraft client = Minecraft.getInstance();
 		int page = pagination.pageIndex();
