@@ -1,24 +1,33 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import static com.quillui.theme.QuillThemeData.ColorRole.ACCENT;
+import static com.quillui.theme.QuillThemeData.ColorRole.DANGER;
+import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
+
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
-import com.foque.laborcraft.client.ui.LcTheme;
-import com.foque.laborcraft.client.ui.LcTooltips;
-import com.foque.laborcraft.client.ui.widget.LcButton;
 import com.foque.laborcraft.command.LaborCraftCommands;
 import com.foque.laborcraft.network.OpenHomeRegisterPayload;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.EditBox;
+import com.quillui.layout.QuillCrossAxisAlignment;
+import com.quillui.layout.QuillFlexBox;
+import com.quillui.render.QuillTooltips;
+import com.quillui.screen.QuillScreen;
+import com.quillui.theme.QuillSpacing;
+import com.quillui.theme.QuillThemeData;
+import com.quillui.widget.QuillButton;
+import com.quillui.widget.QuillCardBox;
+import com.quillui.widget.QuillNodes;
+import com.quillui.widget.QuillTextField;
 import net.minecraft.network.chat.Component;
 
-/** Modal shown after sneak-clicking a bed; registers, renames or releases the house. */
-public final class LaborCraftHomeRegisterScreen extends LaborCraftScreen {
+/** Register, rename or release a house after sneak-clicking a bed. */
+public final class LaborCraftHomeRegisterScreen extends QuillScreen {
 	private final OpenHomeRegisterPayload home;
-	private EditBox nameBox;
-	private LcButton unclaimButton;
+	private QuillTextField nameBox;
+	private QuillButton unclaimButton;
 	private boolean confirmUnclaim;
 
 	public LaborCraftHomeRegisterScreen(OpenHomeRegisterPayload home) {
-		super(Component.translatable("laborcraft.ui.home.register.title"), 440, 240);
+		super(Component.translatable("laborcraft.ui.home.register.title"), 440, 260);
 		this.home = home;
 	}
 
@@ -41,187 +50,158 @@ public final class LaborCraftHomeRegisterScreen extends LaborCraftScreen {
 
 	@Override
 	protected void buildContent() {
-		int x = panelX + 22;
-		int width = panelWidth() - 44;
-		int buttonsY = panelY + 158;
+		QuillFlexBox root = QuillNodes.column(QuillSpacing.SPACE_2);
+		root.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
+		root.add(new QuillCardBox(null, info()));
 
-		if (home.canRegister()) {
-			addNameBox(x, width);
-			LcButton confirm = new LcButton(
-					x,
-					buttonsY,
-					170,
-					24,
-					Component.translatable("laborcraft.ui.home.register.confirm"),
-					LcButton.Variant.PRIMARY,
-					this::confirm
+		if (home.canRegister() || home.alreadyOwner()) {
+			root.add(text(Component.translatable("laborcraft.ui.home.register.name")));
+			nameBox = QuillTextField.of(
+					font,
+					Component.translatable("laborcraft.ui.home.register.name.hint")
 			);
-			addRenderableWidget(confirm);
-
-			LcButton cancel = new LcButton(
-					x + 178,
-					buttonsY,
-					110,
-					24,
-					Component.translatable("laborcraft.ui.home.register.cancel"),
-					LcButton.Variant.GHOST,
-					this::onClose
-			);
-			addRenderableWidget(cancel);
-		} else if (home.alreadyOwner()) {
-			addNameBox(x, width);
-			LcButton rename = new LcButton(
-					x,
-					buttonsY,
-					100,
-					24,
-					Component.translatable("laborcraft.ui.home.register.rename"),
-					LcButton.Variant.PRIMARY,
-					this::rename
-			);
-			rename.tip(LcTooltips.of(
-					Component.translatable("laborcraft.ui.home.register.rename"),
-					Component.translatable("laborcraft.ui.home.register.rename.tip"),
-					"/" + LaborCraftCommands.HOME_RENAME
-			));
-			addRenderableWidget(rename);
-
-			unclaimButton = new LcButton(
-					x + 108,
-					buttonsY,
-					160,
-					24,
-					Component.translatable("laborcraft.ui.home.register.unclaim"),
-					LcButton.Variant.DANGER,
-					this::unclaim
-			);
-			unclaimButton.tip(LcTooltips.of(
-					Component.translatable("laborcraft.ui.home.register.unclaim"),
-					Component.translatable("laborcraft.ui.home.register.unclaim.tip"),
-					"/" + LaborCraftCommands.HOME_REMOVE
-			));
-			addRenderableWidget(unclaimButton);
-
-			LcButton close = new LcButton(
-					x + 276,
-					buttonsY,
-					80,
-					24,
-					Component.translatable("laborcraft.ui.worker.close"),
-					LcButton.Variant.GHOST,
-					this::onClose
-			);
-			addRenderableWidget(close);
-		} else {
-			LcButton close = new LcButton(
-					x + width - 100,
-					buttonsY,
-					100,
-					24,
-					Component.translatable("laborcraft.ui.worker.close"),
-					LcButton.Variant.GHOST,
-					this::onClose
-			);
-			addRenderableWidget(close);
+			nameBox.setMaxLength(32);
+			nameBox.setValue(home.suggestedName());
+			nameBox.setHint(Component.translatable("laborcraft.ui.home.register.name.hint"));
+			root.add(control(nameBox, 20));
+			root.add(text(Component.translatable(
+					home.alreadyOwner()
+							? "laborcraft.ui.home.register.hint.manage"
+							: "laborcraft.ui.home.register.hint"
+			), MUTED));
 		}
+
+		root.add(actions());
+		setContent(root);
+
+		if (nameBox != null) {
+			setInitialFocus(nameBox);
+		}
+		addRenderableWidget(closeButton(this::onClose));
 	}
 
-	private void addNameBox(int x, int width) {
-		nameBox = new EditBox(
-				font,
-				x,
-				panelY + 130,
-				width,
-				20,
-				Component.translatable("laborcraft.ui.home.register.name")
-		);
-		nameBox.setMaxLength(32);
-		nameBox.setValue(home.suggestedName());
-		nameBox.setHint(Component.translatable("laborcraft.ui.home.register.name.hint"));
-		addRenderableWidget(nameBox);
-		setInitialFocus(nameBox);
-	}
-
-	@Override
-	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-		super.extractBackground(graphics, mouseX, mouseY, delta);
-
-		int x = panelX + 22;
-		graphics.text(
-				font,
-				Component.translatable("laborcraft.ui.home.register.bed", home.x(), home.y(), home.z()),
-				x,
-				panelY + 64,
-				LcTheme.MUTED
-		);
-		graphics.text(
-				font,
-				Component.translatable(
-						"laborcraft.ui.home.register.size",
-						home.width(),
-						home.depth(),
-						home.doors(),
-						home.beds(),
-						home.slots(),
-						home.capacity()
-				),
-				x,
-				panelY + 78,
-				LcTheme.TEXT
-		);
+	private QuillFlexBox info() {
+		QuillFlexBox column = QuillNodes.column(2);
+		column.add(text(Component.translatable(
+				"laborcraft.ui.home.register.bed",
+				home.x(),
+				home.y(),
+				home.z()
+		), MUTED));
+		column.add(text(Component.translatable(
+				"laborcraft.ui.home.register.size",
+				home.width(),
+				home.depth(),
+				home.doors(),
+				home.beds(),
+				home.slots(),
+				home.capacity()
+		)));
 
 		Component status;
-		int statusColor;
+		QuillThemeData.ColorRole role;
 		if (!home.valid()) {
 			status = Component.translatable(
 					"laborcraft.ui.home.register.reason",
-					Component.translatable("laborcraft.housing.reason." + (home.failure().isBlank() ? "invalid" : home.failure()))
+					Component.translatable("laborcraft.housing.reason."
+							+ (home.failure().isBlank() ? "invalid" : home.failure()))
 			);
-			statusColor = LcTheme.DANGER;
-		} else if (home.canRegister()) {
+			role = DANGER;
+		}
+		else if (home.canRegister()) {
 			status = home.claimed()
 					? Component.translatable("laborcraft.ui.home.register.repair")
 					: Component.translatable("laborcraft.ui.home.register.ready");
-			statusColor = LcTheme.ACCENT;
-		} else if (home.alreadyOwner()) {
+			role = ACCENT;
+		}
+		else if (home.alreadyOwner()) {
 			status = Component.translatable("laborcraft.ui.home.register.already", home.existingName());
-			statusColor = LcTheme.MUTED;
-		} else {
+			role = MUTED;
+		}
+		else {
 			status = Component.translatable(
 					"laborcraft.ui.home.register.claimed",
 					home.ownerName(),
 					home.existingName()
 			);
-			statusColor = LcTheme.DANGER;
+			role = DANGER;
 		}
-		graphics.text(font, status, x, panelY + 94, statusColor);
+		column.add(text(status, role));
+		return column;
+	}
 
-		if (home.canRegister() || home.alreadyOwner()) {
-			graphics.text(
-					font,
-					Component.translatable("laborcraft.ui.home.register.name"),
-					x,
-					panelY + 116,
-					LcTheme.TEXT
-			);
-			graphics.text(
-					font,
-					Component.translatable(
-							home.alreadyOwner()
-									? "laborcraft.ui.home.register.hint.manage"
-									: "laborcraft.ui.home.register.hint"
-					),
-					x,
-					panelY + 188,
-					LcTheme.MUTED
-			);
+	private QuillFlexBox actions() {
+		QuillFlexBox row = QuillNodes.row(QuillSpacing.SPACE_2);
+
+		if (home.canRegister()) {
+			row.add(QuillNodes.widget(primary(
+					"laborcraft.ui.home.register.confirm",
+					this::confirm
+			), 170, 24));
+			row.add(QuillNodes.widget(ghost(
+					"laborcraft.ui.home.register.cancel",
+					this::onClose
+			), 110, 24));
+			return row;
 		}
+
+		if (home.alreadyOwner()) {
+			QuillButton rename = primary("laborcraft.ui.home.register.rename", this::rename);
+			rename.tip(QuillTooltips.of(
+					Component.translatable("laborcraft.ui.home.register.rename"),
+					Component.translatable("laborcraft.ui.home.register.rename.tip"),
+					"/" + LaborCraftCommands.HOME_RENAME
+			));
+			row.add(QuillNodes.widget(rename, 100, 24));
+
+			unclaimButton = new QuillButton(
+					0, 0, 160, 24,
+					Component.translatable("laborcraft.ui.home.register.unclaim"),
+					QuillButton.Variant.DANGER,
+					this::unclaim
+			);
+			unclaimButton.tip(QuillTooltips.of(
+					Component.translatable("laborcraft.ui.home.register.unclaim"),
+					Component.translatable("laborcraft.ui.home.register.unclaim.tip"),
+					"/" + LaborCraftCommands.HOME_REMOVE
+			));
+			row.add(QuillNodes.widget(unclaimButton, 160, 24));
+
+			row.add(QuillNodes.widget(ghost(
+					"laborcraft.ui.worker.close",
+					this::onClose
+			), 80, 24));
+			return row;
+		}
+
+		row.add(QuillNodes.flexible(QuillNodes.spacer()));
+		row.add(QuillNodes.widget(ghost("laborcraft.ui.worker.close", this::onClose), 100, 24));
+		return row;
+	}
+
+	private QuillButton primary(String key, Runnable action) {
+		return new QuillButton(
+				0, 0, 120, 24,
+				Component.translatable(key),
+				QuillButton.Variant.PRIMARY,
+				action
+		);
+	}
+
+	private QuillButton ghost(String key, Runnable action) {
+		return new QuillButton(
+				0, 0, 120, 24,
+				Component.translatable(key),
+				QuillButton.Variant.GHOST,
+				action
+		);
 	}
 
 	private void confirm() {
 		String name = cleanName();
 		LaborCraftUiActions.run(
-				LaborCraftCommands.HOME_SET + " " + home.x() + " " + home.y() + " " + home.z() + " " + name
+				LaborCraftCommands.HOME_SET + " "
+						+ home.x() + " " + home.y() + " " + home.z() + " " + name
 		);
 		onClose();
 	}
@@ -229,7 +209,8 @@ public final class LaborCraftHomeRegisterScreen extends LaborCraftScreen {
 	private void rename() {
 		String name = cleanName();
 		LaborCraftUiActions.run(
-				LaborCraftCommands.HOME_RENAME + " " + home.x() + " " + home.y() + " " + home.z() + " " + name
+				LaborCraftCommands.HOME_RENAME + " "
+						+ home.x() + " " + home.y() + " " + home.z() + " " + name
 		);
 		onClose();
 	}
@@ -237,8 +218,10 @@ public final class LaborCraftHomeRegisterScreen extends LaborCraftScreen {
 	private void unclaim() {
 		if (!confirmUnclaim) {
 			confirmUnclaim = true;
-			unclaimButton.setMessage(Component.translatable("laborcraft.ui.home.register.unclaim.confirm"));
-			unclaimButton.tip(LcTooltips.of(
+			unclaimButton.setMessage(Component.translatable(
+					"laborcraft.ui.home.register.unclaim.confirm"
+			));
+			unclaimButton.tip(QuillTooltips.of(
 					Component.translatable("laborcraft.ui.home.register.unclaim.confirm"),
 					Component.translatable("laborcraft.ui.home.register.unclaim.confirm.tip"),
 					null
@@ -247,7 +230,8 @@ public final class LaborCraftHomeRegisterScreen extends LaborCraftScreen {
 		}
 
 		LaborCraftUiActions.run(
-				LaborCraftCommands.HOME_REMOVE + " " + home.x() + " " + home.y() + " " + home.z()
+				LaborCraftCommands.HOME_REMOVE + " "
+						+ home.x() + " " + home.y() + " " + home.z()
 		);
 		onClose();
 	}

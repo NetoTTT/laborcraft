@@ -1,20 +1,29 @@
 package com.foque.laborcraft.client.ui.screen;
 
-import com.foque.laborcraft.client.ui.LcRender;
-import com.foque.laborcraft.client.ui.LcTheme;
+import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
+
 import com.foque.laborcraft.client.ui.LcTooltips;
-import com.foque.laborcraft.client.ui.widget.LcButton;
+import com.foque.laborcraft.client.ui.widget.ItemStackWidget;
+import com.quillui.layout.QuillCrossAxisAlignment;
+import com.quillui.layout.QuillFlexBox;
+import com.quillui.layout.QuillLayoutNode;
+import com.quillui.render.QuillTooltips;
+import com.quillui.screen.QuillScreen;
+import com.quillui.theme.QuillSpacing;
+import com.quillui.widget.QuillButton;
+import com.quillui.widget.QuillCardBox;
+import com.quillui.widget.QuillNodes;
 import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 
-public final class LaborCraftItemActionScreen extends LaborCraftScreen {
+/** Item action sheet with quantity controls and option buttons. */
+public final class LaborCraftItemActionScreen extends QuillScreen {
 	public record Option(
 			Component label,
 			Component description,
@@ -40,9 +49,6 @@ public final class LaborCraftItemActionScreen extends LaborCraftScreen {
 	private final Runnable onBack;
 	private final long maxQuantity;
 	private long quantity = 1L;
-	private LcButton minus;
-	private LcButton plus;
-	private LcButton all;
 
 	public LaborCraftItemActionScreen(
 			ItemStack stack,
@@ -75,159 +81,124 @@ public final class LaborCraftItemActionScreen extends LaborCraftScreen {
 
 	@Override
 	protected void buildContent() {
-		int x = panelX + 22;
-		int width = panelWidth() - 44;
-		int quantityY = panelY + 132;
+		QuillFlexBox root = QuillNodes.column(QuillSpacing.SPACE_2);
+		root.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
+		root.add(itemCard());
+		root.add(quantityRow());
 
-		minus = new LcButton(
-				x + 200,
-				quantityY,
-				22,
-				22,
-				Component.literal("-"),
-				LcButton.Variant.SECONDARY,
-				() -> changeQuantity(-1)
-		);
-		minus.tip(LcTooltips.of(
-				Component.translatable("laborcraft.test.item.minus"),
-				Component.translatable("laborcraft.test.item.quantity.tip"),
-				null
-		));
-		addRenderableWidget(minus);
-
-		plus = new LcButton(
-				x + 286,
-				quantityY,
-				22,
-				22,
-				Component.literal("+"),
-				LcButton.Variant.SECONDARY,
-				() -> changeQuantity(1)
-		);
-		plus.tip(LcTooltips.of(
-				Component.translatable("laborcraft.test.item.plus"),
-				Component.translatable("laborcraft.test.item.quantity.tip"),
-				null
-		));
-		addRenderableWidget(plus);
-
-		all = new LcButton(
-				x + 314,
-				quantityY,
-				width - 314,
-				22,
-				Component.translatable("laborcraft.test.item.all"),
-				LcButton.Variant.SECONDARY,
-				() -> changeQuantity(maxQuantity)
-		);
-		all.tip(LcTooltips.of(
-				Component.translatable("laborcraft.test.item.all"),
-				Component.translatable("laborcraft.test.item.all.tip"),
-				null
-		));
-		addRenderableWidget(all);
-
-		int optionY = panelY + 162;
-		int visibleOptions = Math.min(options.size(), 3);
-		for (int index = 0; index < visibleOptions; index++) {
+		int visible = Math.min(options.size(), 3);
+		for (int index = 0; index < visible; index++) {
 			Option option = options.get(index);
-			LcButton button = new LcButton(
-					x,
-					optionY + index * 29,
-					width,
-					24,
+			QuillButton button = new QuillButton(
+					0, 0, 300, 24,
 					option.label(),
-					option.primary() ? LcButton.Variant.PRIMARY : LcButton.Variant.SECONDARY,
+					option.primary() ? QuillButton.Variant.PRIMARY : QuillButton.Variant.SECONDARY,
 					() -> option.action().accept(this)
 			);
 			if (option.sound() != null) {
 				button.clickSound(option.sound());
 			}
-			button.tip(LcTooltips.of(
+			button.tip(QuillTooltips.of(
 					option.label(),
 					option.description(),
 					option.command() == null ? null : "/" + option.command()
 			));
-			addRenderableWidget(button);
+			root.add(control(button, 24));
 		}
 
-		LcButton back = new LcButton(
-				x,
-				panelY + panelHeight() - 50,
-				90,
-				24,
+		root.add(backRow());
+		setContent(root);
+	}
+
+	private QuillLayoutNode itemCard() {
+		QuillFlexBox body = QuillNodes.row(QuillSpacing.SPACE_2);
+		body.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
+		body.add(QuillNodes.widget(new ItemStackWidget(stack, 16), 16, 16));
+
+		QuillFlexBox text = QuillNodes.column(2);
+		text.add(control(label(stack.getHoverName()).title()));
+		text.add(control(label(kindLabel).muted()));
+		body.add(QuillNodes.flexible(text));
+
+		if (maxQuantity > 1) {
+			body.add(text(Component.literal("x" + maxQuantity), MUTED));
+		}
+		return new QuillCardBox(null, body);
+	}
+
+	private QuillFlexBox quantityRow() {
+		QuillFlexBox row = QuillNodes.row(QuillSpacing.SPACE_2);
+		row.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
+		row.add(text(Component.translatable("laborcraft.test.item.quantity")));
+		row.add(QuillNodes.flexible(QuillNodes.spacer()));
+		row.add(QuillNodes.widget(quantityButton(
+				"-",
+				"laborcraft.test.item.minus",
+				-1
+		), 22, 22));
+		row.add(text(Component.literal(quantity + " / " + maxQuantity)));
+		row.add(QuillNodes.widget(quantityButton(
+				"+",
+				"laborcraft.test.item.plus",
+				1
+		), 22, 22));
+		row.add(QuillNodes.widget(allButton(), 92, 22));
+		return row;
+	}
+
+	private QuillButton quantityButton(String label, String tipKey, long delta) {
+		QuillButton button = new QuillButton(
+				0, 0, 22, 22,
+				Component.literal(label),
+				QuillButton.Variant.SECONDARY,
+				() -> changeQuantity(delta)
+		);
+		button.active = delta < 0 ? quantity > 1 : quantity < maxQuantity;
+		button.tip(LcTooltips.of(
+				Component.translatable(tipKey),
+				Component.translatable("laborcraft.test.item.quantity.tip"),
+				null
+		));
+		return button;
+	}
+
+	private QuillButton allButton() {
+		QuillButton button = new QuillButton(
+				0, 0, 92, 22,
+				Component.translatable("laborcraft.test.item.all"),
+				QuillButton.Variant.SECONDARY,
+				() -> changeQuantity(maxQuantity)
+		);
+		button.active = quantity < maxQuantity;
+		button.tip(LcTooltips.of(
+				Component.translatable("laborcraft.test.item.all"),
+				Component.translatable("laborcraft.test.item.all.tip"),
+				null
+		));
+		return button;
+	}
+
+	private QuillFlexBox backRow() {
+		QuillFlexBox row = QuillNodes.row(QuillSpacing.SPACE_2);
+		QuillButton back = new QuillButton(
+				0, 0, 90, 24,
 				Component.translatable("laborcraft.test.item.back"),
-				LcButton.Variant.GHOST,
+				QuillButton.Variant.GHOST,
 				this::back
 		);
-		back.tip(LcTooltips.of(
+		back.tip(QuillTooltips.of(
 				Component.translatable("laborcraft.test.item.back"),
 				Component.translatable("laborcraft.test.item.back.tip"),
 				null
 		));
-		addRenderableWidget(back);
-
-		LcButton close = new LcButton(
-				panelX + panelWidth() - 30,
-				panelY + 8,
-				20,
-				20,
-				Component.literal("X"),
-				LcButton.Variant.GHOST,
-				this::back
-		);
-		close.tip(LcTooltips.of(
-				Component.translatable("laborcraft.test.item.close"),
-				Component.translatable("laborcraft.test.item.close.tip"),
-				null
-		));
-		addRenderableWidget(close);
-
-		updateQuantityButtons();
+		row.add(QuillNodes.widget(back, 90, 24));
+		row.add(QuillNodes.flexible(QuillNodes.spacer()));
+		return row;
 	}
 
-	@Override
-	public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
-		super.extractBackground(graphics, mouseX, mouseY, delta);
-
-		int x = panelX + 22;
-		int y = panelY + 64;
-		int width = panelWidth() - 44;
-
-		graphics.fill(x, y, x + width, y + 60, 0x401B232D);
-		LcRender.border(graphics, x, y, width, 60, LcTheme.DIVIDER);
-		graphics.item(stack, x + 12, y + 22);
-		graphics.text(font, stack.getHoverName(), x + 38, y + 14, LcTheme.TITLE);
-		graphics.text(font, kindLabel, x + 38, y + 30, LcTheme.MUTED);
-
-		if (maxQuantity > 1) {
-			graphics.text(
-					font,
-					Component.literal("x" + maxQuantity),
-					x + width - 38,
-					y + 14,
-					LcTheme.MUTED
-			);
-		}
-
-		graphics.text(
-				font,
-				Component.translatable("laborcraft.test.item.quantity"),
-				x,
-				panelY + 138,
-				LcTheme.TEXT
-		);
-		graphics.centeredText(
-				font,
-				Component.literal(quantity + " / " + maxQuantity),
-				x + 260,
-				panelY + 138,
-				LcTheme.TITLE
-		);
-
-		if (mouseX >= x + 12 && mouseX < x + 28 && mouseY >= y + 22 && mouseY < y + 38) {
-			graphics.setTooltipForNextFrame(font, stack, mouseX, mouseY);
-		}
+	private void changeQuantity(long delta) {
+		quantity = Math.max(1, Math.min(quantity + delta, maxQuantity));
+		refreshContent();
 	}
 
 	@Override
@@ -249,20 +220,5 @@ public final class LaborCraftItemActionScreen extends LaborCraftScreen {
 						.append(Component.literal("[LaborCraft] ").withStyle(ChatFormatting.GOLD))
 						.append(message.copy().withStyle(ChatFormatting.GRAY))
 		);
-	}
-
-	private void changeQuantity(long delta) {
-		quantity = Math.max(1, Math.min(quantity + delta, maxQuantity));
-		updateQuantityButtons();
-	}
-
-	private void updateQuantityButtons() {
-		if (minus == null || plus == null || all == null) {
-			return;
-		}
-
-		minus.active = quantity > 1;
-		plus.active = quantity < maxQuantity;
-		all.active = quantity < maxQuantity;
 	}
 }
