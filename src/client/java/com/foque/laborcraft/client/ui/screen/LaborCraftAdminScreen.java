@@ -671,7 +671,7 @@ public final class LaborCraftAdminScreen extends LaborCraftScreen {
 
 		LcRender.tabStrip(graphics, x - 4, panelY + 50, width + 8, 28);
 		if (tab == Tab.SYSTEM) {
-			LcRender.section(graphics, x - 6, panelY + 82, width + 12, 230);
+			LcRender.section(graphics, x - 6, panelY + 82, width + 12, 250);
 		} else {
 			int left = width / 2 - 8;
 			int rightX = x + left + 16;
