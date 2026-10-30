@@ -12,6 +12,11 @@ import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.network.OpenAdminPayload;
 import com.foque.laborcraft.worker.WorkerRank;
 import com.foque.laborcraft.worker.WorkerRarity;
+import com.quillui.layout.QuillCrossAxisAlignment;
+import com.quillui.layout.QuillFlexBox;
+import com.quillui.layout.QuillRect;
+import com.quillui.widget.QuillNodes;
+import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
 import java.util.Locale;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;
@@ -419,25 +424,15 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 	}
 
 	private void buildSystem(int x, int width) {
-		int y = panelY + 88;
-		addRenderableWidget(systemButton(
-				x, y, width, "laborcraft.ui.admin.reload", LaborCraftCommands.ADMIN_RELOAD
-		));
-		addRenderableWidget(systemButton(
-				x, y + 30, width, "laborcraft.ui.admin.status", LaborCraftCommands.ADMIN_STATUS
-		));
-		addRenderableWidget(systemButton(
-				x, y + 60, width, "laborcraft.ui.admin.items", LaborCraftCommands.TEST_ITEMS
-		));
-		addRenderableWidget(systemButton(
-				x, y + 90, width, "laborcraft.ui.admin.players", LaborCraftCommands.PLAYERS
-		));
+		QuillFlexBox column = QuillNodes.column(6);
+		column.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
+		column.add(control(systemButton(0, 0, width, "laborcraft.ui.admin.reload", LaborCraftCommands.ADMIN_RELOAD), 24));
+		column.add(control(systemButton(0, 0, width, "laborcraft.ui.admin.status", LaborCraftCommands.ADMIN_STATUS), 24));
+		column.add(control(systemButton(0, 0, width, "laborcraft.ui.admin.items", LaborCraftCommands.TEST_ITEMS), 24));
+		column.add(control(systemButton(0, 0, width, "laborcraft.ui.admin.players", LaborCraftCommands.PLAYERS), 24));
 
 		LcButton provider = new LcButton(
-				x,
-				y + 120,
-				width,
-				24,
+				0, 0, width, 24,
 				Component.translatable("laborcraft.ui.admin.provider"),
 				LcButton.Variant.SECONDARY,
 				() -> {
@@ -454,17 +449,12 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 				Component.translatable("laborcraft.ui.admin.provider.tip"),
 				"/" + LaborCraftCommands.ADMIN_SET_PROVIDER + " <id>"
 		));
-		addRenderableWidget(provider);
+		column.add(control(provider, 24));
 
-		addRenderableWidget(systemButton(
-				x, y + 150, width, "laborcraft.ui.admin.market", LaborCraftCommands.ADMIN_MARKET_REFRESH
-		));
+		column.add(control(systemButton(0, 0, width, "laborcraft.ui.admin.market", LaborCraftCommands.ADMIN_MARKET_REFRESH), 24));
 
 		LcButton bubble = new LcButton(
-				x,
-				y + 180,
-				width,
-				24,
+				0, 0, width, 24,
 				label("laborcraft.ui.admin.bubble_walls", Component.translatable(state.bubbleThroughWalls()
 						? "laborcraft.ui.admin.state.on"
 						: "laborcraft.ui.admin.state.off").getString()),
@@ -482,7 +472,8 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 				Component.translatable("laborcraft.ui.admin.bubble_walls.tip"),
 				"/" + LaborCraftCommands.ADMIN_SET_BUBBLE_WALLS + " " + !state.bubbleThroughWalls()
 		));
-		addRenderableWidget(bubble);
+		column.add(control(bubble, 24));
+		column.add(text(Component.translatable("laborcraft.ui.admin.note"), MUTED));
 
 		LcButton config = new LcButton(
 				panelX + panelWidth() - 100,
@@ -499,8 +490,8 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 				"/" + LaborCraftCommands.CONFIG
 		));
 		addRenderableWidget(config);
+		setContent(column, new QuillRect(x, panelY + 88, width, panelHeight() - 88 - 28));
 	}
-
 	private void buildActions(int x, int left, int rightX, int right) {
 		int y = panelY + 314;
 		LcButton apply = actionButton(
@@ -747,15 +738,7 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 					right,
 					LcTheme.MUTED
 			);
-		} else {
-			graphics.textWithWordWrap(
-					font,
-					Component.translatable("laborcraft.ui.admin.note"),
-					x,
-					panelY + 300,
-					width,
-					LcTheme.MUTED
-			);
 		}
+
 	}
 }
