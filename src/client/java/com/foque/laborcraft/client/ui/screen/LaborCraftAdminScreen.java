@@ -190,48 +190,19 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 	}
 
 	private void buildBilling(int x, int width) {
-		int left = width / 2 - 8;
-		int rightX = x + left + 16;
-		int right = width - left - 16;
-		int y = panelY + 88;
-		int step = 23;
-
-		addRenderableWidget(toggleButton(
-				x, y, left, "laborcraft.ui.admin.billing.enabled", state.enabled(), "enabled"
-		));
-		addRenderableWidget(integerButton(
-				x, y + step, left, "laborcraft.ui.admin.billing.check_ticks", state.checkTicks(),
-				LaborCraftCommands.BILLING_SET + " check-ticks ", 20, 24_000, "20", "100", "200"
-		));
-		addRenderableWidget(integerButton(
-				x, y + step * 2, left, "laborcraft.ui.admin.billing.grace", state.gracePeriods(),
-				LaborCraftCommands.BILLING_SET + " grace ", 0, 1000, "0", "1", "2"
-		));
-		addRenderableWidget(integerButton(
-				x, y + step * 3, left, "laborcraft.ui.admin.billing.dismiss", state.dismissAfterMissed(),
-				LaborCraftCommands.BILLING_SET + " dismiss-after ", 0, 1000, "0", "3"
-		));
-		addRenderableWidget(integerButton(
-				x, y + step * 4, left, "laborcraft.ui.admin.billing.mood", state.missedMoodPenalty(),
-				LaborCraftCommands.BILLING_SET + " mood-penalty ", 0, 100, "0", "10"
-		));
-		addRenderableWidget(toggleButton(
-				x, y + step * 5, left, "laborcraft.ui.admin.billing.debt", state.allowDebt(), "debt"
-		));
-		addRenderableWidget(toggleButton(
-				x, y + step * 6, left, "laborcraft.ui.admin.billing.notify", state.notifyOwner(), "notify"
-		));
-		addRenderableWidget(toggleButton(
-				x, y + step * 7, left, "laborcraft.ui.admin.billing.use_schedule", state.useSchedule(), "use-schedule"
-		));
-		addRenderableWidget(toggleButton(
-				x, y + step * 8, left, "laborcraft.ui.admin.billing.pause_off_duty",
-				state.pauseOffDuty(), "pause-off-duty"
-		));
-
-		buildActions(x, left, rightX, right);
+		QuillFlexBox column = QuillNodes.column(2);
+		column.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
+		column.add(control(toggleButton(0, 0, width, "laborcraft.ui.admin.billing.enabled", state.enabled(), "enabled"), 21));
+		column.add(control(integerButton(0, 0, width, "laborcraft.ui.admin.billing.check_ticks", state.checkTicks(), LaborCraftCommands.BILLING_SET + " check-ticks ", 20, 24_000, "20", "100", "200"), 21));
+		column.add(control(integerButton(0, 0, width, "laborcraft.ui.admin.billing.grace", state.gracePeriods(), LaborCraftCommands.BILLING_SET + " grace ", 0, 1000, "0", "1", "2"), 21));
+		column.add(control(integerButton(0, 0, width, "laborcraft.ui.admin.billing.dismiss", state.dismissAfterMissed(), LaborCraftCommands.BILLING_SET + " dismiss-after ", 0, 1000, "0", "3"), 21));
+		column.add(control(integerButton(0, 0, width, "laborcraft.ui.admin.billing.mood", state.missedMoodPenalty(), LaborCraftCommands.BILLING_SET + " mood-penalty ", 0, 100, "0", "10"), 21));
+		column.add(control(toggleButton(0, 0, width, "laborcraft.ui.admin.billing.debt", state.allowDebt(), "debt"), 21));
+		column.add(control(toggleButton(0, 0, width, "laborcraft.ui.admin.billing.notify", state.notifyOwner(), "notify"), 21));
+		column.add(control(toggleButton(0, 0, width, "laborcraft.ui.admin.billing.use_schedule", state.useSchedule(), "use-schedule"), 21));
+		column.add(control(toggleButton(0, 0, width, "laborcraft.ui.admin.billing.pause_off_duty", state.pauseOffDuty(), "pause-off-duty"), 21));
+		setContent(column, new QuillRect(x, panelY + 88, width, 214));
 	}
-
 	private void buildSchedule(int x, int width) {
 		int left = width / 2 - 8;
 		int y = panelY + 88;
