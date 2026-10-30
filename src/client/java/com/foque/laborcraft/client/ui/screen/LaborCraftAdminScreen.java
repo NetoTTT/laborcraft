@@ -202,6 +202,8 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 		column.add(control(toggleButton(0, 0, width, "laborcraft.ui.admin.billing.use_schedule", state.useSchedule(), "use-schedule"), 21));
 		column.add(control(toggleButton(0, 0, width, "laborcraft.ui.admin.billing.pause_off_duty", state.pauseOffDuty(), "pause-off-duty"), 21));
 		setContent(column, new QuillRect(x, panelY + 88, width, 214));
+		int left = width / 2 - 8;
+		buildActions(x, left, x + left + 16, width - left - 16);
 	}
 	private void buildSchedule(int x, int width) {
 		int left = width / 2 - 8;
@@ -637,7 +639,7 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 		int width = panelWidth() - 44;
 
 		LcRender.tabStrip(graphics, x - 4, panelY + 50, width + 8, 28);
-		if (tab == Tab.SYSTEM) {
+		if (tab == Tab.SYSTEM || tab == Tab.BILLING) {
 			LcRender.section(graphics, x - 6, panelY + 82, width + 12, 250);
 		} else {
 			int left = width / 2 - 8;
@@ -664,19 +666,8 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 					panelY + 194,
 					LcTheme.MUTED
 			);
-		} else if (tab == Tab.BILLING) {
-			int left = width / 2 - 8;
-			int rightX = x + left + 16;
-			int right = width - left - 16;
-			graphics.textWithWordWrap(
-					font,
-					Component.translatable("laborcraft.ui.admin.billing.note"),
-					rightX,
-					panelY + 92,
-					right,
-					LcTheme.MUTED
-			);
 		} else if (tab == Tab.SCHEDULE) {
+
 			int left = width / 2 - 8;
 			int rightX = x + left + 16;
 			int right = width - left - 16;
