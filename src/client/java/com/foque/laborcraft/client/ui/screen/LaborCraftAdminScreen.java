@@ -54,6 +54,11 @@ public final class LaborCraftAdminScreen extends com.quillui.screen.QuillScreen 
 	}
 
 	@Override
+	protected boolean constrainPanel() {
+		return false;
+	}
+
+	@Override
 	protected Component subtitle() {
 		return switch (tab) {
 			case SALARY -> Component.translatable("laborcraft.ui.admin.subtitle.salary");

@@ -94,6 +94,11 @@ public final class LaborCraftStationScreen extends com.quillui.screen.QuillScree
 	}
 
 	@Override
+	protected boolean constrainPanel() {
+		return false;
+	}
+
+	@Override
 	protected Component subtitle() {
 		return Component.translatable(
 				"laborcraft.ui.station.subtitle",

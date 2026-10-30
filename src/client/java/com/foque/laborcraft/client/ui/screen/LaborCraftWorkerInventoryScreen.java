@@ -93,6 +93,11 @@ public final class LaborCraftWorkerInventoryScreen extends com.quillui.screen.Qu
 	}
 
 	@Override
+	protected boolean constrainPanel() {
+		return false;
+	}
+
+	@Override
 	protected Component subtitle() {
 		return Component.literal(worker.name());
 	}
