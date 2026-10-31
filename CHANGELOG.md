@@ -20,6 +20,8 @@ Núcleo de IA por emprego e correção das portas.
 - Resultados/erros do posto aparecem como toast na UI (`UiToastPayload`), além do chat.
 - Station usa `QuillScreen.navigator` sem header: tabs fixas, saldo e X no navigator; o corpo ganha a altura do header e só ele rola.
 - O posto valida o cercado ao abrir: cerca quebrada aparece em vermelho com "Cercado inválido" até escanear novamente.
+- No modo sem cercado / escanear novamente, o mapa desenha linhas conectando cercas e portões (`QuillMapPath`).
+- Texto de "sem cercado" não repete mais a instrução de clique.
 - `/laborcraft station job set <pos> <job>` para especializar o Posto.
 
 ### Corrigido
