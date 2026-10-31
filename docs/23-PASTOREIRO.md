@@ -163,3 +163,10 @@ resultado aparece como toast; o chat continua recebendo a mesma mensagem como fa
 - Fecha quando o trabalhador se afasta 2 blocos do portão ou quando o path termina.
 - O pastoreiro não abre portão por conta própria; ele mira um ponto fundo dentro do cercado para o path atravessar o portão.
 - Se ficar 3 s empurrando a cerca sem sair do lugar, cancela o path e tenta outro ponto; após 3 falhas, pausa com "Confira o portão".
+## Travessia do portão
+
+- O pathfinding vanilla trata portão fechado como cerca, mesmo com `canOpenDoors`.
+- Por isso o pastoreiro só usa pathfinding **fora** e **dentro** do cercado.
+- A travessia em si (2 blocos) é feita pelo `MoveControl`, com o portão aberto pelo brain.
+- Ao terminar de cruzar, o portão fecha na hora.
+- Se não atravessar em 4 s, tenta de novo após 2 s; o aviso no chat aparece no máximo a cada 30 s.

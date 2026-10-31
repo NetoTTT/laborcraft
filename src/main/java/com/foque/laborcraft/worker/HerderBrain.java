@@ -5,7 +5,12 @@ import com.foque.laborcraft.area.EnclosureSpan;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -13,16 +18,20 @@ import net.minecraft.world.phys.Vec3;
  * Herder test brain: while on duty, the worker walks into the pen through its gate, wanders the
  * interior, then leaves again and repeats.
  *
- * <p>Gates are not opened by this brain. {@link com.foque.laborcraft.entity.ai.OpenFenceGateGoal}
- * opens a gate only when the current path steps onto it and closes it right after the worker
- * crosses, so a worker walking near the fence never opens anything.</p>
+ * <p>Pathfinding is only used where it is reliable: outside up to the gate, and inside the pen.
+ * The two-block passage through the gate is driven directly with the move control while the brain
+ * holds the gate open, because vanilla pathfinding treats a closed fence gate as a fence even for
+ * door-capable mobs. The gate is closed again as soon as the worker is fully through.</p>
  */
 public final class HerderBrain extends AbstractWorkerBrain {
 	private static final int CHECK_INTERVAL = 10;
 	private static final int PATH_TIMEOUT = 200;
 	private static final int GRAZE_TICKS = 240;
 	private static final int OUTSIDE_TICKS = 100;
-	private static final int STUCK_TICKS = 60;
+	private static final int CROSSING_TIMEOUT = 80;
+	private static final int RETRY_TICKS = 200;
+	private static final int NOTICE_COOLDOWN = 600;
+	private static final double GATE_REACH_SQR = 6.25D;
 	private static final Direction[] HORIZONTAL = {
 			Direction.NORTH,
 			Direction.SOUTH,
@@ -41,9 +50,11 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	private int phaseTicks;
 	private int pathTicks;
 	private int failedPaths;
-	private int stuckTicks;
-	private Vec3 lastPosition;
+	private int crossingTicks;
+	private long retryAt;
+	private long nextNoticeAt;
 	private BlockPos target;
+	private BlockPos openedGate;
 
 	public HerderBrain(LaborCraftWorker worker) {
 		super(worker, CHECK_INTERVAL);
@@ -66,145 +77,233 @@ public final class HerderBrain extends AbstractWorkerBrain {
 
 	@Override
 	protected boolean canResumeJob(ServerLevel level, StationRegistry.Station station) {
-		String notice = worker.workNotice();
-		return switch (notice == null ? "" : notice) {
-			case "laborcraft.ui.worker.task.need_pen",
-					"laborcraft.ui.worker.task.pen_unreachable" -> station.hasEnclosure();
-			default -> false;
-		};
+		return station.hasEnclosure();
 	}
 
 	@Override
 	protected void tickJob(ServerLevel level, StationRegistry.Station station) {
+		if (level.getGameTime() < retryAt) {
+			worker.getNavigation().stop();
+			return;
+		}
+
 		EnclosureDescriptor pen = station.enclosure();
 		if (pen == null || pen.spans().isEmpty() || pen.gates().isEmpty()) {
 			pause(level, "laborcraft.ui.worker.task.need_pen");
 			return;
 		}
 
-		trackStuck();
-
 		boolean inside = pen.contains(worker.blockPosition());
 		BlockPos gate = nearestGate(pen, worker.blockPosition());
+		Direction inward = insideDirection(pen, gate);
+		if (inward == null) {
+			notifyOnce(level, "laborcraft.ui.worker.task.pen_unreachable");
+			retryAt = level.getGameTime() + RETRY_TICKS;
+			return;
+		}
 
 		switch (phase) {
-			case EXIT -> {
-				BlockPos outside = outsideStand(level, pen, gate);
-				if (outside == null) {
-					pause(level, "laborcraft.ui.worker.task.pen_unreachable");
-					return;
-				}
-				if (!inside && worker.blockPosition().distSqr(outside) <= 4.0D) {
-					phase = Phase.WAIT_OUTSIDE;
-					phaseTicks = OUTSIDE_TICKS;
-					target = null;
-					pathTicks = 0;
-					failedPaths = 0;
-					stuckTicks = 0;
-					return;
-				}
-				follow(level, outside, () -> {
-				});
-			}
+			case EXIT -> tickExit(level, pen, gate, inward, inside);
 			case WAIT_OUTSIDE -> {
 				phaseTicks -= CHECK_INTERVAL;
 				worker.getNavigation().stop();
+				closeGate(level, gate);
 				if (phaseTicks <= 0) {
+					resetAttempt();
 					phase = Phase.ENTER;
-					target = null;
-					failedPaths = 0;
 				}
 			}
-			case ENTER -> {
-				if (inside) {
-					phase = Phase.GRAZE;
-					phaseTicks = GRAZE_TICKS;
-					target = null;
-					pathTicks = 0;
-					failedPaths = 0;
-					stuckTicks = 0;
-					return;
-				}
-				// Aim deep inside the pen, so the path goes through the gate instead of stopping
-				// in the one-block gap next to it.
-				BlockPos entry = randomInteriorThread(level, pen);
-				if (entry == null) {
-					entry = insideStand(level, pen, gate);
-				}
-				if (entry == null) {
-					pause(level, "laborcraft.ui.worker.task.pen_unreachable");
-					return;
-				}
-				follow(level, entry, () -> {
-				});
-				if (pen.contains(worker.blockPosition())) {
-					phase = Phase.GRAZE;
-					phaseTicks = GRAZE_TICKS;
-					target = null;
-					pathTicks = 0;
-					failedPaths = 0;
-					stuckTicks = 0;
-				}
-			}
-			case GRAZE -> {
-				if (!inside) {
-					// pushed out by an animal or a gate: walk back in
-					phase = Phase.ENTER;
-					target = null;
-					pathTicks = 0;
-					return;
-				}
-				phaseTicks -= CHECK_INTERVAL;
-				if (phaseTicks <= 0) {
-					phase = Phase.EXIT;
-					target = null;
-					pathTicks = 0;
-					failedPaths = 0;
-					stuckTicks = 0;
-					return;
-				}
-				if (target == null || worker.getNavigation().isDone()) {
-					target = randomInteriorThread(level, pen);
-					pathTicks = PATH_TIMEOUT;
-				}
-				if (target == null) {
-					return;
-				}
-				follow(level, target, () -> {
-				});
-			}
+			case ENTER -> tickEnter(level, pen, gate, inward, inside);
+			case GRAZE -> tickGraze(level, pen, gate, inside);
 		}
 	}
 
-	/** Stops and retries when the worker is pushing against a fence without moving. */
-	private void trackStuck() {
-		Vec3 current = worker.position();
-		if (lastPosition == null || current.distanceToSqr(lastPosition) >= 0.09D) {
-			lastPosition = current;
-			stuckTicks = 0;
+	private void tickEnter(
+			ServerLevel level,
+			EnclosureDescriptor pen,
+			BlockPos gate,
+			Direction inward,
+			boolean inside
+	) {
+		if (inside) {
+			finishCrossing(level, gate);
+			phase = Phase.GRAZE;
+			phaseTicks = GRAZE_TICKS;
 			return;
 		}
-		stuckTicks += CHECK_INTERVAL;
-		if (stuckTicks < STUCK_TICKS) {
+
+		if (nearGate(gate)) {
+			cross(level, pen, gate, inward, true, 2);
 			return;
 		}
-		stuckTicks = 0;
-		lastPosition = null;
-		worker.getNavigation().stop();
-		pathTicks = 0;
-		failedPaths++;
-		target = null;
+
+		BlockPos approach = outsideStand(level, pen, gate, inward);
+		if (approach == null) {
+			fail(level);
+			return;
+		}
+		closeGate(level, gate);
+		follow(level, approach);
+	}
+
+	private void tickExit(
+			ServerLevel level,
+			EnclosureDescriptor pen,
+			BlockPos gate,
+			Direction inward,
+			boolean inside
+	) {
+		if (!inside) {
+			finishCrossing(level, gate);
+			phase = Phase.WAIT_OUTSIDE;
+			phaseTicks = OUTSIDE_TICKS;
+			return;
+		}
+
+		if (nearGate(gate)) {
+			cross(level, pen, gate, inward, false, 2);
+			return;
+		}
+
+		BlockPos insideStand = standAt(level, gate.relative(inward));
+		if (insideStand == null) {
+			fail(level);
+			return;
+		}
+		follow(level, insideStand);
+	}
+
+	private void tickGraze(ServerLevel level, EnclosureDescriptor pen, BlockPos gate, boolean inside) {
+		if (!inside) {
+			resetAttempt();
+			phase = Phase.ENTER;
+			return;
+		}
+
+		phaseTicks -= CHECK_INTERVAL;
+		if (phaseTicks <= 0) {
+			resetAttempt();
+			phase = Phase.EXIT;
+			return;
+		}
+
+		if (worker.position().distanceToSqr(Vec3.atCenterOf(gate)) > 16.0D) {
+			closeGate(level, gate);
+		}
+
+		if (target == null || worker.getNavigation().isDone()) {
+			target = randomInteriorThread(level, pen);
+			pathTicks = PATH_TIMEOUT;
+		}
+		if (target != null) {
+			follow(level, target);
+		}
 	}
 
 	/**
-	 * Walks to {@code stand}, retrying on path timeouts and pausing after repeated failures so the
-	 * worker does not silently spin in front of a closed or unreachable pen.
+	 * Drives the worker straight through the gate while holding it open. Navigation is stopped so
+	 * there is no path conflict; vanilla pathfinding is not asked to cross a closed gate.
 	 */
-	private void follow(ServerLevel level, BlockPos stand, Runnable onArrive) {
+	private void cross(
+			ServerLevel level,
+			EnclosureDescriptor pen,
+			BlockPos gate,
+			Direction inward,
+			boolean entering,
+			int depth
+	) {
+		Direction direction = entering ? inward : inward.getOpposite();
+		BlockPos rawStand = gate.relative(direction, depth);
+		BlockPos stand = standAt(level, rawStand);
+		if (stand == null) {
+			stand = standAt(level, gate.relative(direction));
+		}
+		if (stand == null) {
+			fail(level);
+			return;
+		}
+
+		openGate(level, gate);
+		worker.getNavigation().stop();
+		worker.getMoveControl().setWantedPosition(
+				stand.getX() + 0.5D,
+				stand.getY(),
+				stand.getZ() + 0.5D,
+				1.0D
+		);
+
+		crossingTicks += CHECK_INTERVAL;
+		if (crossingTicks >= 20) {
+			worker.getJumpControl().jump();
+		}
+		if (crossingTicks >= CROSSING_TIMEOUT) {
+			fail(level);
+			return;
+		}
+
+		boolean passed = entering ? pen.contains(worker.blockPosition()) : !pen.contains(worker.blockPosition());
+		if (passed) {
+			finishCrossing(level, gate);
+			if (entering) {
+				phase = Phase.GRAZE;
+				phaseTicks = GRAZE_TICKS;
+			}
+			else {
+				phase = Phase.WAIT_OUTSIDE;
+				phaseTicks = OUTSIDE_TICKS;
+			}
+		}
+	}
+
+	private boolean nearGate(BlockPos gate) {
+		return worker.position().distanceToSqr(Vec3.atCenterOf(gate)) <= GATE_REACH_SQR;
+	}
+
+	private void finishCrossing(ServerLevel level, BlockPos gate) {
+		closeGate(level, gate);
+		crossingTicks = 0;
+		failedPaths = 0;
+		pathTicks = 0;
+		target = null;
+	}
+
+	private void resetAttempt() {
+		crossingTicks = 0;
+		failedPaths = 0;
+		pathTicks = 0;
+		target = null;
+	}
+
+	/** Retries after a cooldown and reports the problem at most once per 30 s, never per tick. */
+	private void fail(ServerLevel level) {
+		closeGate(level, openedGate);
+		openedGate = null;
+		worker.getNavigation().stop();
+		resetAttempt();
+		retryAt = level.getGameTime() + RETRY_TICKS;
+		notifyOnce(level, "laborcraft.ui.worker.task.pen_unreachable");
+	}
+
+	private void notifyOnce(ServerLevel level, String key) {
+		long now = level.getGameTime();
+		if (now < nextNoticeAt) {
+			return;
+		}
+		nextNoticeAt = now + NOTICE_COOLDOWN;
+		worker.announce(key, 10);
+		ServerPlayer owner = worker.owner() == null
+				? null
+				: level.getServer().getPlayerList().getPlayer(worker.owner());
+		if (owner != null) {
+			owner.sendSystemMessage(WorkerChat.say(worker, Component.translatable(key)));
+		}
+	}
+
+	/** Walks to {@code stand} with vanilla navigation and reports a failure after a timeout. */
+	private void follow(ServerLevel level, BlockPos stand) {
 		if (worker.blockPosition().distSqr(stand) <= 2.25D) {
 			worker.getNavigation().stop();
 			pathTicks = 0;
-			onArrive.run();
 			return;
 		}
 
@@ -215,12 +314,9 @@ public final class HerderBrain extends AbstractWorkerBrain {
 					stand.getZ() + 0.5D,
 					1.0D
 			);
+			pathTicks = moved ? PATH_TIMEOUT : 0;
 			if (!moved) {
-				pathTicks = 0;
 				failedPaths++;
-			}
-			else {
-				pathTicks = PATH_TIMEOUT;
 			}
 		}
 		else {
@@ -231,11 +327,17 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 
 		if (failedPaths >= 3) {
-			failedPaths = 0;
-			target = null;
-			worker.getNavigation().stop();
-			pause(level, "laborcraft.ui.worker.task.pen_unreachable");
+			fail(level);
 		}
+	}
+
+	private static Direction insideDirection(EnclosureDescriptor pen, BlockPos gate) {
+		for (Direction direction : HORIZONTAL) {
+			if (pen.contains(gate.relative(direction))) {
+				return direction;
+			}
+		}
+		return null;
 	}
 
 	private static BlockPos nearestGate(EnclosureDescriptor pen, BlockPos from) {
@@ -251,36 +353,16 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		return best;
 	}
 
-	private BlockPos insideStand(ServerLevel level, EnclosureDescriptor pen, BlockPos gate) {
-		for (Direction direction : HORIZONTAL) {
-			BlockPos adjacent = gate.relative(direction);
-			if (!pen.contains(adjacent)) {
-				continue;
-			}
-			BlockPos stand = standAt(level, adjacent);
+	private BlockPos outsideStand(
+			ServerLevel level, EnclosureDescriptor pen, BlockPos gate, Direction inward
+	) {
+		for (int distance = 2; distance >= 1; distance--) {
+			BlockPos stand = standAt(level, gate.relative(inward.getOpposite(), distance));
 			if (stand != null) {
 				return stand;
 			}
 		}
 		return null;
-	}
-
-	/** Two blocks outside the gate, so the path keeps moving until the worker is fully through. */
-	private BlockPos outsideStand(ServerLevel level, EnclosureDescriptor pen, BlockPos gate) {
-		for (Direction direction : HORIZONTAL) {
-			BlockPos adjacent = gate.relative(direction);
-			if (!pen.contains(adjacent)) {
-				continue;
-			}
-			Direction outward = direction.getOpposite();
-			for (int distance = 2; distance >= 1; distance--) {
-				BlockPos stand = standAt(level, gate.relative(outward, distance));
-				if (stand != null) {
-					return stand;
-				}
-			}
-		}
-		return standAt(level, gate.relative(Direction.NORTH, 2));
 	}
 
 	/** Picks a walkable column inside the pen. Spans are interior-only, so this never leaves it. */
@@ -300,7 +382,6 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		return null;
 	}
 
-	/** Finds a spot with two free blocks and solid ground within a small vertical window. */
 	private static BlockPos standAt(ServerLevel level, BlockPos origin) {
 		for (int dy = 6; dy >= -8; dy--) {
 			BlockPos candidate = origin.above(dy);
@@ -319,12 +400,47 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		return null;
 	}
 
+	private void openGate(ServerLevel level, BlockPos gate) {
+		setGate(level, gate, true);
+		openedGate = gate;
+	}
+
+	private void closeGate(ServerLevel level, BlockPos gate) {
+		if (gate != null) {
+			setGate(level, gate, false);
+			if (gate.equals(openedGate)) {
+				openedGate = null;
+			}
+		}
+	}
+
+	private static void setGate(ServerLevel level, BlockPos gate, boolean open) {
+		BlockState state = level.getBlockState(gate);
+		if (!(state.getBlock() instanceof FenceGateBlock)
+				|| !state.hasProperty(FenceGateBlock.OPEN)
+				|| state.getValue(FenceGateBlock.OPEN) == open) {
+			return;
+		}
+		level.setBlock(gate, state.setValue(FenceGateBlock.OPEN, open), 10);
+		level.playSound(
+				null,
+				gate,
+				open ? SoundEvents.FENCE_GATE_OPEN : SoundEvents.FENCE_GATE_CLOSE,
+				SoundSource.BLOCKS,
+				1.0F,
+				1.0F
+		);
+	}
+
 	@Override
 	protected void onPaused() {
+		if (openedGate != null && worker.level() instanceof ServerLevel level) {
+			setGate(level, openedGate, false);
+		}
+		openedGate = null;
 		target = null;
 		pathTicks = 0;
 		failedPaths = 0;
-		stuckTicks = 0;
-		lastPosition = null;
+		crossingTicks = 0;
 	}
 }
