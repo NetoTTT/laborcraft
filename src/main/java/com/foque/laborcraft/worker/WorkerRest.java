@@ -50,6 +50,11 @@ public final class WorkerRest {
 			return false;
 		}
 
+		StationRegistry.Station station = StationRegistry.byWorker(level.getServer(), worker.getUUID());
+		if (station != null) {
+			HerderBrain.closeIdleGates(level, station.enclosure());
+		}
+
 		if (state == WorkerState.STRIKE
 				|| state == WorkerState.PAUSED
 				|| state == WorkerState.STORED

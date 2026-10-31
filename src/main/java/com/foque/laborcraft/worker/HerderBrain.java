@@ -513,7 +513,10 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	 * Closes pen gates nobody is using. With several gates, a path can cross one and leave another
 	 * open after a retry, phase change or chunk reload; this watchdog closes them all.
 	 */
-	private void closeIdleGates(ServerLevel level, EnclosureDescriptor pen) {
+	static void closeIdleGates(ServerLevel level, EnclosureDescriptor pen) {
+		if (pen == null) {
+			return;
+		}
 		for (BlockPos gate : pen.gates()) {
 			BlockState state = level.getBlockState(gate);
 			if (!(state.getBlock() instanceof FenceGateBlock)
@@ -536,9 +539,16 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 	}
 
+	/** A gate is in use only while some worker's next path node is exactly that gate. */
 	private static boolean gateInUse(ServerLevel level, BlockPos gate) {
-		AABB box = new AABB(gate).inflate(2.5D);
-		return !level.getEntitiesOfClass(LaborCraftWorker.class, box).isEmpty();
+		AABB box = new AABB(gate).inflate(3.0D);
+		for (LaborCraftWorker other : level.getEntitiesOfClass(LaborCraftWorker.class, box)) {
+			Path path = other.getNavigation().getPath();
+			if (path != null && !path.isDone() && path.getNextNodePos().equals(gate)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static Direction insideDirection(EnclosureDescriptor pen, BlockPos gate) {
