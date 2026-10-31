@@ -27,6 +27,7 @@ Núcleo de IA por emprego e correção das portas.
 - Toasts empilhados no Quill em vez de se sobrepor.
 - Scan não trata mais terreno/step de 1 bloco como parede: cerca faltando gera buraco e o cercado não valida.
 - Portão aberto conta como abertura; feche os portões antes de escanear.
+- Scan do cercado virou flood 2D da cerca (igual ao overlay do mapa): não percorre mais o chão.
 - `/laborcraft station job set <pos> <job>` para especializar o Posto.
 
 ### Corrigido

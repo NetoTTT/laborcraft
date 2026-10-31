@@ -845,12 +845,12 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		boolean[] fences = new boolean[size * size];
 		boolean[] gates = new boolean[size * size];
 		int centerX = station.pos().getX();
-		int centerY = station.pos().getY();
+		int centerY = client.player == null ? station.pos().getY() : client.player.blockPosition().getY();
 		int centerZ = station.pos().getZ();
 		BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
 		for (int dx = -half; dx <= half; dx++) {
 			for (int dz = -half; dz <= half; dz++) {
-				for (int dy = -6; dy <= 8; dy++) {
+				for (int dy = -4; dy <= 8; dy++) {
 					cursor.set(centerX + dx, centerY + dy, centerZ + dz);
 					var state = client.level.getBlockState(cursor);
 					if (state.getBlock() instanceof FenceGateBlock) {

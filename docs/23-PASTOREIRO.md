@@ -141,3 +141,10 @@ resultado aparece como toast; o chat continua recebendo a mesma mensagem como fa
 - Terreno, degrau de 1 bloco, árvore ou teto não fecham um buraco: o scan escapa e reprova.
 - Portão aberto é abertura; feche os portões antes de escanear.
 - Área mínima interna: 4 blocos (`enclosure.minArea`), migrada para 4 na config v3.
+## Validação em planta
+
+- O scan é um flood 2D: a cerca, a parede e o portão fechado são o limite.
+- Chão, degraus, água, árvores e teto não fecham buraco nenhum.
+- A banda vertical de detecção é a mesma do overlay do mapa (`-4..+8` em torno do jogador).
+- Se faltar um bloco de cerca, o flood vaza e o cercado é reprovado.
+- Portão aberto é abertura; feche antes de escanear.
