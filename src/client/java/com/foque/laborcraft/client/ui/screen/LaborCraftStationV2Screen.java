@@ -296,10 +296,10 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 		QuillButton eye = new QuillButton(
 				0, 0, 18, 18,
-				Component.literal("E"),
+				Component.empty(),
 				QuillButton.Variant.GHOST,
 				() -> highlightWorker(worker.id())
-		);
+		).icon(EYE_ICON);
 		eye.tip(QuillTooltips.of(
 				Component.translatable("laborcraft.ui.station.highlight"),
 				Component.translatable("laborcraft.ui.station.highlight.tip"),
@@ -804,10 +804,10 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 		QuillButton eye = new QuillButton(
 				0, 0, 18, 18,
-				Component.literal("E"),
+				Component.empty(),
 				QuillButton.Variant.GHOST,
 				() -> highlightStorage(view)
-		);
+		).icon(EYE_ICON);
 		eye.tip(QuillTooltips.of(
 				Component.translatable("laborcraft.ui.station.storage.highlight"),
 				Component.translatable("laborcraft.ui.station.storage.highlight.tip"),
