@@ -31,7 +31,7 @@ public final class EnclosureScanner {
 			Direction.WEST
 	};
 	private static final int MIN_BOUNDARY = 4;
-	private static final int START_SCAN_UP = 2;
+	private static final int START_SCAN_UP = 8;
 	private static final int START_SCAN_DOWN = 4;
 	private static final int SEED_SEARCH = 2;
 
