@@ -5,12 +5,14 @@ import com.foque.laborcraft.area.EnclosureDescriptor;
 import com.foque.laborcraft.area.EnclosureSpan;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
+import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
@@ -190,6 +192,10 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return;
 		}
 
+		if (LaborCraftConfig.get().herder.breeding && tryBreed(level, pen, station)) {
+			return;
+		}
+
 		if (LaborCraftConfig.get().herder.collectEggs) {
 			if (depositing) {
 				if (depositProduce(level, station)) {
@@ -306,6 +312,99 @@ public final class HerderBrain extends AbstractWorkerBrain {
 
 		if (failedPaths >= 3) {
 			fail(level);
+		}
+	}
+
+	/**
+	 * Feeds one adult when its species is below the cap and at least two adults can breed. Two
+	 * consecutive calls put two animals in love; vanilla handles the baby and the cooldown.
+	 */
+	private boolean tryBreed(
+			ServerLevel level, EnclosureDescriptor pen, StationRegistry.Station station
+	) {
+		LaborCraftConfig.HerderSettings settings = LaborCraftConfig.get().herder;
+		for (HerderAnimals.Species species : HerderAnimals.Species.values()) {
+			int population = HerderAnimals.count(level, pen, species);
+			if (population < 2 || population >= settings.maxPerSpecies) {
+				continue;
+			}
+			List<Animal> adults = HerderAnimals.breedableAdults(level, pen, species);
+			if (adults.size() < 2) {
+				continue;
+			}
+
+			if (!hasFood(species)) {
+				withdrawFood(level, station, species);
+				if (!hasFood(species)) {
+					continue;
+				}
+			}
+
+			Animal target = nearest(adults);
+			if (target == null) {
+				continue;
+			}
+			if (worker.position().distanceToSqr(target.position()) > 2.25D) {
+				if (worker.getNavigation().isDone() || pathTicks <= 0) {
+					worker.getNavigation().moveTo(target.getX(), target.getY(), target.getZ(), 1.0D);
+					pathTicks = PATH_TIMEOUT;
+				}
+				return true;
+			}
+			if (consumeFood(species)) {
+				target.setInLove(null);
+				worker.getNavigation().stop();
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private Animal nearest(List<Animal> animals) {
+		Animal best = null;
+		double bestDistance = Double.MAX_VALUE;
+		for (Animal animal : animals) {
+			double distance = worker.position().distanceToSqr(animal.position());
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				best = animal;
+			}
+		}
+		return best;
+	}
+
+	private boolean hasFood(HerderAnimals.Species species) {
+		return findFoodSlot(species) >= 0;
+	}
+
+	private int findFoodSlot(HerderAnimals.Species species) {
+		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {
+			if (species.isFood(worker.inventoryItem(slot))) {
+				return slot;
+			}
+		}
+		return -1;
+	}
+
+	private boolean consumeFood(HerderAnimals.Species species) {
+		int slot = findFoodSlot(species);
+		if (slot < 0) {
+			return false;
+		}
+		worker.inventoryItem(slot).shrink(1);
+		return true;
+	}
+
+	private void withdrawFood(
+			ServerLevel level, StationRegistry.Station station, HerderAnimals.Species species
+	) {
+		var got = WorkerStorage.extract(level, station, species::isFood, 16);
+		if (got.isEmpty()) {
+			return;
+		}
+		var leftover = FarmerStorage.addToWorker(worker, got);
+		if (!leftover.isEmpty()) {
+			WorkerStorage.insert(level, station, leftover);
 		}
 	}
 

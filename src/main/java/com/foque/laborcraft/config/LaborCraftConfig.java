@@ -291,10 +291,10 @@ public final class LaborCraftConfig {
 		public boolean shearSheep = false;
 		public boolean milkCows = false;
 		public boolean breeding = false;
-		/** Upper bound for herded animals inside one pen. */
-		public int maxAnimalsPerPen = 12;
-		/** Never cull/breed below this; keeps the pen productive. */
-		public int minAnimalsPerPen = 4;
+		/** Upper bound per species inside one pen; breeding stops when the count reaches it. */
+		public int maxPerSpecies = 8;
+		/** Never cull below this per species; keeps the pen productive. */
+		public int minPerSpecies = 3;
 		/** Eggs on the ground are looked up within this radius of the pen. */
 		public int eggScanRadius = 16;
 
