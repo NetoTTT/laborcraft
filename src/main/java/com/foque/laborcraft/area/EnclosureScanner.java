@@ -194,8 +194,10 @@ public final class EnclosureScanner {
 	}
 
 	/**
-	 * Finds a walkable neighbour at the same level or one block up/down. Fences, gates and walls in
-	 * the feet/head space are recorded as boundaries instead of being traversed.
+	 * Finds a walkable neighbour at the same level or one block up/down. Fences, closed gates and
+	 * walls in the feet/head space are recorded as boundaries instead of being traversed. Plain
+	 * solid terrain is not a boundary: a missing fence next to a one-block step must be a hole, not
+	 * a false wall.
 	 */
 	private static Column findNeighbour(
 			ServerLevel level,
@@ -205,7 +207,7 @@ public final class EnclosureScanner {
 			Set<BlockPos> gates,
 			Set<BlockPos> boundary
 	) {
-		for (int y = currentFloor + 1; y >= currentFloor - 1; y--) {
+		for (int y = currentFloor + 2; y >= currentFloor - 1; y--) {
 			BlockPos feet = new BlockPos(x, y, z);
 			BlockPos head = new BlockPos(x, y + 1, z);
 			if (recordBoundary(level, feet, gates, boundary)) {
@@ -215,28 +217,20 @@ public final class EnclosureScanner {
 				return null;
 			}
 
-			BlockPos below = new BlockPos(x, y - 1, z);
-			if (recordBoundary(level, below, gates, boundary)) {
-				return null;
-			}
-
 			BlockState feetState = level.getBlockState(feet);
 			BlockState headState = level.getBlockState(head);
 			if (!feetState.getCollisionShape(level, feet).isEmpty()
 					|| !headState.getCollisionShape(level, head).isEmpty()) {
-				if (!feetState.getCollisionShape(level, feet).isEmpty()) {
-					boundary.add(feet.immutable());
-				}
-				if (!headState.getCollisionShape(level, head).isEmpty()) {
-					boundary.add(head.immutable());
-				}
-				return null;
-			}
-
-			if (level.getBlockState(below).getCollisionShape(level, below).isEmpty()) {
 				continue;
 			}
-			return new Column(x, z, y);
+
+			BlockPos below = new BlockPos(x, y - 1, z);
+			if (recordBoundary(level, below, gates, boundary)) {
+				return null;
+			}
+			if (!level.getBlockState(below).getCollisionShape(level, below).isEmpty()) {
+				return new Column(x, z, y);
+			}
 		}
 		return null;
 	}
@@ -248,6 +242,9 @@ public final class EnclosureScanner {
 		if (state.getBlock() instanceof FenceGateBlock) {
 			BlockPos immutable = pos.immutable();
 			gates.add(immutable);
+			if (state.hasProperty(FenceGateBlock.OPEN) && state.getValue(FenceGateBlock.OPEN)) {
+				return false;
+			}
 			boundary.add(immutable);
 			return true;
 		}

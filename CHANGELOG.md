@@ -25,6 +25,8 @@ Núcleo de IA por emprego e correção das portas.
 - Scan do cercado procura seed em 3x3: clicar na cerca/na borda não gera mais "área pequena demais".
 - Área mínima do cercado cai de 9 para 4 blocos (migração de config para v3).
 - Toasts empilhados no Quill em vez de se sobrepor.
+- Scan não trata mais terreno/step de 1 bloco como parede: cerca faltando gera buraco e o cercado não valida.
+- Portão aberto conta como abertura; feche os portões antes de escanear.
 - `/laborcraft station job set <pos> <job>` para especializar o Posto.
 
 ### Corrigido

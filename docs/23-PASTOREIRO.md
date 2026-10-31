@@ -135,3 +135,9 @@ resultado aparece como toast; o chat continua recebendo a mesma mensagem como fa
 - Cerca quebrada ou layout alterado deixa o cercado em vermelho com "Cercado inválido".
 - O descriptor antigo continua salvo; **Escanear novamente** substitui pelo novo.
 - A validação é sob demanda (abrir posto / escanear), não a cada tick.
+## Fechamento real
+
+- O flood só considera cerca, parede e portão **fechado** como limite.
+- Terreno, degrau de 1 bloco, árvore ou teto não fecham um buraco: o scan escapa e reprova.
+- Portão aberto é abertura; feche os portões antes de escanear.
+- Área mínima interna: 4 blocos (`enclosure.minArea`), migrada para 4 na config v3.
