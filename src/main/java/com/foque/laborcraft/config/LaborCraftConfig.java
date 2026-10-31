@@ -290,7 +290,7 @@ public final class LaborCraftConfig {
 		public boolean collectEggs = true;
 		public boolean shearSheep = false;
 		public boolean milkCows = false;
-		public boolean breeding = false;
+		public boolean breeding = true;
 		/** Upper bound per species inside one pen; breeding stops when the count reaches it. */
 		public int maxPerSpecies = 8;
 		/** Never cull below this per species; keeps the pen productive. */
