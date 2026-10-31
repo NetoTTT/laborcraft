@@ -1,8 +1,10 @@
 package com.foque.laborcraft.worker;
 
+import com.foque.laborcraft.LaborCraft;
 import com.foque.laborcraft.area.EnclosureDescriptor;
 import com.foque.laborcraft.area.EnclosureSpan;
 import com.foque.laborcraft.entity.LaborCraftWorker;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -11,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
@@ -55,6 +58,9 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	private long nextNoticeAt;
 	private BlockPos target;
 	private BlockPos openedGate;
+	private String debugInfo = "";
+	private int lastNodeIndex = -1;
+	private int nodeStuckTicks;
 
 	public HerderBrain(LaborCraftWorker worker) {
 		super(worker, CHECK_INTERVAL);
@@ -96,6 +102,13 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		boolean inside = pen.contains(worker.blockPosition());
 		BlockPos gate = nearestGate(pen, worker.blockPosition());
 		Direction inward = insideDirection(pen, gate);
+		debugInfo = "pos=" + shortPos(worker.blockPosition())
+				+ " inside=" + inside
+				+ " spans=" + pen.spans().size()
+				+ " bbox=" + shortPos(pen.min()) + ".." + shortPos(pen.max())
+				+ " gate=" + shortPos(gate)
+				+ " inward=" + (inward == null ? "none" : inward.getName())
+				+ " path=" + (worker.getNavigation().isDone() ? "done" : "moving");
 		if (inward == null) {
 			notifyOnce(level, "laborcraft.ui.worker.task.pen_unreachable");
 			retryAt = level.getGameTime() + RETRY_TICKS;
@@ -269,6 +282,8 @@ public final class HerderBrain extends AbstractWorkerBrain {
 
 	private void resetAttempt() {
 		crossingTicks = 0;
+		lastNodeIndex = -1;
+		nodeStuckTicks = 0;
 		failedPaths = 0;
 		pathTicks = 0;
 		target = null;
@@ -296,7 +311,9 @@ public final class HerderBrain extends AbstractWorkerBrain {
 				: level.getServer().getPlayerList().getPlayer(worker.owner());
 		if (owner != null) {
 			owner.sendSystemMessage(WorkerChat.say(worker, Component.translatable(key)));
+			owner.sendSystemMessage(Component.literal("[LC path] " + debugInfo).withStyle(ChatFormatting.GRAY));
 		}
+		LaborCraft.LOGGER.info("[herder] {} " + debugInfo, key);
 	}
 
 	/** Walks to {@code stand} with vanilla navigation and reports a failure after a timeout. */
@@ -326,9 +343,33 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			}
 		}
 
+		Path path = worker.getNavigation().getPath();
+		int index = path == null || path.isDone() ? -1 : path.getNextNodeIndex();
+		if (index < 0) {
+			lastNodeIndex = -1;
+			nodeStuckTicks = 0;
+		}
+		else if (index == lastNodeIndex) {
+			nodeStuckTicks += CHECK_INTERVAL;
+			if (nodeStuckTicks >= 60) {
+				nodeStuckTicks = 0;
+				failedPaths++;
+				worker.getNavigation().stop();
+				pathTicks = 0;
+			}
+		}
+		else {
+			lastNodeIndex = index;
+			nodeStuckTicks = 0;
+		}
+
 		if (failedPaths >= 3) {
 			fail(level);
 		}
+	}
+
+	private static String shortPos(BlockPos pos) {
+		return pos.getX() + " " + pos.getY() + " " + pos.getZ();
 	}
 
 	private static Direction insideDirection(EnclosureDescriptor pen, BlockPos gate) {
@@ -442,5 +483,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		pathTicks = 0;
 		failedPaths = 0;
 		crossingTicks = 0;
+		lastNodeIndex = -1;
+		nodeStuckTicks = 0;
 	}
 }
