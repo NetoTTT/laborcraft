@@ -129,3 +129,9 @@ resultado aparece como toast; o chat continua recebendo a mesma mensagem como fa
 - Depois de configurar o cercado, clicar no mapa não inicia outro scan por acidente.
   Use **Escanear novamente** para entrar no modo de clique e **Cancelar** para sair.
 - O mapa deixa uma margem vertical para não gerar scroll residual no conteúdo.
+## Validade do cercado
+
+- Ao abrir o posto, o servidor reescaneia o `seed` e compara área, spans e portões.
+- Cerca quebrada ou layout alterado deixa o cercado em vermelho com "Cercado inválido".
+- O descriptor antigo continua salvo; **Escanear novamente** substitui pelo novo.
+- A validação é sob demanda (abrir posto / escanear), não a cada tick.

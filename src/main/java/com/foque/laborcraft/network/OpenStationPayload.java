@@ -2,6 +2,8 @@ package com.foque.laborcraft.network;
 
 import com.foque.laborcraft.LaborCraft;
 import com.foque.laborcraft.area.EnclosureDescriptor;
+import com.foque.laborcraft.area.EnclosureScan;
+import com.foque.laborcraft.area.EnclosureScanner;
 import com.foque.laborcraft.area.EnclosureSpan;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.economy.CurrencyProviders;
@@ -18,6 +20,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 
@@ -31,6 +34,7 @@ public record OpenStationPayload(
 		String balanceText,
 		String jobId,
 		EnclosureDescriptor enclosure,
+		boolean enclosureValid,
 		ZoneView zone,
 		List<ZoneView> zones,
 		int maxRadius,
@@ -55,6 +59,7 @@ public record OpenStationPayload(
 					buffer.writeBlockPos(enclosure.seed());
 					buffer.writeBlockPos(enclosure.min());
 					buffer.writeBlockPos(enclosure.max());
+					buffer.writeBoolean(payload.enclosureValid());
 					buffer.writeVarInt(enclosure.area());
 					buffer.writeVarInt(enclosure.spans().size());
 					for (EnclosureSpan span : enclosure.spans()) {
@@ -120,10 +125,12 @@ public record OpenStationPayload(
 				String balanceText = buffer.readUtf(64);
 				String jobId = buffer.readUtf(64);
 				EnclosureDescriptor enclosure = null;
+				boolean enclosureValid = false;
 				if (buffer.readBoolean()) {
 					BlockPos seed = buffer.readBlockPos();
 					BlockPos min = buffer.readBlockPos();
 					BlockPos max = buffer.readBlockPos();
+					enclosureValid = buffer.readBoolean();
 					int area = buffer.readVarInt();
 					int spanCount = buffer.readVarInt();
 					List<EnclosureSpan> spans = new ArrayList<>(spanCount);
@@ -194,7 +201,7 @@ public record OpenStationPayload(
 					));
 				}
 				return new OpenStationPayload(
-						pos, mode, balanceText, jobId, enclosure, zone, List.copyOf(zones), maxRadius, verticalRadius, bound,
+						pos, mode, balanceText, jobId, enclosure, enclosureValid, zone, List.copyOf(zones), maxRadius, verticalRadius, bound,
 						List.copyOf(workers), List.copyOf(ownAreas), List.copyOf(areas),
 						List.copyOf(otherPosts), List.copyOf(storage)
 				);
@@ -236,6 +243,18 @@ public record OpenStationPayload(
 				.filter(candidate -> StationRegistry.isActive(server, candidate))
 				.toList();
 		List<StationRegistry.Station> nearby = nearbyStations(station, all);
+		boolean enclosureValid = true;
+		if (station.enclosure() != null) {
+			EnclosureScan scan = EnclosureScanner.scan(
+					(ServerLevel) player.level(),
+					station.enclosure().seed(),
+					LaborCraftConfig.get()
+			);
+			enclosureValid = scan.valid()
+					&& scan.area() == station.enclosure().area()
+					&& scan.spans().equals(station.enclosure().spans())
+					&& scan.gatePositions().size() == station.enclosure().gates().size();
+		}
 
 		return new OpenStationPayload(
 				station.pos(),
@@ -245,6 +264,7 @@ public record OpenStationPayload(
 				),
 				station.jobId(),
 				station.enclosure(),
+				enclosureValid,
 				zone,
 				zones,
 				maxRadius,

@@ -435,6 +435,7 @@
 	"laborcraft.ui.station.mode": "Área de trabalho",
 	"laborcraft.ui.station.enclosure.none": "Sem cercado - clique dentro de uma área cercada no mapa.",
 	"laborcraft.ui.station.enclosure.current": "Cercado: %s blocos (%sx%s) - %s portão(ões)",
+	"laborcraft.ui.station.enclosure.invalid": "Cercado inválido - a cerca mudou. Escaneie novamente.",
 	"laborcraft.ui.station.enclosure.click_hint": "Clique dentro do cercado no mapa para escanear.",
 	"laborcraft.ui.station.enclosure.clear": "Limpar cercado",
 	"laborcraft.ui.station.enclosure.rescan": "Escanear novamente",

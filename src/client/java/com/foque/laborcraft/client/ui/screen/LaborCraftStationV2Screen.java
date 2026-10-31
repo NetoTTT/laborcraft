@@ -493,14 +493,16 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 			EnclosureDescriptor enclosure = station.enclosure();
 			Component mode = enclosure == null
 					? Component.translatable("laborcraft.ui.station.enclosure.none")
-					: Component.translatable(
-							"laborcraft.ui.station.enclosure.current",
-							enclosure.area(),
-							enclosure.width(),
-							enclosure.depth(),
-							enclosure.gates().size()
-					);
-			header.add(control(label(mode).color(enclosure == null ? MUTED : TITLE)));
+					: !station.enclosureValid()
+							? Component.translatable("laborcraft.ui.station.enclosure.invalid")
+						: Component.translatable(
+								"laborcraft.ui.station.enclosure.current",
+								enclosure.area(),
+								enclosure.width(),
+								enclosure.depth(),
+								enclosure.gates().size()
+						);
+			header.add(control(label(mode).color(enclosure == null ? MUTED : station.enclosureValid() ? TITLE : DANGER)));
 		}
 		else {
 			int diameter = station.maxRadius() * 2 + 1;
@@ -790,12 +792,15 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 		List<QuillMapZone> zones = new java.util.ArrayList<>(enclosure.spans().size());
 		int y = enclosure.seed().getY();
+		boolean valid = station.enclosureValid();
+		int fill = valid ? QuillColors.argb(40, 255, 198, 90) : QuillColors.argb(40, 224, 106, 106);
+		int border = valid ? QuillColors.rgb(255, 198, 90) : QuillColors.rgb(224, 106, 106);
 		for (com.foque.laborcraft.area.EnclosureSpan span : enclosure.spans()) {
 			zones.add(new QuillMapZone(
 					new BlockPos(span.minX(), y, span.z()),
 					new BlockPos(span.maxX(), y, span.z()),
-					QuillColors.argb(40, 255, 198, 90),
-					QuillColors.rgb(255, 198, 90),
+					fill,
+					border,
 					false
 			));
 		}
