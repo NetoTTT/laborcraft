@@ -1,7 +1,8 @@
 package com.foque.laborcraft.client.hud;
 
-import com.foque.laborcraft.client.ui.LcRender;
-import com.foque.laborcraft.client.ui.LcTheme;
+import com.quillui.render.QuillRender;
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+import com.quillui.theme.QuillThemeData;
 import com.foque.laborcraft.client.hud.BubbleSettings;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import java.util.HashMap;
@@ -152,14 +153,17 @@ public final class WorkerSpeechHud implements HudElement {
 
 		float alpha = Mth.clamp(bubble.alpha, 0.0F, 1.0F);
 		int border = withAlpha(bubble.color, alpha);
-		int text = withAlpha(LcTheme.TEXT, alpha);
+		int text = withAlpha(LaborCraftTheme.currentData().color(QuillThemeData.ColorRole.TEXT), alpha);
 		int shadow = withAlpha(0x66000000, alpha);
-		int background = withAlpha(0xE6101820, alpha);
+		int background = withAlpha(
+				LaborCraftTheme.currentData().color(QuillThemeData.ColorRole.PANEL_BG),
+				alpha
+		);
 
 		graphics.fill(bubbleX + 1, bubbleY + 1,
 				bubbleX + bubble.width + 1, bubbleY + bubble.height + 1, shadow);
 		graphics.fill(bubbleX, bubbleY, bubbleX + bubble.width, bubbleY + bubble.height, background);
-		LcRender.border(graphics, bubbleX, bubbleY, bubble.width, bubble.height, border);
+		QuillRender.border(graphics, bubbleX, bubbleY, bubble.width, bubble.height, border);
 
 		int tailX = Math.round(bubble.x);
 		graphics.fill(tailX - 3, bubbleY + bubble.height, tailX + 3, bubbleY + bubble.height + 4, background);

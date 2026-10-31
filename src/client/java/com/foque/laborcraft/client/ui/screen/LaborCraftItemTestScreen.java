@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
 import com.foque.laborcraft.client.ui.component.LcPagination;
 import com.foque.laborcraft.client.ui.widget.LcItemGrid;
@@ -32,7 +34,7 @@ public final class LaborCraftItemTestScreen extends QuillScreen {
 	}
 
 	public LaborCraftItemTestScreen(int page) {
-		super(Component.translatable("laborcraft.test.title"), 460, 300);
+		super(Component.translatable("laborcraft.test.title"), 460, 300, LaborCraftTheme.currentData());
 		this.pagination = new LcPagination<>(items(), PAGE_SIZE);
 		this.pagination.setPage(page);
 	}

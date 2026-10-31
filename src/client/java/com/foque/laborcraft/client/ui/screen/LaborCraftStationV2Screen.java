@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import static com.quillui.theme.QuillThemeData.ColorRole.ACCENT;
 import static com.quillui.theme.QuillThemeData.ColorRole.DANGER;
 import static com.quillui.theme.QuillThemeData.ColorRole.INFO;
@@ -85,7 +87,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	}
 
 	public LaborCraftStationV2Screen(OpenStationPayload station, Tab initialTab, BlockPos initialStorage) {
-		super(Component.translatable("laborcraft.ui.station.title"), PANEL_WIDTH, PANEL_HEIGHT);
+		super(Component.translatable("laborcraft.ui.station.title"), PANEL_WIDTH, PANEL_HEIGHT, LaborCraftTheme.currentData());
 		this.station = station;
 		this.tab = initialTab == null ? Tab.WORK : initialTab;
 		this.filter = pendingFilter == null ? WorkerListFilter.ALL : pendingFilter;

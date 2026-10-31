@@ -8,6 +8,7 @@ import com.foque.laborcraft.client.render.LaborCraftWorkerRenderer;
 import com.foque.laborcraft.client.render.StationPreviewManager;
 import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.foque.laborcraft.client.ui.chat.LcValuePrompt;
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
 import com.foque.laborcraft.client.ui.screen.LaborCraftAdminV2Screen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftConfigScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftEmployeeScreen;
@@ -45,6 +46,7 @@ import net.minecraft.core.BlockPos;
 public class LaborCraftClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
+		LaborCraftTheme.load();
 		EntityRenderers.register(LaborCraftEntities.WORKER, LaborCraftWorkerRenderer::new);
 		ClientSendMessageEvents.ALLOW_CHAT.register(LcValuePrompt::allowChat);
 		ClientSendMessageEvents.ALLOW_COMMAND.register(LcValuePrompt::allowCommand);

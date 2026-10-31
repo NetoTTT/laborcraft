@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import static com.quillui.theme.QuillThemeData.ColorRole.ACCENT;
 import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
 
@@ -33,7 +35,7 @@ public final class LaborCraftPlayersScreen extends QuillScreen {
 	private QuillListView<PlayerInfo> list;
 
 	public LaborCraftPlayersScreen() {
-		super(Component.translatable("laborcraft.ui.players.title"), 430, 320);
+		super(Component.translatable("laborcraft.ui.players.title"), 430, 320, LaborCraftTheme.currentData());
 		this.pagination = new LcPagination<>(players(), PAGE_SIZE);
 	}
 

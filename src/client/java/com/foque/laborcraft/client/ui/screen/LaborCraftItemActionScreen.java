@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
 
 import com.foque.laborcraft.client.ui.LcTooltips;
@@ -66,7 +68,7 @@ public final class LaborCraftItemActionScreen extends QuillScreen {
 			Runnable onBack,
 			long available
 	) {
-		super(Component.translatable("laborcraft.test.item.title"), 460, 300);
+		super(Component.translatable("laborcraft.test.item.title"), 460, 300, LaborCraftTheme.currentData());
 		this.stack = stack.copy();
 		this.kindLabel = kindLabel;
 		this.options = List.copyOf(options);

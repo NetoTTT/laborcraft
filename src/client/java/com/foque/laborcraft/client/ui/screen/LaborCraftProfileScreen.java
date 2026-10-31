@@ -1,11 +1,14 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
 
 import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
 import com.foque.laborcraft.client.ui.LcWorkerText;
 import com.foque.laborcraft.client.ui.WorkerListFilter;
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
 import com.foque.laborcraft.client.ui.widget.ItemStackWidget;
 import com.foque.laborcraft.command.LaborCraftCommands;
 import com.foque.laborcraft.job.JobType;
@@ -40,7 +43,7 @@ public final class LaborCraftProfileScreen extends QuillScreen {
 	private WorkerListFilter filter;
 
 	public LaborCraftProfileScreen(OpenProfilePayload profile) {
-		super(Component.translatable("laborcraft.ui.profile.title"), 460, 360);
+		super(Component.translatable("laborcraft.ui.profile.title"), 460, 360, LaborCraftTheme.currentData());
 		this.profile = profile;
 		this.filter = pendingFilter == null ? WorkerListFilter.ALL : pendingFilter;
 		pendingFilter = null;
@@ -56,6 +59,7 @@ public final class LaborCraftProfileScreen extends QuillScreen {
 		QuillFlexBox root = QuillNodes.column(QuillSpacing.SPACE_2);
 		root.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
 		root.add(stats());
+		root.add(themeCard());
 		root.add(header());
 
 		List<OpenProfilePayload.WorkerSummary> visible = visibleWorkers();
@@ -95,6 +99,35 @@ public final class LaborCraftProfileScreen extends QuillScreen {
 		return row;
 	}
 
+	private QuillCardBox themeCard() {
+		QuillFlexBox row = QuillNodes.row(QuillSpacing.SPACE_1);
+		for (LaborCraftTheme theme : LaborCraftTheme.values()) {
+			boolean active = theme == LaborCraftTheme.current();
+			QuillButton button = new QuillButton(
+					0, 0, 60, 20,
+					theme.displayName(),
+					active ? QuillButton.Variant.PRIMARY : QuillButton.Variant.SECONDARY,
+					() -> selectTheme(theme)
+			);
+			button.selected(active);
+			button.tip(QuillTooltips.of(
+					theme.displayName(),
+					theme.description(),
+					null
+			));
+			row.add(QuillNodes.flexible(QuillNodes.widget(button, 60, 20), 1));
+		}
+		return new QuillCardBox(Component.translatable("laborcraft.ui.profile.theme"), row);
+	}
+
+	private void selectTheme(LaborCraftTheme theme) {
+		if (theme == LaborCraftTheme.current()) {
+			return;
+		}
+		LaborCraftTheme.select(theme);
+		pendingFilter = filter;
+		Minecraft.getInstance().setScreenAndShow(new LaborCraftProfileScreen(profile));
+	}
 	private QuillFlexBox header() {
 		QuillFlexBox row = QuillNodes.row(QuillSpacing.SPACE_2);
 		row.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
@@ -171,10 +204,10 @@ public final class LaborCraftProfileScreen extends QuillScreen {
 	private QuillButton highlightButton(OpenProfilePayload.WorkerSummary summary) {
 		QuillButton button = new QuillButton(
 				0, 0, 18, 18,
-				Component.literal("E"),
+				Component.empty(),
 				QuillButton.Variant.GHOST,
 				() -> highlightWorker(summary.id())
-		);
+		).icon(EYE_ICON);
 		button.tip(QuillTooltips.of(
 				Component.translatable("laborcraft.ui.profile.worker.highlight"),
 				Component.translatable("laborcraft.ui.profile.highlight.hint"),

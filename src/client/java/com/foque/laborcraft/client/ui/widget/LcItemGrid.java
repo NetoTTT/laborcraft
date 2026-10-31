@@ -1,7 +1,8 @@
 package com.foque.laborcraft.client.ui.widget;
 
-import com.foque.laborcraft.client.ui.LcRender;
-import com.foque.laborcraft.client.ui.LcTheme;
+import com.quillui.render.QuillRender;
+import com.quillui.theme.QuillThemeData;
+import com.quillui.theme.QuillThemeScope;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -27,6 +28,7 @@ public final class LcItemGrid<T> extends AbstractWidget {
 	private final int rows;
 	private final int cell;
 	private final int gap;
+	private final QuillThemeData theme;
 	private List<T> entries = List.of();
 	private int focusedSlot = -1;
 
@@ -55,6 +57,7 @@ public final class LcItemGrid<T> extends AbstractWidget {
 		this.icon = icon;
 		this.amount = amount;
 		this.onSelect = onSelect;
+		this.theme = QuillThemeScope.current();
 	}
 
 	public void setEntries(List<T> entries) {
@@ -74,8 +77,12 @@ public final class LcItemGrid<T> extends AbstractWidget {
 			boolean filled = index < entries.size();
 			boolean activeSlot = filled && (index == hovered || (isFocused() && index == focusedSlot));
 
-			graphics.fill(slotX, slotY, slotX + cell, slotY + cell, index == hovered ? LcTheme.BUTTON_HOVER : LcTheme.BUTTON_BG);
-			LcRender.border(graphics, slotX, slotY, cell, cell, activeSlot ? LcTheme.ACCENT : LcTheme.BUTTON_BORDER);
+			graphics.fill(slotX, slotY, slotX + cell, slotY + cell, index == hovered
+					? theme.color(QuillThemeData.ColorRole.BUTTON_HOVER)
+					: theme.color(QuillThemeData.ColorRole.BUTTON_BG));
+			QuillRender.border(graphics, slotX, slotY, cell, cell, activeSlot
+					? theme.color(QuillThemeData.ColorRole.ACCENT)
+					: theme.color(QuillThemeData.ColorRole.BUTTON_BORDER));
 
 			if (!filled) {
 				continue;

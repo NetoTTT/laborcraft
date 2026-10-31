@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
 import static com.quillui.theme.QuillThemeData.ColorRole.TITLE;
 
@@ -56,7 +58,7 @@ public final class LaborCraftWorkerInventoryV2Screen extends QuillScreen {
 	private PendingTransfer pending;
 
 	public LaborCraftWorkerInventoryV2Screen(OpenWorkerInventoryPayload worker) {
-		super(Component.translatable("laborcraft.ui.worker.inv.title"), PANEL_WIDTH, PANEL_HEIGHT);
+		super(Component.translatable("laborcraft.ui.worker.inv.title"), PANEL_WIDTH, PANEL_HEIGHT, LaborCraftTheme.currentData());
 		this.worker = worker;
 	}
 

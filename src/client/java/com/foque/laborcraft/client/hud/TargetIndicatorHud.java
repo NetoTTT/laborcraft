@@ -1,7 +1,7 @@
 package com.foque.laborcraft.client.hud;
 
 import com.foque.laborcraft.client.render.WorldHighlightManager;
-import com.foque.laborcraft.client.ui.LcRender;
+import com.quillui.render.QuillRender;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
@@ -83,7 +83,7 @@ public final class TargetIndicatorHud implements HudElement {
 		int cy = (int) py;
 
 		graphics.fill(cx - BADGE, cy - BADGE, cx + BADGE, cy + BADGE, 0xCC101820);
-		LcRender.border(graphics, cx - BADGE, cy - BADGE, BADGE * 2, BADGE * 2, color);
+		QuillRender.border(graphics, cx - BADGE, cy - BADGE, BADGE * 2, BADGE * 2, color);
 		ItemStack icon = WorldHighlightManager.icon();
 		if (!icon.isEmpty()) {
 			graphics.item(icon, cx - 8, cy - 8);

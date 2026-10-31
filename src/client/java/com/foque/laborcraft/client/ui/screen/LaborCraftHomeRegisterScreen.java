@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import static com.quillui.theme.QuillThemeData.ColorRole.ACCENT;
 import static com.quillui.theme.QuillThemeData.ColorRole.DANGER;
 import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
@@ -27,7 +29,7 @@ public final class LaborCraftHomeRegisterScreen extends QuillScreen {
 	private boolean confirmUnclaim;
 
 	public LaborCraftHomeRegisterScreen(OpenHomeRegisterPayload home) {
-		super(Component.translatable("laborcraft.ui.home.register.title"), 440, 260);
+		super(Component.translatable("laborcraft.ui.home.register.title"), 440, 260, LaborCraftTheme.currentData());
 		this.home = home;
 	}
 

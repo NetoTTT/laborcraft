@@ -6,8 +6,7 @@ Status of the screen-by-screen rewrite on `feat/quill-0.3-ui`.
 
 - New and migrated screens extend `com.quillui.screen.QuillScreen`.
 - Content is built with `setContent` and `QuillNodes`; lists use `QuillListView`.
-- New code does not use `LcTheme`, `LcButton`, `LcScrollList` or `LcRender`.
-- `LcTheme`/`LcRender` remain only for the HUDs and the `LcItemGrid` widget.
+- No legacy UI class remains; screens, HUDs and widgets read `LaborCraftTheme`/`QuillThemeData`.
 - Screen sizes come from the panel/content bounds, not from fixed `x`/`y` math.
 
 ## Measured screens
@@ -64,11 +63,10 @@ The legacy station, worker inventory and admin screens were deleted after the V2
 the in-game smoke test, together with the unused widgets:
 
 - `LaborCraftAdminScreen`, `LaborCraftStationScreen`, `LaborCraftWorkerInventoryScreen`
-- `LcButton`, `LcScrollList`, `LcAreaMap`, `LcJobOption`
+- `LcButton`, `LcScrollList`, `LcAreaMap`, `LcJobOption`, `LcTheme`, `LcRender`
 
-No screen overrides `constrainPanel()` and no screen imports `LcTheme`, `LcButton`, `LcScrollList`
-or `LcRender`. The HUDs (`TargetIndicatorHud`, `WorkerSpeechHud`) and the `LcItemGrid` widget still
-use `LcTheme`/`LcRender`; they are outside the screen gate.
+No screen overrides `constrainPanel()` and the legacy UI aliases no longer exist. Screens, HUDs and
+`LcItemGrid` read the player-selected `LaborCraftTheme` (six palettes, see `docs/20-TEMAS.md`).
 
 ## Next pass
 
@@ -79,6 +77,6 @@ use `LcTheme`/`LcRender`; they are outside the screen gate.
 ## Release gate for LC 2
 
 - No screen overrides `constrainPanel()`.
-- No screen code imports `LcTheme`, `LcButton`, `LcScrollList` or `LcRender`.
+- No screen or widget imports a legacy UI alias; all UI reads `QuillThemeData`.
 - Every screen opens, resizes and closes without layout overlap.
 - `./gradlew build` and the in-game smoke test pass.

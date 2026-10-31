@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
 
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
@@ -17,7 +19,7 @@ import net.minecraft.network.chat.Component;
 /** Language and client preferences. Rebuilt with the measured Quill API. */
 public final class LaborCraftConfigScreen extends QuillScreen {
 	public LaborCraftConfigScreen() {
-		super(Component.translatable("laborcraft.ui.config.title"), 420, 260);
+		super(Component.translatable("laborcraft.ui.config.title"), 420, 260, LaborCraftTheme.currentData());
 	}
 
 	@Override

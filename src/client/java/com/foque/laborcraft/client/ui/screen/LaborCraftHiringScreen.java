@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import static com.quillui.theme.QuillThemeData.ColorRole.DANGER;
 import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
 
@@ -32,7 +34,7 @@ public final class LaborCraftHiringScreen extends QuillScreen {
 	private OpenHiringPayload.Offer selected;
 
 	public LaborCraftHiringScreen(OpenHiringPayload offer) {
-		super(Component.translatable("laborcraft.ui.hire.title"), 460, 360);
+		super(Component.translatable("laborcraft.ui.hire.title"), 460, 360, LaborCraftTheme.currentData());
 		this.offer = offer;
 		this.selected = offer.offers().isEmpty() ? null : offer.offers().get(0);
 	}

@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import com.foque.laborcraft.client.ui.LcWorkerText;
 import com.foque.laborcraft.job.JobType;
 import com.foque.laborcraft.job.JobTypes;
@@ -14,7 +16,7 @@ public abstract class LaborCraftWorkerScreen extends QuillScreen {
 	protected final OpenWorkerPayload worker;
 
 	protected LaborCraftWorkerScreen(OpenWorkerPayload worker, Component title, int panelWidth, int panelHeight) {
-		super(title, panelWidth, panelHeight);
+		super(title, panelWidth, panelHeight, LaborCraftTheme.currentData());
 		this.worker = worker;
 	}
 

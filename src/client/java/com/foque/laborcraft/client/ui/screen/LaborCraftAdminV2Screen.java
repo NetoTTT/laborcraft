@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
+
 import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
 
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
@@ -56,7 +58,7 @@ public final class LaborCraftAdminV2Screen extends QuillScreen {
 	}
 
 	private LaborCraftAdminV2Screen(OpenAdminPayload state, Tab initialTab) {
-		super(Component.translatable("laborcraft.ui.admin.title"), PANEL_WIDTH, PANEL_HEIGHT);
+		super(Component.translatable("laborcraft.ui.admin.title"), PANEL_WIDTH, PANEL_HEIGHT, LaborCraftTheme.currentData());
 		this.state = state;
 		this.tab = initialTab == null ? Tab.SALARY : initialTab;
 	}
