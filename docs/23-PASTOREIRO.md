@@ -148,3 +148,12 @@ resultado aparece como toast; o chat continua recebendo a mesma mensagem como fa
 - A banda vertical de detecção é a mesma do overlay do mapa (`-4..+8` em torno do jogador).
 - Se faltar um bloco de cerca, o flood vaza e o cercado é reprovado.
 - Portão aberto é abertura; feche antes de escanear.
+## Cérebro do pastoreiro (teste)
+
+- `HerderBrain` roda só em expediente (`WorkerRest` cuida do fora do expediente).
+- Sem cercado, o trabalhador pausa com "Configure um cercado...".
+- O ciclo é: entrar → pastar 12 s → sair → esperar 5 s fora → entrar de novo.
+- A porta é o `OpenFenceGateGoal`: o path passa pelo portão fechado, ele abre, o trabalhador cruza e ele fecha quando o trabalhador se afasta 3,5 blocos.
+- O ponto de entrada é a coluna interna ao lado do portão; o de saída é a coluna externa oposta.
+- Se o path falhar 3 vezes seguidas, o trabalhador pausa com "Confira o portão".
+- Não exige ferramenta.

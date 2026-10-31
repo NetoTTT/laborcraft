@@ -53,19 +53,36 @@ public abstract class AbstractWorkerBrain implements WorkerBrain {
 			return;
 		}
 
-		if (!station.hasZone()) {
-			pause(level, "laborcraft.ui.worker.task.need_zone");
+		if (!hasWorkArea(station)) {
+			pause(level, areaNotice());
 			return;
 		}
 
-		prepareTool();
-		if (!toolReady()) {
-			pause(level,
-					toolUsable() ? "laborcraft.ui.worker.task.tool_breaking" : "laborcraft.ui.worker.task.need_tool");
-			return;
+		if (needsTool()) {
+			prepareTool();
+			if (!toolReady()) {
+				pause(level,
+						toolUsable() ? "laborcraft.ui.worker.task.tool_breaking" : "laborcraft.ui.worker.task.need_tool");
+				return;
+			}
 		}
 
 		tickJob(level, station);
+	}
+
+	/** Whether the station has the area this job works with (rectangle zone or pen). */
+	protected boolean hasWorkArea(StationRegistry.Station station) {
+		return station.hasZone();
+	}
+
+	/** Notice shown when the station lacks the work area for this job. */
+	protected String areaNotice() {
+		return "laborcraft.ui.worker.task.need_zone";
+	}
+
+	/** Jobs without equipment skip the tool slot entirely. */
+	protected boolean needsTool() {
+		return true;
 	}
 
 	/** Job production step, called only when the worker is active, in a zone, with a valid tool. */
@@ -114,7 +131,7 @@ public abstract class AbstractWorkerBrain implements WorkerBrain {
 		}
 
 		return switch (notice) {
-			case "laborcraft.ui.worker.task.need_zone" -> station.hasZone();
+			case "laborcraft.ui.worker.task.need_zone" -> hasWorkArea(station);
 			case "laborcraft.ui.worker.task.need_tool",
 					"laborcraft.ui.worker.task.tool_breaking" -> {
 				prepareTool();

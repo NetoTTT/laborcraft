@@ -31,5 +31,6 @@ public final class JobBrains {
 
 	public static void bootstrap() {
 		register(JobTypes.FARMER.id(), FarmerBrain::new);
+		register(JobTypes.HERDER.id(), HerderBrain::new);
 	}
 }
