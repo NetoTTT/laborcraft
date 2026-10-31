@@ -11,17 +11,21 @@ import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
 import static com.quillui.theme.QuillThemeData.ColorRole.SUCCESS;
 import static com.quillui.theme.QuillThemeData.ColorRole.TITLE;
 
+import com.foque.laborcraft.area.EnclosureDescriptor;
 import com.foque.laborcraft.client.render.StationPreviewManager;
 import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
 import com.foque.laborcraft.client.ui.LcWorkerText;
 import com.foque.laborcraft.client.ui.WorkerListFilter;
 import com.foque.laborcraft.command.LaborCraftCommands;
+import com.foque.laborcraft.job.JobTypes;
 import com.foque.laborcraft.network.OpenStationPayload;
 import com.quillui.layout.QuillCrossAxisAlignment;
 import com.quillui.layout.QuillFlexBox;
 import com.quillui.layout.QuillLayoutNode;
 import com.quillui.map.QuillMap;
+import com.mojang.blaze3d.platform.InputConstants;
+import com.quillui.map.QuillMapMarker;
 import com.quillui.map.QuillMapZone;
 import com.quillui.render.QuillTooltips;
 import com.quillui.screen.QuillScreen;
@@ -36,6 +40,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -104,6 +109,10 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 	public BlockPos stationPos() {
 		return station.pos();
+	}
+
+	private boolean herder() {
+		return JobTypes.HERDER.id().equals(station.jobId());
 	}
 
 	public Tab activeTab() {
@@ -462,15 +471,30 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		QuillFlexBox header = QuillNodes.row(QuillSpacing.SPACE_2);
 		header.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
 
-		int diameter = station.maxRadius() * 2 + 1;
-		Component mode = station.zone() == null
-				? Component.translatable("laborcraft.ui.station.mode.free_radius", diameter, diameter)
-				: Component.translatable(
-						"laborcraft.ui.station.mode.zone",
-						station.zone().width(),
-						station.zone().depth()
-				);
-		header.add(control(label(mode).color(station.zone() == null ? DANGER : TITLE)));
+		if (herder()) {
+			EnclosureDescriptor enclosure = station.enclosure();
+			Component mode = enclosure == null
+					? Component.translatable("laborcraft.ui.station.enclosure.none")
+					: Component.translatable(
+							"laborcraft.ui.station.enclosure.current",
+							enclosure.area(),
+							enclosure.width(),
+							enclosure.depth(),
+							enclosure.gates().size()
+					);
+			header.add(control(label(mode).color(enclosure == null ? MUTED : TITLE)));
+		}
+		else {
+			int diameter = station.maxRadius() * 2 + 1;
+			Component mode = station.zone() == null
+					? Component.translatable("laborcraft.ui.station.mode.free_radius", diameter, diameter)
+					: Component.translatable(
+							"laborcraft.ui.station.mode.zone",
+							station.zone().width(),
+							station.zone().depth()
+					);
+			header.add(control(label(mode).color(station.zone() == null ? DANGER : TITLE)));
+		}
 		header.add(QuillNodes.flexible(QuillNodes.spacer()));
 
 		layerButton = new QuillButton(
@@ -498,6 +522,26 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 	private QuillFlexBox configActions() {
 		QuillFlexBox bar = QuillNodes.row(QuillSpacing.SPACE_2);
+
+		if (herder()) {
+			if (station.enclosure() == null) {
+				bar.add(control(label(Component.translatable(
+						"laborcraft.ui.station.enclosure.click_hint"
+				)).muted()));
+			}
+			else {
+				bar.add(QuillNodes.widget(new QuillButton(
+						0, 0, 150, 24,
+						Component.translatable("laborcraft.ui.station.enclosure.clear"),
+						QuillButton.Variant.DANGER,
+						() -> LaborCraftUiActions.run(
+								LaborCraftCommands.STATION_ENCLOSURE_CLEAR + " " + posString()
+						)
+				), 150, 24));
+			}
+			bar.add(QuillNodes.flexible(QuillNodes.spacer()));
+			return bar;
+		}
 
 		if (drawing) {
 			confirmMapButton = new QuillButton(
@@ -650,6 +694,16 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 				station.maxRadius(),
 				(int) Math.ceil(Math.max(width, height) / 8.0D)
 		);
+		if (herder() && station.enclosure() != null) {
+			EnclosureDescriptor enclosure = station.enclosure();
+			int span = Math.max(
+					Math.max(Math.abs(enclosure.min().getX() - station.pos().getX()),
+							Math.abs(enclosure.max().getX() - station.pos().getX())),
+					Math.max(Math.abs(enclosure.min().getZ() - station.pos().getZ()),
+							Math.abs(enclosure.max().getZ() - station.pos().getZ()))
+			);
+			viewRadius = Math.max(viewRadius, span + 8);
+		}
 		QuillMap created = new QuillMap(
 				0,
 				0,
@@ -662,9 +716,14 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		);
 		created.setLayer(mapLayer);
 		created.setRadiusLimitVisible(false);
-		created.setReadOnly(!drawing);
-		created.setZones(mapZones());
+		boolean herder = herder();
+		created.setReadOnly(herder || !drawing);
+		created.setZones(herder ? enclosureZones() : mapZones());
 		created.setMergeZones(true);
+		if (herder) {
+			created.setMarkers(enclosureGates());
+			return created;
+		}
 
 		if (drawing) {
 			BlockPos savedFrom = station.zone() == null ? null : station.zone().from();
@@ -679,6 +738,43 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		}
 
 		return created;
+	}
+
+	private List<QuillMapZone> enclosureZones() {
+		EnclosureDescriptor enclosure = station.enclosure();
+		if (enclosure == null) {
+			return List.of();
+		}
+
+		List<QuillMapZone> zones = new java.util.ArrayList<>(enclosure.spans().size());
+		int y = enclosure.seed().getY();
+		for (com.foque.laborcraft.area.EnclosureSpan span : enclosure.spans()) {
+			zones.add(new QuillMapZone(
+					new BlockPos(span.minX(), y, span.z()),
+					new BlockPos(span.maxX(), y, span.z()),
+					QuillColors.argb(40, 255, 198, 90),
+					QuillColors.rgb(255, 198, 90),
+					false
+			));
+		}
+		return zones;
+	}
+
+	private List<QuillMapMarker> enclosureGates() {
+		EnclosureDescriptor enclosure = station.enclosure();
+		if (enclosure == null) {
+			return List.of();
+		}
+
+		List<QuillMapMarker> markers = new java.util.ArrayList<>(enclosure.gates().size());
+		for (BlockPos gate : enclosure.gates()) {
+			markers.add(new QuillMapMarker(
+					gate,
+					Component.translatable("laborcraft.ui.station.enclosure.gate"),
+					QuillColors.rgb(255, 198, 90)
+			));
+		}
+		return markers;
 	}
 
 	private List<QuillMapZone> mapZones() {
@@ -942,6 +1038,23 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	}
 
 	// --- Shared -----------------------------------------------------------------------------
+
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (tab == Tab.CONFIG && herder() && map != null
+				&& event.button() == InputConstants.MOUSE_BUTTON_LEFT
+				&& map.isMouseOver(event.x(), event.y())) {
+			BlockPos clicked = map.blockAt(event.x(), event.y());
+			if (clicked != null) {
+				LaborCraftUiActions.run(
+						LaborCraftCommands.STATION_ENCLOSURE_SET + " " + posString()
+								+ " " + coordinates(clicked)
+				);
+				return true;
+			}
+		}
+		return super.mouseClicked(event, doubleClick);
+	}
 
 	@Override
 	public void tick() {

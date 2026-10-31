@@ -25,7 +25,6 @@ public final class EnclosureScanner {
 			Direction.EAST,
 			Direction.WEST
 	};
-	private static final int MIN_AREA = 9;
 	private static final int MIN_BOUNDARY = 4;
 
 	private EnclosureScanner() {
@@ -36,8 +35,9 @@ public final class EnclosureScanner {
 			return EnclosureScan.invalid("blocked");
 		}
 
-		int maxArea = Math.max(MIN_AREA, config.housing.maxVolume);
-		int maxRadius = Math.max(4, config.housing.maxDistanceFromAnchor);
+		int minArea = Math.max(4, config.enclosure.minArea);
+		int maxArea = Math.max(minArea, config.enclosure.maxArea);
+		int maxRadius = Math.max(4, config.enclosure.maxScanRadius);
 		Set<BlockPos> visited = new HashSet<>();
 		ArrayDeque<BlockPos> queue = new ArrayDeque<>();
 		visited.add(origin);
@@ -80,7 +80,7 @@ public final class EnclosureScanner {
 		}
 
 		int area = visited.size();
-		if (area < MIN_AREA) {
+		if (area < minArea) {
 			return EnclosureScan.invalid("too_small");
 		}
 		if (boundary.size() < MIN_BOUNDARY) {

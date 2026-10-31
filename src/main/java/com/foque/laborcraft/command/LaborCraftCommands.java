@@ -54,6 +54,9 @@ public final class LaborCraftCommands {
 	public static final String STATION_ZONE_CLEAR = STATION + " zone clear";
 	public static final String STATION_ZONE_MAX = STATION + " maxarea";
 	public static final String STATION_STORAGE_LINK = STATION + " storage link";
+	public static final String STATION_ENCLOSURE_SET = STATION + " enclosure set";
+	public static final String STATION_ENCLOSURE_CLEAR = STATION + " enclosure clear";
+	public static final String STATION_JOB_SET = STATION + " job set";
 	public static final String STATION_STORAGE_UNLINK = STATION + " storage unlink";
 	public static final String STATION_STORAGE_ROLE = STATION + " storage role";
 	public static final String STATION_STORAGE_SCAN = STATION + " storage scan";

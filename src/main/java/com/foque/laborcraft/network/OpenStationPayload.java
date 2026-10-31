@@ -1,6 +1,8 @@
 package com.foque.laborcraft.network;
 
 import com.foque.laborcraft.LaborCraft;
+import com.foque.laborcraft.area.EnclosureDescriptor;
+import com.foque.laborcraft.area.EnclosureSpan;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftWorker;
@@ -27,6 +29,8 @@ public record OpenStationPayload(
 		BlockPos pos,
 		String mode,
 		String balanceText,
+		String jobId,
+		EnclosureDescriptor enclosure,
 		ZoneView zone,
 		List<ZoneView> zones,
 		int maxRadius,
@@ -44,6 +48,25 @@ public record OpenStationPayload(
 				buffer.writeBlockPos(payload.pos());
 				buffer.writeUtf(payload.mode(), 16);
 				buffer.writeUtf(payload.balanceText(), 64);
+				buffer.writeUtf(payload.jobId(), 64);
+				buffer.writeBoolean(payload.enclosure() != null);
+				if (payload.enclosure() != null) {
+					EnclosureDescriptor enclosure = payload.enclosure();
+					buffer.writeBlockPos(enclosure.seed());
+					buffer.writeBlockPos(enclosure.min());
+					buffer.writeBlockPos(enclosure.max());
+					buffer.writeVarInt(enclosure.area());
+					buffer.writeVarInt(enclosure.spans().size());
+					for (EnclosureSpan span : enclosure.spans()) {
+						buffer.writeVarInt(span.z());
+						buffer.writeVarInt(span.minX());
+						buffer.writeVarInt(span.maxX());
+					}
+					buffer.writeVarInt(enclosure.gates().size());
+					for (BlockPos gate : enclosure.gates()) {
+						buffer.writeBlockPos(gate);
+					}
+				}
 				buffer.writeBoolean(payload.zone() != null);
 				if (payload.zone() != null) {
 					buffer.writeBlockPos(payload.zone().from());
@@ -95,6 +118,29 @@ public record OpenStationPayload(
 				BlockPos pos = buffer.readBlockPos();
 				String mode = buffer.readUtf(16);
 				String balanceText = buffer.readUtf(64);
+				String jobId = buffer.readUtf(64);
+				EnclosureDescriptor enclosure = null;
+				if (buffer.readBoolean()) {
+					BlockPos seed = buffer.readBlockPos();
+					BlockPos min = buffer.readBlockPos();
+					BlockPos max = buffer.readBlockPos();
+					int area = buffer.readVarInt();
+					int spanCount = buffer.readVarInt();
+					List<EnclosureSpan> spans = new ArrayList<>(spanCount);
+					for (int index = 0; index < spanCount; index++) {
+						spans.add(new EnclosureSpan(
+								buffer.readVarInt(),
+								buffer.readVarInt(),
+								buffer.readVarInt()
+						));
+					}
+					int gateCount = buffer.readVarInt();
+					List<BlockPos> gates = new ArrayList<>(gateCount);
+					for (int index = 0; index < gateCount; index++) {
+						gates.add(buffer.readBlockPos());
+					}
+					enclosure = new EnclosureDescriptor("", seed, min, max, area, spans, gates);
+				}
 				ZoneView zone = buffer.readBoolean()
 						? new ZoneView(buffer.readBlockPos(), buffer.readBlockPos())
 						: null;
@@ -148,7 +194,7 @@ public record OpenStationPayload(
 					));
 				}
 				return new OpenStationPayload(
-						pos, mode, balanceText, zone, List.copyOf(zones), maxRadius, verticalRadius, bound,
+						pos, mode, balanceText, jobId, enclosure, zone, List.copyOf(zones), maxRadius, verticalRadius, bound,
 						List.copyOf(workers), List.copyOf(ownAreas), List.copyOf(areas),
 						List.copyOf(otherPosts), List.copyOf(storage)
 				);
@@ -197,6 +243,8 @@ public record OpenStationPayload(
 				CurrencyProviders.active().format(
 						CurrencyProviders.active().balance(player.getUUID())
 				),
+				station.jobId(),
+				station.enclosure(),
 				zone,
 				zones,
 				maxRadius,

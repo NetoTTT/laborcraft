@@ -96,7 +96,22 @@ final class StationCommands {
 												context.getSource(),
 												BlockPosArgument.getLoadedBlockPos(context, "pos")
 										)))))
-				.then(Commands.literal("enclosure")
+				.then(Commands.literal("job")
+						.then(Commands.literal("set")
+								.then(Commands.argument("pos", BlockPosArgument.blockPos())
+										.then(Commands.argument("job", net.minecraft.commands.arguments.IdentifierArgument.id())
+												.suggests((context, builder) -> {
+													for (com.foque.laborcraft.job.JobType job
+															: com.foque.laborcraft.job.JobTypes.all()) {
+														builder.suggest(job.id());
+													}
+													return builder.buildFuture();
+												})
+												.executes(context -> stationJobSet(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos"),
+														net.minecraft.commands.arguments.IdentifierArgument.getId(context, "job").toString()
+												))))))				.then(Commands.literal("enclosure")
 						.then(Commands.literal("set")
 								.then(Commands.argument("pos", BlockPosArgument.blockPos())
 										.then(Commands.argument("seed", BlockPosArgument.blockPos())
@@ -365,6 +380,31 @@ final class StationCommands {
 		return 1;
 	}
 
+	private static int stationJobSet(
+			CommandSourceStack source, BlockPos pos, String jobId
+	) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = CommandSupport.stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+		if (com.foque.laborcraft.job.JobTypes.get(jobId) == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.job.unknown", jobId));
+			return 0;
+		}
+
+		StationRegistry.setJob(source.getServer(), station, jobId);
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.station.job.set", jobId),
+				true
+		);
+		return 1;
+	}
 	private static int stationEnclosureSet(
 			CommandSourceStack source, BlockPos pos, BlockPos seed
 	) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
@@ -393,6 +433,10 @@ final class StationCommands {
 				station,
 				EnclosureDescriptor.from(scan, station.dimension())
 		);
+		StationRegistry.Station updated = StationRegistry.get(source.getServer(), station.dimension(), pos);
+		if (updated != null) {
+			OpenStationPayload.open(player, updated);
+		}
 		source.sendSuccess(
 				() -> Component.translatable(
 						"laborcraft.station.enclosure.set",
@@ -419,6 +463,10 @@ final class StationCommands {
 		}
 
 		StationRegistry.clearEnclosure(source.getServer(), station);
+		StationRegistry.Station updated = StationRegistry.get(source.getServer(), station.dimension(), pos);
+		if (updated != null) {
+			OpenStationPayload.open(player, updated);
+		}
 		source.sendSuccess(
 				() -> Component.translatable("laborcraft.station.enclosure.cleared"),
 				true

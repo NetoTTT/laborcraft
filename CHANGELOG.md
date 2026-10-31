@@ -16,6 +16,8 @@ Núcleo de IA por emprego e correção das portas.
 - `/laborcraft admin set max-workers <n>` para ajustar o limite de trabalhadores por jogador.
 - Configurações por emprego em `LaborCraftConfig.jobs`/`job(jobId)`; o campo `farmer` vira alias compatível.
 - `EnclosureDescriptor` no Posto (seed, bounds, spans e portões) com `/laborcraft station enclosure set/clear`, separado das zonas retangulares.
+- Mapa de Config do pastoreiro em modo clique: o seed vem do bloco clicado, com limite de scan configurável (`enclosure.maxScanRadius`/`maxArea`).
+- `/laborcraft station job set <pos> <job>` para especializar o Posto.
 
 ### Corrigido
 - O NPC agora consegue atravessar portas fechadas: o pathfinding foi habilitado com `setCanOpenDoors(true)`, então ele encontra, abre e fecha portas para entrar/sair da casa e chegar à cama.

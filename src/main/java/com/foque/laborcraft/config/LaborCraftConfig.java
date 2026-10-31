@@ -35,6 +35,7 @@ public final class LaborCraftConfig {
 	public SpeechSettings speech = new SpeechSettings();
 	public CompatibilitySettings compatibility = new CompatibilitySettings();
 	public BillingSettings billing = new BillingSettings();
+	public EnclosureSettings enclosure = new EnclosureSettings();
 	public JobSettings farmer = JobSettings.farmer();
 	public Map<String, JobSettings> jobs = new LinkedHashMap<>();
 
@@ -263,6 +264,16 @@ public final class LaborCraftConfig {
 		}
 	}
 
+	public static final class EnclosureSettings {
+		/** How far from the clicked seed the pen scan may walk before giving up. */
+		public int maxScanRadius = 64;
+		/** Safety cap for the interior area; a huge field is not a pen. */
+		public int maxArea = 4096;
+		public int minArea = 9;
+
+		public EnclosureSettings() {
+		}
+	}
 	public static final class JobSettings {
 		public boolean enabled = true;
 		public int baseWage = 24;

@@ -10,6 +10,12 @@
 
 `pen scan` usa a posição do jogador como ponto interno. Fique dentro do cercado, em espaço livre.
 
+Definir o emprego do Posto:
+
+```text
+/laborcraft station job set <posição-do-posto> laborcraft:herder
+```
+
 Aplicar/remover num Posto:
 
 ```text
@@ -90,3 +96,15 @@ Stations antigas carregam com `jobId=""` e `enclosure=null`.
 
 `station enclosure set` grava o descriptor e mantém `mode=ZONES`; `hasEnclosure()` é separado de
 `hasZone()` para o fazendeiro continuar usando retângulos.
+## Mapa do pastoreiro
+
+Quando o Posto está em `laborcraft:herder`, a aba Config muda:
+
+- o mapa é somente leitura;
+- **clicar** num bloco dentro do cercado envia o seed para o servidor;
+- o servidor roda `EnclosureScanner` com limite (`enclosure.maxScanRadius`, `enclosure.maxArea`);
+- o descriptor volta no `OpenStationPayload` e é desenhado como spans âmbar;
+- portões aparecem como marcadores;
+- o botão **Limpar cercado** remove o descriptor.
+
+O retângulo continua sendo o modo dos outros empregos. Se o clique não encontrar um cercado dentro do limite, o servidor responde com o motivo (`no_gate`, `no_fence`, `too_large`, etc.).
