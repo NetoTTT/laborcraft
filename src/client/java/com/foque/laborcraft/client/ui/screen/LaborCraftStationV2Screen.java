@@ -1100,6 +1100,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 								+ " " + coordinates(clicked)
 				);
 				rescan = false;
+				refreshContent();
 				return true;
 			}
 		}
