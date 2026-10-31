@@ -112,7 +112,12 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	}
 
 	private boolean herder() {
-		return JobTypes.HERDER.id().equals(station.jobId());
+		if (JobTypes.HERDER.id().equals(station.jobId())) {
+			return true;
+		}
+		return station.jobId().isBlank()
+				&& station.bound() != null
+				&& JobTypes.HERDER.id().equals(station.bound().jobId());
 	}
 
 	public Tab activeTab() {

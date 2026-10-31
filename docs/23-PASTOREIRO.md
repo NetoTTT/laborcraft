@@ -108,3 +108,12 @@ Quando o Posto está em `laborcraft:herder`, a aba Config muda:
 - o botão **Limpar cercado** remove o descriptor.
 
 O retângulo continua sendo o modo dos outros empregos. Se o clique não encontrar um cercado dentro do limite, o servidor responde com o motivo (`no_gate`, `no_fence`, `too_large`, etc.).
+## Compatibilidade com Posto antigo
+
+Se o Posto ainda tem `jobId` vazio (criado antes da especialização), a UI usa o emprego do
+trabalhador vinculado. Então um trabalhador `laborcraft:herder` já abre o mapa em modo clique,
+mesmo que o Posto tenha uma zona retangular antiga; a zona antiga fica oculta nesse modo.
+
+O bind agora grava o `jobId` do primeiro trabalhador no Posto e recusa trabalhadores de outro
+emprego. Para fixar a especialização sem depender do trabalhador, use
+`/laborcraft station job set <pos> laborcraft:herder`.

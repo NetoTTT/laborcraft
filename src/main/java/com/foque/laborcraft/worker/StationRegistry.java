@@ -125,7 +125,19 @@ public final class StationRegistry {
 			return false;
 		}
 
-		boolean replaced = registry.replace(station.withWorker(worker));
+		LaborCraftWorker entity = LaborCraftWorker.find(server, worker);
+		String workerJob = entity == null ? "" : entity.jobId();
+		if (!station.jobId().isBlank()
+				&& !workerJob.isBlank()
+				&& !station.jobId().equals(workerJob)) {
+			return false;
+		}
+
+		Station updated = station.withWorker(worker);
+		if (station.jobId().isBlank() && !workerJob.isBlank()) {
+			updated = updated.withJob(workerJob);
+		}
+		boolean replaced = registry.replace(updated);
 		if (replaced) {
 			registry.save();
 		}
