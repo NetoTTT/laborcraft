@@ -31,10 +31,35 @@ public final class EnclosureScanner {
 	}
 
 	public static EnclosureScan scan(ServerLevel level, BlockPos origin, LaborCraftConfig config) {
-		if (!level.getBlockState(origin).getCollisionShape(level, origin).isEmpty()) {
-			return EnclosureScan.invalid("blocked");
-		}
+		EnclosureScan best = null;
+		for (int dy : new int[]{0, -1, 1, -2, 2, -3, 3}) {
+			BlockPos seed = origin.offset(0, dy, 0);
+			if (!level.getBlockState(seed).getCollisionShape(level, seed).isEmpty()) {
+				continue;
+			}
 
+			EnclosureScan candidate = scanLayer(level, seed, config);
+			if (candidate.valid()) {
+				return candidate;
+			}
+			if (best == null || priority(candidate.failureReason()) > priority(best.failureReason())) {
+				best = candidate;
+			}
+		}
+		return best == null ? EnclosureScan.invalid("blocked") : best;
+	}
+
+	private static int priority(String reason) {
+		return switch (reason == null ? "" : reason) {
+			case "no_gate" -> 5;
+			case "no_fence" -> 4;
+			case "not_enclosed" -> 3;
+			case "too_small" -> 2;
+			default -> 1;
+		};
+	}
+
+	private static EnclosureScan scanLayer(ServerLevel level, BlockPos origin, LaborCraftConfig config) {
 		int minArea = Math.max(4, config.enclosure.minArea);
 		int maxArea = Math.max(minArea, config.enclosure.maxArea);
 		int maxRadius = Math.max(4, config.enclosure.maxScanRadius);
@@ -50,7 +75,7 @@ public final class EnclosureScanner {
 			BlockPos current = queue.poll();
 			if (Math.abs(current.getX() - origin.getX()) > maxRadius
 					|| Math.abs(current.getZ() - origin.getZ()) > maxRadius) {
-				return EnclosureScan.invalid("too_large");
+				return EnclosureScan.invalid("not_enclosed");
 			}
 
 			for (Direction direction : HORIZONTAL) {
@@ -72,7 +97,7 @@ public final class EnclosureScanner {
 
 				if (visited.add(next)) {
 					if (visited.size() > maxArea) {
-						return EnclosureScan.invalid("too_large");
+						return EnclosureScan.invalid("not_enclosed");
 					}
 					queue.add(next);
 				}

@@ -291,6 +291,7 @@
 	"laborcraft.command.admin.pen.valid": "Cercado: %s blocos (%sx%s), %s portão(ões), %s blocos de cerca.",
 	"laborcraft.command.admin.pen.invalid": "Não é um cercado válido: %s",
 	"laborcraft.pen.reason.blocked": "fique em espaço aberto dentro do cercado",
+	"laborcraft.pen.reason.not_enclosed": "o cercado está aberto, sem cerca completa, ou o clique foi fora dele",
 	"laborcraft.pen.reason.too_large": "área grande demais ou sem cerca",
 	"laborcraft.pen.reason.too_small": "área pequena demais",
 	"laborcraft.pen.reason.no_fence": "sem cerca ou parede delimitando",

@@ -103,6 +103,8 @@ Quando o Posto está em `laborcraft:herder`, a aba Config muda:
 - o mapa é somente leitura;
 - **clicar** num bloco dentro do cercado envia o seed para o servidor, usando o Y da camada visível (`QuillMap.layerY()`), inclusive no subsolo;
 - o servidor roda `EnclosureScanner` com limite (`enclosure.maxScanRadius`, `enclosure.maxArea`);
+- o scan tenta o Y clicado e ±1/±2/±3 blocos, para plataformas e mapas com degraus;
+- se o flood escapar, o motivo é `not_enclosed` (aberto/fora), não `too_large`;
 - o descriptor volta no `OpenStationPayload` e é desenhado como spans âmbar;
 - portões aparecem como marcadores;
 - o botão **Limpar cercado** remove o descriptor.

@@ -291,6 +291,7 @@
 	"laborcraft.command.admin.pen.valid": "Pen: %s blocks (%sx%s), %s gate(s), %s boundary blocks.",
 	"laborcraft.command.admin.pen.invalid": "Not a valid pen: %s",
 	"laborcraft.pen.reason.blocked": "stand inside open space",
+	"laborcraft.pen.reason.not_enclosed": "the pen is open, has no complete fence, or the click is outside it",
 	"laborcraft.pen.reason.too_large": "area too large or not enclosed",
 	"laborcraft.pen.reason.too_small": "area too small",
 	"laborcraft.pen.reason.no_fence": "no fence or wall boundary",
