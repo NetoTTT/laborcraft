@@ -55,6 +55,9 @@ public final class OpenFenceGateGoal extends Goal {
 
 	@Override
 	public boolean canContinueToUse() {
+		if (mob.isRemoved() || !mob.isAlive()) {
+			return false;
+		}
 		Path path = mob.getNavigation().getPath();
 		if (path == null || path.isDone()) {
 			return false;

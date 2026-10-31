@@ -101,3 +101,10 @@ O ciclo entrar → pastar → sair continua igual, com portão abrindo/fechando 
 - Galinha primeiro porque valida coleta de drop, inventário e depósito sem ferramenta.
 - Ovelha e vaca adicionam ferramenta/consumível e cooldown por animal.
 - A contagem de população é sempre por cercado; dois cercados não compartilham teto.
+
+## Portões múltiplos
+
+- O pastoreiro fecha qualquer portão do cercado que esteja aberto e **sem trabalhador a menos de 2,5 blocos**.
+- Isso roda a cada tick do brain, então portão esquecido aberto por retry, troca de fase ou recarregamento de chunk é fechado.
+- O portão em uso (travessia) é preservado.
+- `OpenFenceGateGoal` também fecha ao parar e quando o trabalhador é removido.

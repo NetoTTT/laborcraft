@@ -36,6 +36,7 @@ Núcleo de IA por emprego e correção das portas.
 - Portão fechado agora é `WALKABLE_DOOR` no avaliador de nós: path atravessa cercado e volta pra casa.
 - Pastoreiro: coleta ovos de galinha no cercado e deposita no baú de saída (`herder.collectEggs`).
 - Reprodução: conta animais por espécie no cercado, alimenta casais com a comida vanilla e respeita `maxPerSpecies`.
+- Pastoreiro fecha portões ociosos do cercado (watchdog), preservando o portão em travessia.
 - Config `herder`: limites de população por cercado e flags de produtos futuros.
 - Docs: estudo de pathing (`24-PATHING.md`) e design dos animais (`25-PASTOREIRO-ANIMAIS.md`).
 - Cérebros podem declarar área própria (cercado) e dispensar ferramenta.

@@ -15,6 +15,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Items;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -87,14 +90,16 @@ public final class HerderBrain extends AbstractWorkerBrain {
 
 	@Override
 	protected void tickJob(ServerLevel level, StationRegistry.Station station) {
-		if (level.getGameTime() < retryAt) {
-			worker.getNavigation().stop();
-			return;
-		}
-
 		EnclosureDescriptor pen = station.enclosure();
 		if (pen == null || pen.spans().isEmpty() || pen.gates().isEmpty()) {
 			pause(level, "laborcraft.ui.worker.task.need_pen");
+			return;
+		}
+
+		closeIdleGates(level, pen);
+
+		if (level.getGameTime() < retryAt) {
+			worker.getNavigation().stop();
 			return;
 		}
 
@@ -502,6 +507,38 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return link.pos();
 		}
 		return null;
+	}
+
+	/**
+	 * Closes pen gates nobody is using. With several gates, a path can cross one and leave another
+	 * open after a retry, phase change or chunk reload; this watchdog closes them all.
+	 */
+	private void closeIdleGates(ServerLevel level, EnclosureDescriptor pen) {
+		for (BlockPos gate : pen.gates()) {
+			BlockState state = level.getBlockState(gate);
+			if (!(state.getBlock() instanceof FenceGateBlock)
+					|| !state.hasProperty(FenceGateBlock.OPEN)
+					|| !state.getValue(FenceGateBlock.OPEN)) {
+				continue;
+			}
+			if (gateInUse(level, gate)) {
+				continue;
+			}
+			level.setBlock(gate, state.setValue(FenceGateBlock.OPEN, false), 10);
+			level.playSound(
+					null,
+					gate,
+					SoundEvents.FENCE_GATE_CLOSE,
+					SoundSource.BLOCKS,
+					1.0F,
+					1.0F
+			);
+		}
+	}
+
+	private static boolean gateInUse(ServerLevel level, BlockPos gate) {
+		AABB box = new AABB(gate).inflate(2.5D);
+		return !level.getEntitiesOfClass(LaborCraftWorker.class, box).isEmpty();
 	}
 
 	private static Direction insideDirection(EnclosureDescriptor pen, BlockPos gate) {
