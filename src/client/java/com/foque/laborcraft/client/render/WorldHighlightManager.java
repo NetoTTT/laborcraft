@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.render;
 
+import com.quillui.theme.QuillColors;
+
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -23,7 +25,7 @@ public final class WorldHighlightManager {
 	private static UUID entityId;
 	private static BlockPos entityFallback;
 	private static ItemStack icon = ItemStack.EMPTY;
-	private static int color = 0xFFFFC65A;
+	private static int color = QuillColors.rgb(255, 198, 90);
 	private static long endTick;
 
 	private WorldHighlightManager() {
@@ -37,7 +39,7 @@ public final class WorldHighlightManager {
 		blockTarget = pos.immutable();
 		entityId = null;
 		entityFallback = null;
-		color = 0xFF000000 | (rgb & 0xFFFFFF);
+		color = QuillColors.withAlpha(rgb, 255);
 		icon = iconStack == null ? ItemStack.EMPTY : iconStack.copy();
 		Minecraft client = Minecraft.getInstance();
 		endTick = client.level == null ? 0L : client.level.getGameTime() + 20L * SECONDS;
@@ -55,7 +57,7 @@ public final class WorldHighlightManager {
 		entityId = id;
 		blockTarget = null;
 		entityFallback = null;
-		color = 0xFF000000 | (rgb & 0xFFFFFF);
+		color = QuillColors.withAlpha(rgb, 255);
 		icon = iconStack == null ? ItemStack.EMPTY : iconStack.copy();
 		Minecraft client = Minecraft.getInstance();
 		endTick = client.level == null ? 0L : client.level.getGameTime() + 20L * SECONDS;

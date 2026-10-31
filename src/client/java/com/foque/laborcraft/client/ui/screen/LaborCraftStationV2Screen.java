@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.quillui.theme.QuillColors;
+
 import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
 
 import static com.quillui.theme.QuillThemeData.ColorRole.ACCENT;
@@ -444,7 +446,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 	private void highlightWorker(UUID id) {
 		Minecraft client = Minecraft.getInstance();
-		boolean found = WorldHighlightManager.highlightEntity(id, 0xFF48D7A0, EYE_ICON);
+		boolean found = WorldHighlightManager.highlightEntity(id, QuillColors.rgb(72, 215, 160), EYE_ICON);
 		onClose();
 		if (!found && client.gui != null) {
 			client.gui.hud.setOverlayMessage(
@@ -685,16 +687,16 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		zones.add(new QuillMapZone(
 				station.pos().offset(-radius, 0, -radius),
 				station.pos().offset(radius, 0, radius),
-				0x004C8BF5,
-				0x994C8BF5,
+				QuillColors.argb(0, 76, 139, 245),
+				QuillColors.argb(153, 76, 139, 245),
 				true
 		));
 		for (OpenStationPayload.AreaView area : station.ownAreas()) {
 			zones.add(new QuillMapZone(
 					area.from(),
 					area.to(),
-					0x28FFC65A,
-					0xFFFFC65A,
+					QuillColors.argb(40, 255, 198, 90),
+					QuillColors.rgb(255, 198, 90),
 					false
 			));
 		}
@@ -702,8 +704,8 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 			zones.add(new QuillMapZone(
 					area.from(),
 					area.to(),
-					0x284C8BF5,
-					0xFF4C8BF5,
+					QuillColors.argb(40, 76, 139, 245),
+					QuillColors.rgb(76, 139, 245),
 					false
 			));
 		}
@@ -917,7 +919,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	}
 
 	private void highlightStorage(OpenStationPayload.StorageView view) {
-		WorldHighlightManager.highlight(view.pos(), 0xFFFFC65A, new ItemStack(Items.CHEST));
+		WorldHighlightManager.highlight(view.pos(), QuillColors.rgb(255, 198, 90), new ItemStack(Items.CHEST));
 		onClose();
 	}
 

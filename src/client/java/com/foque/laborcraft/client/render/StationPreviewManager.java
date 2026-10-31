@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.render;
 
+import com.quillui.theme.QuillColors;
+
 import com.foque.laborcraft.network.OpenStationPayload;
 import com.foque.laborcraft.worker.StationAreas;
 import java.util.ArrayList;
@@ -271,7 +273,7 @@ public final class StationPreviewManager {
 
 		double yBottom = stationY - verticalRadius;
 		double yTop = stationY + verticalRadius + 1.0;
-		DustParticleOptions dust = new DustParticleOptions(0x48D7A0, 0.9f);
+		DustParticleOptions dust = new DustParticleOptions(QuillColors.rgb(72, 215, 160), 0.9f);
 
 		Set<Long> corners = new HashSet<>();
 		for (long key : cells) {

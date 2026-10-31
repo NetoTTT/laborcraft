@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.widget;
 
+import com.quillui.theme.QuillColors;
+
 import com.quillui.render.QuillRender;
 import com.quillui.theme.QuillThemeData;
 import java.util.List;
@@ -235,16 +237,16 @@ public final class WorkerInventoryBoard extends AbstractWidget {
 		if (stack.getCount() > 1) {
 			String count = String.valueOf(stack.getCount());
 			int textWidth = font.width(count);
-			graphics.text(font, count, x + SLOT - textWidth - 2, y + SLOT - 10, 0xFFFFFFFF);
+			graphics.text(font, count, x + SLOT - textWidth - 2, y + SLOT - 10, QuillColors.rgb(255, 255, 255));
 		}
 		if (stack.isDamageableItem() && stack.isDamaged()) {
 			int max = stack.getMaxDamage();
 			int remaining = max - stack.getDamageValue();
 			int barWidth = Math.max(1, (int) ((SLOT - 4) * (remaining / (float) max)));
 			int color = remaining / (float) max > 0.5F
-					? 0xFF48D7A0
-					: (remaining / (float) max > 0.2F ? 0xFFFFC65A : 0xFFFF5555);
-			graphics.fill(x + 2, y + SLOT - 4, x + SLOT - 2, y + SLOT - 3, 0xFF101820);
+					? QuillColors.rgb(72, 215, 160)
+					: (remaining / (float) max > 0.2F ? QuillColors.rgb(255, 198, 90) : QuillColors.rgb(255, 85, 85));
+			graphics.fill(x + 2, y + SLOT - 4, x + SLOT - 2, y + SLOT - 3, QuillColors.rgb(16, 24, 32));
 			graphics.fill(x + 2, y + SLOT - 4, x + 2 + barWidth, y + SLOT - 3, color);
 		}
 	}

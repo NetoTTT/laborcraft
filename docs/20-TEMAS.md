@@ -15,7 +15,12 @@ O jogador escolhe o tema no **Perfil**, no card **Tema**. A escolha é do client
 | `amethyst` | Ametista | Violeta profundo com destaque ametista. |
 
 O tema **Vidro** usa transparência de verdade (alpha nos roles de painel/superfície). Minecraft não
-tem blur de tela, então o efeito é translucidez + brilho frio, não um desfoque real.
+tem blur de tela, então o efeito é translucidez + brilho frio, não um desfoque real. O tema
+**Claro** mantém o `SCREEN_BG` transparente e o painel levemente translúcido, para o mundo aparecer
+ao redor como nos outros temas.
+
+Cores de UI são sempre declaradas com `QuillColors.rgb(...)` ou `QuillColors.argb(...)`, nunca com
+literais hexadecimais.
 
 ## Onde fica
 

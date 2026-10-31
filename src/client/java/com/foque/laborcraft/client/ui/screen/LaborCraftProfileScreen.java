@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.screen;
 
+import com.quillui.theme.QuillColors;
+
 import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
 
 import static com.quillui.theme.QuillThemeData.ColorRole.MUTED;
@@ -250,7 +252,7 @@ public final class LaborCraftProfileScreen extends QuillScreen {
 
 	private void highlightWorker(UUID id) {
 		Minecraft client = Minecraft.getInstance();
-		boolean found = WorldHighlightManager.highlightEntity(id, 0xFF48D7A0, EYE_ICON);
+		boolean found = WorldHighlightManager.highlightEntity(id, QuillColors.rgb(72, 215, 160), EYE_ICON);
 		onClose();
 		if (!found && client.gui != null) {
 			client.gui.hud.setOverlayMessage(

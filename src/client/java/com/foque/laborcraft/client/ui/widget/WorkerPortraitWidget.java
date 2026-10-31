@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.ui.widget;
 
+import com.quillui.theme.QuillColors;
+
 import com.quillui.theme.QuillThemeData;
 import com.quillui.theme.QuillThemeScope;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -24,15 +26,15 @@ public final class WorkerPortraitWidget extends AbstractWidget {
 		int x = getX();
 		int y = getY();
 		int size = Math.min(getWidth(), getHeight());
-		graphics.fill(x, y, x + size, y + size, 0xFF202A35);
+		graphics.fill(x, y, x + size, y + size, QuillColors.rgb(32, 42, 53));
 		graphics.fill(x, y, x + size, y + 1, accent);
 		graphics.fill(x, y + size - 1, x + size, y + size, accent);
 		graphics.fill(x, y, x + 1, y + size, accent);
 		graphics.fill(x + size - 1, y, x + size, y + size, accent);
 
 		int center = x + size / 2;
-		graphics.fill(center - 7, y + 9, center + 7, y + 23, 0xFF445367);
-		graphics.fill(center - 14, y + 27, center + 14, y + size - 8, 0xFF2E3947);
+		graphics.fill(center - 7, y + 9, center + 7, y + 23, QuillColors.rgb(68, 83, 103));
+		graphics.fill(center - 14, y + 27, center + 14, y + size - 8, QuillColors.rgb(46, 57, 71));
 		graphics.fill(center - 14, y + size - 8, center + 14, y + size - 5, accent);
 	}
 

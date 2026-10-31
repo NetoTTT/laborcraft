@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.hud;
 
+import com.quillui.theme.QuillColors;
+
 import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.quillui.render.QuillRender;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
@@ -82,7 +84,7 @@ public final class TargetIndicatorHud implements HudElement {
 		int cx = (int) px;
 		int cy = (int) py;
 
-		graphics.fill(cx - BADGE, cy - BADGE, cx + BADGE, cy + BADGE, 0xCC101820);
+		graphics.fill(cx - BADGE, cy - BADGE, cx + BADGE, cy + BADGE, QuillColors.argb(204, 16, 24, 32));
 		QuillRender.border(graphics, cx - BADGE, cy - BADGE, BADGE * 2, BADGE * 2, color);
 		ItemStack icon = WorldHighlightManager.icon();
 		if (!icon.isEmpty()) {
@@ -110,7 +112,7 @@ public final class TargetIndicatorHud implements HudElement {
 				labelY - 2,
 				cx + textWidth / 2 + 3,
 				labelY + 9,
-				0xAA101820
+				QuillColors.argb(170, 16, 24, 32)
 		);
 		graphics.centeredText(client.font, label, cx, labelY, color);
 	}

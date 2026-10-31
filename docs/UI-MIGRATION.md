@@ -8,6 +8,7 @@ Status of the screen-by-screen rewrite on `feat/quill-0.3-ui`.
 - Content is built with `setContent` and `QuillNodes`; lists use `QuillListView`.
 - No legacy UI class remains; screens, HUDs and widgets read `LaborCraftTheme`/`QuillThemeData`.
 - Screen sizes come from the panel/content bounds, not from fixed `x`/`y` math.
+- UI colours use `QuillColors.rgb(...)`/`QuillColors.argb(...)`, never hexadecimal literals.
 
 ## Measured screens
 

@@ -1,5 +1,7 @@
 package com.foque.laborcraft.client.hud;
 
+import com.quillui.theme.QuillColors;
+
 import com.quillui.render.QuillRender;
 import com.foque.laborcraft.client.ui.theme.LaborCraftTheme;
 import com.quillui.theme.QuillThemeData;
@@ -154,7 +156,7 @@ public final class WorkerSpeechHud implements HudElement {
 		float alpha = Mth.clamp(bubble.alpha, 0.0F, 1.0F);
 		int border = withAlpha(bubble.color, alpha);
 		int text = withAlpha(LaborCraftTheme.currentData().color(QuillThemeData.ColorRole.TEXT), alpha);
-		int shadow = withAlpha(0x66000000, alpha);
+		int shadow = withAlpha(QuillColors.argb(102, 0, 0, 0), alpha);
 		int background = withAlpha(
 				LaborCraftTheme.currentData().color(QuillThemeData.ColorRole.PANEL_BG),
 				alpha
@@ -197,9 +199,9 @@ public final class WorkerSpeechHud implements HudElement {
 	}
 
 	private static int withAlpha(int color, float alpha) {
-		int original = (color >>> 24) & 0xFF;
+		int original = QuillColors.alpha(color);
 		int applied = Mth.clamp((int) (original * alpha), 0, 255);
-		return (applied << 24) | (color & 0xFFFFFF);
+		return QuillColors.withAlpha(color, applied);
 	}
 
 	private static final class Bubble {
@@ -207,7 +209,7 @@ public final class WorkerSpeechHud implements HudElement {
 		private List<FormattedCharSequence> lines = List.of();
 		private int width;
 		private int height;
-		private int color = 0xFFE0A93B;
+		private int color = QuillColors.rgb(224, 169, 59);
 		private float x;
 		private float y;
 		private float alpha;
