@@ -63,8 +63,8 @@ public final class FarmerStorage {
 		int keptSeeds = 0;
 		int keptMeal = 0;
 		int moved = 0;
-		int seedKeep = LaborCraftConfig.get().farmer.useComposter
-				? Math.max(SEED_RESERVE, LaborCraftConfig.get().farmer.seedSurplusForCompost)
+		int seedKeep = LaborCraftConfig.get().job(worker.jobId()).useComposter
+				? Math.max(SEED_RESERVE, LaborCraftConfig.get().job(worker.jobId()).seedSurplusForCompost)
 				: SEED_RESERVE;
 
 		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {

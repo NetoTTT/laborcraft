@@ -14,6 +14,8 @@ Núcleo de IA por emprego e correção das portas.
 - `EnclosureScanner` e `/laborcraft admin pen scan`: valida cercado fechado com pelo menos um portão e calcula a área interna.
 - Emprego `laborcraft:herder` (Pastoreiro) registrado como protótipo, ainda sem lógica de produção.
 - `/laborcraft admin set max-workers <n>` para ajustar o limite de trabalhadores por jogador.
+- Configurações por emprego em `LaborCraftConfig.jobs`/`job(jobId)`; o campo `farmer` vira alias compatível.
+- `EnclosureDescriptor` no Posto (seed, bounds, spans e portões) com `/laborcraft station enclosure set/clear`, separado das zonas retangulares.
 
 ### Corrigido
 - O NPC agora consegue atravessar portas fechadas: o pathfinding foi habilitado com `setCanOpenDoors(true)`, então ele encontra, abre e fecha portas para entrar/sair da casa e chegar à cama.

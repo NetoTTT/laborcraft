@@ -258,8 +258,7 @@ public final class BillingManager {
 	}
 
 	private static JobSettings jobSettings(LaborCraftConfig config, String jobId) {
-		// The farmer is the only job today; unknown jobs fall back to the farmer table.
-		return config.farmer;
+		return config.job(jobId);
 	}
 
 	private static ServerPlayer serverPlayer(LaborCraftWorker worker) {

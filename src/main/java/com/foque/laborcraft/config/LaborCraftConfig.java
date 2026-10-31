@@ -10,7 +10,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class LaborCraftConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
@@ -18,7 +20,7 @@ public final class LaborCraftConfig {
 
 	private static LaborCraftConfig instance = new LaborCraftConfig();
 
-	public int schemaVersion = 1;
+	public int schemaVersion = 2;
 	public String currencyProvider = "laborcraft:ledger";
 	public boolean allowOwnerOverrides = true;
 
@@ -34,6 +36,37 @@ public final class LaborCraftConfig {
 	public CompatibilitySettings compatibility = new CompatibilitySettings();
 	public BillingSettings billing = new BillingSettings();
 	public JobSettings farmer = JobSettings.farmer();
+	public Map<String, JobSettings> jobs = new LinkedHashMap<>();
+
+	public LaborCraftConfig() {
+		normalize();
+	}
+
+	/** Fills the per-job table and keeps the legacy {@code farmer} field pointing at the farmer entry. */
+	public void normalize() {
+		if (jobs == null) {
+			jobs = new LinkedHashMap<>();
+		}
+		if (farmer == null) {
+			farmer = JobSettings.farmer();
+		}
+		jobs.putIfAbsent("laborcraft:farmer", farmer);
+		jobs.putIfAbsent("laborcraft:herder", JobSettings.herder());
+		farmer = jobs.get("laborcraft:farmer");
+	}
+
+	/** Settings for one job; unknown jobs fall back to the default/farmer table. */
+	public JobSettings job(String jobId) {
+		if (jobId == null || jobId.isBlank()) {
+			return farmer;
+		}
+		JobSettings settings = jobs.get(jobId);
+		return settings == null ? farmer : settings;
+	}
+
+	public JobSettings defaultJob() {
+		return job("laborcraft:farmer");
+	}
 
 	public static LaborCraftConfig get() {
 		return instance;
@@ -45,6 +78,7 @@ public final class LaborCraftConfig {
 				LaborCraftConfig loaded = GSON.fromJson(reader, LaborCraftConfig.class);
 				if (loaded != null) {
 					instance = loaded;
+					instance.normalize();
 				}
 			} catch (IOException | RuntimeException exception) {
 				LaborCraft.LOGGER.error("Falha ao ler {}, usando padroes", FILE, exception);
@@ -55,6 +89,7 @@ public final class LaborCraftConfig {
 	}
 
 	public void save() {
+		normalize();
 		try {
 			Files.createDirectories(FILE.getParent());
 			try (Writer writer = Files.newBufferedWriter(FILE, StandardCharsets.UTF_8)) {
@@ -240,6 +275,17 @@ public final class LaborCraftConfig {
 		public String waterPolicy = "prefer";
 
 		public JobSettings() {
+		}
+
+		public static JobSettings herder() {
+			JobSettings settings = new JobSettings();
+			settings.baseWage = 20;
+			settings.maxTier = 4;
+			settings.workRadius = 8;
+			settings.billingPeriodDays = 1;
+			settings.useBoneMeal = false;
+			settings.useComposter = false;
+			return settings;
 		}
 
 		public static JobSettings farmer() {

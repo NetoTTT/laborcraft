@@ -44,7 +44,7 @@ public final class WorkerOffers {
 					boosts,
 					WorkerAptitudes.roll(random),
 					price(config, rank, rarity),
-					SalaryTable.periodWage(config, config.farmer, rank, rarity, boosts)
+					SalaryTable.periodWage(config, config.defaultJob(), rank, rarity, boosts)
 			));
 		}
 

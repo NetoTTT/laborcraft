@@ -10,6 +10,13 @@
 
 `pen scan` usa a posição do jogador como ponto interno. Fique dentro do cercado, em espaço livre.
 
+Aplicar/remover num Posto:
+
+```text
+/laborcraft station enclosure set <posição-do-posto> <posição-dentro-do-cercado>
+/laborcraft station enclosure clear <posição-do-posto>
+```
+
 ## O que já existe
 
 - `EnclosureScanner` / `EnclosureScan`: flood fill horizontal de 2D, delimitado por cerca, parede e
@@ -48,8 +55,9 @@ Opções de armazenamento:
 2. **Enclosure descriptor**: guardar o ponto-semente + bounds e revalidar o cercado
    periodicamente; a área é recalculada.
 
-Recomendação: começar com **row runs** porque o mapa, `StationAreas` e a persistência já entendem
-retângulos. Se o cercado for maior/irregular, aumentar o limite ou migrar para descriptor.
+Decisão: usar **descriptor próprio** (`EnclosureDescriptor`), com seed, bounds, área, spans
+horizontais e posições dos portões. O retângulo continua existindo para empregos que preferem área
+retangular (ex.: fazendeiro).
 
 ### UI por emprego
 
@@ -64,3 +72,21 @@ O Posto deve ter um `PostKind` derivado do `jobId`:
 - Salário/cobrança ainda usam `config.farmer` para todos os empregos.
 - O scan de cercado ainda não é aplicado a um Posto.
 - Herder não tem produção, então não pausa por falta de cerca/portão; apenas o comando valida.
+
+## Config por emprego
+
+`LaborCraftConfig` agora tem `jobs` (`Map<String, JobSettings>`) e `job(jobId)`. O campo antigo
+`farmer` continua existindo como alias do emprego farmer para JSONs antigos.
+
+- `config.job(worker.jobId())` é usado por cobrança, contrato, farmer e storage.
+- `config.job("laborcraft:herder")` tem valores próprios (`JobSettings.herder()`).
+- `config.defaultJob()` mantém as ofertas genéricas no farmer até o mercado escolher emprego.
+- O painel Admin ainda edita o farmer; um seletor de emprego na aba Salário fica para a próxima UI.
+
+## Persistência do Posto
+
+`Station` ganhou `jobId` e `enclosure`. `stations.json` salva os spans e portões do descriptor.
+Stations antigas carregam com `jobId=""` e `enclosure=null`.
+
+`station enclosure set` grava o descriptor e mantém `mode=ZONES`; `hasEnclosure()` é separado de
+`hasZone()` para o fazendeiro continuar usando retângulos.

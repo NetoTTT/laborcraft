@@ -788,7 +788,7 @@ final class WorkerCommands {
 				level,
 				station,
 				worker,
-				LaborCraftConfig.get().farmer.useBoneMeal
+				LaborCraftConfig.get().job(worker.jobId()).useBoneMeal
 		);
 		OpenWorkerInventoryPayload.open(player, worker);
 		if (moved <= 0) {

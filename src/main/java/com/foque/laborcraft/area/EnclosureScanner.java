@@ -2,7 +2,9 @@ package com.foque.laborcraft.area;
 
 import com.foque.laborcraft.config.LaborCraftConfig;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -92,11 +94,28 @@ public final class EnclosureScanner {
 		int maxX = Integer.MIN_VALUE;
 		int minZ = Integer.MAX_VALUE;
 		int maxZ = Integer.MIN_VALUE;
+		Set<Long> columns = new HashSet<>();
 		for (BlockPos cell : visited) {
 			minX = Math.min(minX, cell.getX());
 			maxX = Math.max(maxX, cell.getX());
 			minZ = Math.min(minZ, cell.getZ());
 			maxZ = Math.max(maxZ, cell.getZ());
+			columns.add(pack(cell.getX(), cell.getZ()));
+		}
+
+		List<EnclosureSpan> spans = new ArrayList<>();
+		for (int z = minZ; z <= maxZ; z++) {
+			int runStart = -1;
+			for (int x = minX; x <= maxX + 1; x++) {
+				boolean inside = x <= maxX && columns.contains(pack(x, z));
+				if (inside && runStart < 0) {
+					runStart = x;
+				}
+				else if (!inside && runStart >= 0) {
+					spans.add(new EnclosureSpan(z, runStart, x - 1));
+					runStart = -1;
+				}
+			}
 		}
 
 		return new EnclosureScan(
@@ -108,7 +127,14 @@ public final class EnclosureScanner {
 				boundary.size(),
 				"",
 				new BlockPos(minX, origin.getY(), minZ),
-				new BlockPos(maxX, origin.getY(), maxZ)
+				new BlockPos(maxX, origin.getY(), maxZ),
+				origin.immutable(),
+				spans,
+				List.copyOf(gates)
 		);
+	}
+
+	private static long pack(int x, int z) {
+		return ((long) x << 32) | (z & 0xFFFFFFFFL);
 	}
 }

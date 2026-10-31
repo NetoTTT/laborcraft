@@ -1,5 +1,8 @@
 package com.foque.laborcraft.command;
 
+import com.foque.laborcraft.area.EnclosureDescriptor;
+import com.foque.laborcraft.area.EnclosureScanner;
+import com.foque.laborcraft.area.EnclosureScan;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import com.foque.laborcraft.network.OpenStationPayload;
@@ -93,7 +96,21 @@ final class StationCommands {
 												context.getSource(),
 												BlockPosArgument.getLoadedBlockPos(context, "pos")
 										)))))
-				.then(Commands.literal("maxarea")
+				.then(Commands.literal("enclosure")
+						.then(Commands.literal("set")
+								.then(Commands.argument("pos", BlockPosArgument.blockPos())
+										.then(Commands.argument("seed", BlockPosArgument.blockPos())
+												.executes(context -> stationEnclosureSet(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos"),
+														BlockPosArgument.getLoadedBlockPos(context, "seed")
+												)))))
+						.then(Commands.literal("clear")
+								.then(Commands.argument("pos", BlockPosArgument.blockPos())
+										.executes(context -> stationEnclosureClear(
+												context.getSource(),
+												BlockPosArgument.getLoadedBlockPos(context, "pos")
+										)))))				.then(Commands.literal("maxarea")
 						.then(Commands.argument("pos", BlockPosArgument.blockPos())
 								.executes(context -> stationZoneMax(
 										context.getSource(),
@@ -348,6 +365,66 @@ final class StationCommands {
 		return 1;
 	}
 
+	private static int stationEnclosureSet(
+			CommandSourceStack source, BlockPos pos, BlockPos seed
+	) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = CommandSupport.stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		EnclosureScan scan = EnclosureScanner.scan(source.getLevel(), seed, LaborCraftConfig.get());
+		if (!scan.valid()) {
+			source.sendFailure(Component.translatable(
+					"laborcraft.station.enclosure.invalid",
+					Component.translatable("laborcraft.pen.reason." + scan.failureReason())
+			));
+			return 0;
+		}
+
+		StationRegistry.setEnclosure(
+				source.getServer(),
+				station,
+				EnclosureDescriptor.from(scan, station.dimension())
+		);
+		source.sendSuccess(
+				() -> Component.translatable(
+						"laborcraft.station.enclosure.set",
+						scan.area(),
+						scan.gatePositions().size()
+				),
+				true
+		);
+		return 1;
+	}
+
+	private static int stationEnclosureClear(
+			CommandSourceStack source, BlockPos pos
+	) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = CommandSupport.stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		StationRegistry.clearEnclosure(source.getServer(), station);
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.station.enclosure.cleared"),
+				true
+		);
+		return 1;
+	}
 	private static int stationZoneSet(CommandSourceStack source, BlockPos pos, BlockPos from, BlockPos to)
 			throws com.mojang.brigadier.exceptions.CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();

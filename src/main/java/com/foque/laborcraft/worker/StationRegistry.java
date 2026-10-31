@@ -1,6 +1,8 @@
 package com.foque.laborcraft.worker;
 
 import com.foque.laborcraft.LaborCraft;
+import com.foque.laborcraft.area.EnclosureDescriptor;
+import com.foque.laborcraft.area.EnclosureSpan;
 import com.foque.laborcraft.block.LaborCraftBlocks;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
@@ -169,7 +171,9 @@ public final class StationRegistry {
 				station.mode(),
 				station.zones(),
 				station.storage(),
-				station.createdAt()
+				station.createdAt(),
+				station.jobId(),
+				station.enclosure()
 		);
 		registry.replace(claimed);
 		registry.save();
@@ -265,11 +269,30 @@ public final class StationRegistry {
 
 	public static void setZones(MinecraftServer server, Station station, List<Zone> zones) {
 		StationRegistry registry = load(server);
+		boolean hasArea = !zones.isEmpty() || station.enclosure() != null;
 		Station updated = station.withZones(List.copyOf(zones))
-				.withMode(zones.isEmpty() ? StationMode.FREE : StationMode.ZONES);
+				.withMode(hasArea ? StationMode.ZONES : StationMode.FREE);
 		if (registry.replace(updated)) {
 			registry.save();
 		}
+	}
+
+	public static void setJob(MinecraftServer server, Station station, String jobId) {
+		StationRegistry registry = load(server);
+		if (registry.replace(station.withJob(jobId == null ? "" : jobId))) {
+			registry.save();
+		}
+	}
+
+	public static void setEnclosure(MinecraftServer server, Station station, EnclosureDescriptor enclosure) {
+		StationRegistry registry = load(server);
+		if (registry.replace(station.withEnclosure(enclosure))) {
+			registry.save();
+		}
+	}
+
+	public static void clearEnclosure(MinecraftServer server, Station station) {
+		setEnclosure(server, station, null);
 	}
 
 	/**
@@ -500,7 +523,9 @@ public final class StationRegistry {
 						StationMode.of(entry.mode),
 						readZones(entry.zones),
 						readStorage(entry),
-						entry.createdAt
+						entry.createdAt,
+						entry.jobId == null ? "" : entry.jobId,
+						readEnclosure(entry.dimension, entry.enclosure)
 				));
 			}
 		} catch (IOException | RuntimeException exception) {
@@ -543,6 +568,8 @@ public final class StationRegistry {
 				entry.storage.add(linkData);
 			}
 			entry.createdAt = station.createdAt();
+			entry.jobId = station.jobId();
+			entry.enclosure = writeEnclosure(station.enclosure());
 			data.stations.add(entry);
 		}
 
@@ -554,6 +581,67 @@ public final class StationRegistry {
 		} catch (IOException exception) {
 			LaborCraft.LOGGER.error("Falha ao salvar os postos {}", file, exception);
 		}
+	}
+
+	private static EnclosureDescriptor readEnclosure(String dimension, EnclosureData data) {
+		if (data == null) {
+			return null;
+		}
+
+		List<EnclosureSpan> spans = new ArrayList<>();
+		if (data.spans != null) {
+			for (int[] span : data.spans) {
+				if (span != null && span.length == 3) {
+					spans.add(new EnclosureSpan(span[0], span[1], span[2]));
+				}
+			}
+		}
+
+		List<BlockPos> gates = new ArrayList<>();
+		if (data.gates != null) {
+			for (int[] gate : data.gates) {
+				if (gate != null && gate.length == 3) {
+					gates.add(new BlockPos(gate[0], gate[1], gate[2]));
+				}
+			}
+		}
+
+		return new EnclosureDescriptor(
+				dimension,
+				new BlockPos(data.seedX, data.seedY, data.seedZ),
+				new BlockPos(data.minX, data.minY, data.minZ),
+				new BlockPos(data.maxX, data.maxY, data.maxZ),
+				data.area,
+				spans,
+				gates
+		);
+	}
+
+	private static EnclosureData writeEnclosure(EnclosureDescriptor descriptor) {
+		if (descriptor == null) {
+			return null;
+		}
+
+		EnclosureData data = new EnclosureData();
+		data.seedX = descriptor.seed().getX();
+		data.seedY = descriptor.seed().getY();
+		data.seedZ = descriptor.seed().getZ();
+		data.minX = descriptor.min().getX();
+		data.minY = descriptor.min().getY();
+		data.minZ = descriptor.min().getZ();
+		data.maxX = descriptor.max().getX();
+		data.maxY = descriptor.max().getY();
+		data.maxZ = descriptor.max().getZ();
+		data.area = descriptor.area();
+		data.spans = new ArrayList<>(descriptor.spans().size());
+		for (EnclosureSpan span : descriptor.spans()) {
+			data.spans.add(new int[]{span.z(), span.minX(), span.maxX()});
+		}
+		data.gates = new ArrayList<>(descriptor.gates().size());
+		for (BlockPos gate : descriptor.gates()) {
+			data.gates.add(new int[]{gate.getX(), gate.getY(), gate.getZ()});
+		}
+		return data;
 	}
 
 	private static List<Zone> readZones(List<int[]> raw) {
@@ -701,15 +789,35 @@ public final class StationRegistry {
 			StationMode mode,
 			List<Zone> zones,
 			List<StorageLink> storage,
-			long createdAt
+			long createdAt,
+			String jobId,
+			EnclosureDescriptor enclosure
 	) {
 		public Station {
 			zones = List.copyOf(zones);
 			storage = List.copyOf(storage);
+			jobId = jobId == null ? "" : jobId;
+		}
+
+		/** Compatibility constructor for stations created before jobs/enclosures existed. */
+		public Station(
+				String id,
+				String dimension,
+				BlockPos pos,
+				UUID owner,
+				UUID worker,
+				StationMode mode,
+				List<Zone> zones,
+				List<StorageLink> storage,
+				long createdAt
+		) {
+			this(id, dimension, pos, owner, worker, mode, zones, storage, createdAt, "", null);
 		}
 
 		public Station withWorker(UUID newWorker) {
-			return new Station(id, dimension, pos, owner, newWorker, mode, zones, storage, createdAt);
+			return new Station(
+					id, dimension, pos, owner, newWorker, mode, zones, storage, createdAt, jobId, enclosure
+			);
 		}
 
 		public boolean isOwner(UUID candidate) {
@@ -717,19 +825,41 @@ public final class StationRegistry {
 		}
 
 		public Station withMode(StationMode newMode) {
-			return new Station(id, dimension, pos, owner, worker, newMode, zones, storage, createdAt);
+			return new Station(
+					id, dimension, pos, owner, worker, newMode, zones, storage, createdAt, jobId, enclosure
+			);
 		}
 
 		public Station withZones(List<Zone> newZones) {
-			return new Station(id, dimension, pos, owner, worker, mode, newZones, storage, createdAt);
+			return new Station(
+					id, dimension, pos, owner, worker, mode, newZones, storage, createdAt, jobId, enclosure
+			);
 		}
 
 		public Station withStorage(List<StorageLink> newStorage) {
-			return new Station(id, dimension, pos, owner, worker, mode, zones, newStorage, createdAt);
+			return new Station(
+					id, dimension, pos, owner, worker, mode, zones, newStorage, createdAt, jobId, enclosure
+			);
+		}
+
+		public Station withJob(String newJobId) {
+			return new Station(
+					id, dimension, pos, owner, worker, mode, zones, storage, createdAt, newJobId, enclosure
+			);
+		}
+
+		public Station withEnclosure(EnclosureDescriptor newEnclosure) {
+			return new Station(
+					id, dimension, pos, owner, worker, mode, zones, storage, createdAt, jobId, newEnclosure
+			);
 		}
 
 		public boolean hasZone() {
 			return !zones.isEmpty();
+		}
+
+		public boolean hasEnclosure() {
+			return enclosure != null;
 		}
 	}
 
@@ -750,6 +880,23 @@ public final class StationRegistry {
 		private List<StorageData> storage;
 		private int[] chest;
 		private long createdAt;
+		private String jobId;
+		private EnclosureData enclosure;
+	}
+
+	private static final class EnclosureData {
+		private int seedX;
+		private int seedY;
+		private int seedZ;
+		private int minX;
+		private int minY;
+		private int minZ;
+		private int maxX;
+		private int maxY;
+		private int maxZ;
+		private int area;
+		private List<int[]> spans;
+		private List<int[]> gates;
 	}
 
 	private static final class StorageData {

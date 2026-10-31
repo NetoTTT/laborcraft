@@ -198,7 +198,7 @@ final class AdminCommands {
 							scan.area(),
 							scan.width(),
 							scan.depth(),
-							scan.gates(),
+							scan.gatePositions().size(),
 							scan.boundaryBlocks()
 					),
 					false
