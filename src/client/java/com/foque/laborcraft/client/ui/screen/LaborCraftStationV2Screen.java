@@ -75,6 +75,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	private UUID selectedWorkerId;
 	private BlockPos selectedStoragePos;
 	private boolean drawing;
+	private boolean rescan;
 	private QuillMap map;
 	private QuillListView<OpenStationPayload.Summary> workerList;
 	private QuillListView<OpenStationPayload.StorageView> storageList;
@@ -148,10 +149,16 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		QuillChip balance = QuillChip.of(Component.literal(station.balanceText()))
 				.icon(new ItemStack(Items.GOLD_INGOT))
 				.accent();
-		QuillFlexBox row = QuillNodes.row(8);
-		row.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
-		row.add(control(balance));
-		row.add(QuillNodes.flexible(QuillNodes.tabs(
+		QuillFlexBox top = QuillNodes.row(8);
+		top.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
+		top.add(control(balance));
+		top.add(QuillNodes.flexible(QuillNodes.spacer()));
+		top.add(QuillNodes.widget(closeButton(this::onClose), 20, 20));
+
+		QuillFlexBox column = QuillNodes.column(6);
+		column.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
+		column.add(top);
+		column.add(QuillNodes.tabs(
 				theme(),
 				6,
 				List.of(
@@ -161,9 +168,8 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 				),
 				tab.ordinal(),
 				index -> switchTab(Tab.values()[index])
-		)));
-		row.add(QuillNodes.widget(closeButton(this::onClose), 20, 20));
-		return row;
+		));
+		return column;
 	}
 
 	@Override
@@ -525,7 +531,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	}
 
 	private QuillCardBox configMapCard() {
-		int mapHeight = Math.max(120, contentBounds().height() - 76);
+		int mapHeight = Math.max(120, contentBounds().height() - 84);
 		map = createMap(mapHeight);
 		QuillFlexBox column = QuillNodes.column(0);
 		column.add(QuillNodes.fixedHeight(mapHeight, control(map)));
@@ -541,7 +547,31 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 						"laborcraft.ui.station.enclosure.click_hint"
 				)).muted()));
 			}
+			else if (rescan) {
+				bar.add(control(label(Component.translatable(
+						"laborcraft.ui.station.enclosure.rescan_hint"
+				)).muted()));
+				bar.add(QuillNodes.flexible(QuillNodes.spacer()));
+				bar.add(QuillNodes.widget(new QuillButton(
+						0, 0, 100, 24,
+						Component.translatable("laborcraft.ui.station.enclosure.cancel"),
+						QuillButton.Variant.GHOST,
+						() -> {
+							rescan = false;
+							refreshContent();
+						}
+				), 100, 24));
+			}
 			else {
+				bar.add(QuillNodes.widget(new QuillButton(
+						0, 0, 160, 24,
+						Component.translatable("laborcraft.ui.station.enclosure.rescan"),
+						QuillButton.Variant.SECONDARY,
+						() -> {
+							rescan = true;
+							refreshContent();
+						}
+				), 160, 24));
 				bar.add(QuillNodes.widget(new QuillButton(
 						0, 0, 150, 24,
 						Component.translatable("laborcraft.ui.station.enclosure.clear"),
@@ -1054,6 +1084,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		if (tab == Tab.CONFIG && herder() && map != null
+				&& (station.enclosure() == null || rescan)
 				&& event.button() == InputConstants.MOUSE_BUTTON_LEFT
 				&& map.isMouseOver(event.x(), event.y())) {
 			BlockPos clicked = map.blockAt(event.x(), event.y());
@@ -1063,6 +1094,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 						LaborCraftCommands.STATION_ENCLOSURE_SET + " " + posString()
 								+ " " + coordinates(clicked)
 				);
+				rescan = false;
 				return true;
 			}
 		}

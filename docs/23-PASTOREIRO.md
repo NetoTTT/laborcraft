@@ -123,3 +123,9 @@ emprego. Para fixar a especialização sem depender do trabalhador, use
 
 Os resultados do scan/aplicação usam `UiToastPayload`: quando uma tela Quill está aberta, o
 resultado aparece como toast; o chat continua recebendo a mesma mensagem como fallback.
+## Ajustes de navegação
+
+- O navigator da Station tem duas linhas: saldo + X em cima, tabs embaixo.
+- Depois de configurar o cercado, clicar no mapa não inicia outro scan por acidente.
+  Use **Escanear novamente** para entrar no modo de clique e **Cancelar** para sair.
+- O mapa deixa uma margem vertical para não gerar scroll residual no conteúdo.
