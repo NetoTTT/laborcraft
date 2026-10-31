@@ -24,6 +24,7 @@ import com.quillui.screen.QuillScreen;
 import com.quillui.theme.QuillSpacing;
 import com.quillui.theme.QuillThemeData;
 import com.quillui.widget.QuillButton;
+import com.quillui.widget.QuillChip;
 import com.quillui.widget.QuillCardBox;
 import com.quillui.widget.QuillListView;
 import com.quillui.widget.QuillNodes;
@@ -117,6 +118,15 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 				station.pos().getX(),
 				station.pos().getY(),
 				station.pos().getZ()
+		);
+	}
+
+	@Override
+	protected QuillLayoutNode headerAccessory() {
+		return QuillNodes.widget(
+				QuillChip.of(Component.literal(station.balanceText()))
+						.icon(new ItemStack(Items.GOLD_INGOT))
+						.accent()
 		);
 	}
 
@@ -633,20 +643,25 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 	private QuillMap createMap(int height) {
 		int width = Math.max(64, contentBounds().width() - 16);
+		int viewRadius = Math.max(
+				station.maxRadius(),
+				(int) Math.ceil(Math.max(width, height) / 8.0D)
+		);
 		QuillMap created = new QuillMap(
 				0,
 				0,
 				width,
 				height,
 				station.pos(),
-				station.maxRadius(),
+				viewRadius,
 				32,
 				theme()
 		);
 		created.setLayer(mapLayer);
-		created.setRadiusLimitVisible(true);
+		created.setRadiusLimitVisible(false);
 		created.setReadOnly(!drawing);
 		created.setZones(mapZones());
+		created.setMergeZones(true);
 
 		if (drawing) {
 			BlockPos savedFrom = station.zone() == null ? null : station.zone().from();
@@ -665,6 +680,14 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 	private List<QuillMapZone> mapZones() {
 		List<QuillMapZone> zones = new java.util.ArrayList<>();
+		int radius = station.maxRadius();
+		zones.add(new QuillMapZone(
+				station.pos().offset(-radius, 0, -radius),
+				station.pos().offset(radius, 0, radius),
+				0x004C8BF5,
+				0x994C8BF5,
+				true
+		));
 		for (OpenStationPayload.AreaView area : station.ownAreas()) {
 			zones.add(new QuillMapZone(
 					area.from(),
@@ -790,6 +813,19 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		)).muted()));
 		row.add(QuillNodes.flexible(identity));
 
+		QuillButton swap = new QuillButton(
+				0, 0, 56, 16,
+				Component.translatable("laborcraft.ui.station.storage.swap"),
+				QuillButton.Variant.GHOST,
+				() -> cycleStorageRole(view)
+		);
+		swap.tip(QuillTooltips.of(
+				Component.translatable("laborcraft.ui.station.storage.swap"),
+				Component.translatable("laborcraft.ui.station.storage.swap.tip"),
+				null
+		));
+		row.add(QuillNodes.widget(swap, 56, 16));
+
 		QuillButton eye = new QuillButton(
 				0, 0, 18, 18,
 				Component.empty(),
@@ -864,6 +900,12 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 	private void cycleStorageRole() {
 		OpenStationPayload.StorageView view = selectedStorageView();
+		if (view != null) {
+			cycleStorageRole(view);
+		}
+	}
+
+	private void cycleStorageRole(OpenStationPayload.StorageView view) {
 		if (view == null) {
 			return;
 		}

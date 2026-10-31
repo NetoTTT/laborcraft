@@ -26,6 +26,7 @@ import net.minecraft.world.Container;
 public record OpenStationPayload(
 		BlockPos pos,
 		String mode,
+		String balanceText,
 		ZoneView zone,
 		List<ZoneView> zones,
 		int maxRadius,
@@ -42,6 +43,7 @@ public record OpenStationPayload(
 			(buffer, payload) -> {
 				buffer.writeBlockPos(payload.pos());
 				buffer.writeUtf(payload.mode(), 16);
+				buffer.writeUtf(payload.balanceText(), 64);
 				buffer.writeBoolean(payload.zone() != null);
 				if (payload.zone() != null) {
 					buffer.writeBlockPos(payload.zone().from());
@@ -92,6 +94,7 @@ public record OpenStationPayload(
 			buffer -> {
 				BlockPos pos = buffer.readBlockPos();
 				String mode = buffer.readUtf(16);
+				String balanceText = buffer.readUtf(64);
 				ZoneView zone = buffer.readBoolean()
 						? new ZoneView(buffer.readBlockPos(), buffer.readBlockPos())
 						: null;
@@ -145,7 +148,7 @@ public record OpenStationPayload(
 					));
 				}
 				return new OpenStationPayload(
-						pos, mode, zone, List.copyOf(zones), maxRadius, verticalRadius, bound,
+						pos, mode, balanceText, zone, List.copyOf(zones), maxRadius, verticalRadius, bound,
 						List.copyOf(workers), List.copyOf(ownAreas), List.copyOf(areas),
 						List.copyOf(otherPosts), List.copyOf(storage)
 				);
@@ -191,6 +194,9 @@ public record OpenStationPayload(
 		return new OpenStationPayload(
 				station.pos(),
 				station.mode().name(),
+				CurrencyProviders.active().format(
+						CurrencyProviders.active().balance(player.getUUID())
+				),
 				zone,
 				zones,
 				maxRadius,

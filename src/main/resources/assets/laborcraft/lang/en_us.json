@@ -384,6 +384,8 @@
 	"laborcraft.ui.station.storage.highlight": "Highlight chest",
 	"laborcraft.ui.station.storage.highlight.tip": "Shows this container in the world.",
 	"laborcraft.ui.station.storage.role.tip": "Click to cycle mixed, output, input and tools.",
+	"laborcraft.ui.station.storage.swap": "Swap",
+	"laborcraft.ui.station.storage.swap.tip": "Cycles this container role directly from the row.",
 	"laborcraft.ui.station.subtitle": "Post at %s, %s, %s",
 	"laborcraft.ui.station.tab.work": "Work",
 	"laborcraft.ui.station.tab.config": "Config",

@@ -384,6 +384,8 @@
 	"laborcraft.ui.station.storage.highlight": "Destacar baú",
 	"laborcraft.ui.station.storage.highlight.tip": "Mostra este container no mundo.",
 	"laborcraft.ui.station.storage.role.tip": "Clique para alternar misto, saída, entrada e ferramentas.",
+	"laborcraft.ui.station.storage.swap": "Trocar",
+	"laborcraft.ui.station.storage.swap.tip": "Alterna a função deste container direto na linha.",
 	"laborcraft.ui.station.subtitle": "Posto em %s, %s, %s",
 	"laborcraft.ui.station.tab.work": "Trabalho",
 	"laborcraft.ui.station.tab.config": "Config",
