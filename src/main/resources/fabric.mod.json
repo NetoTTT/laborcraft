@@ -15,6 +15,9 @@
 	"license": "GPL-3.0-or-later",
 	"icon": "assets/laborcraft/icon.png",
 	"environment": "*",
+	"mixins": [
+		"laborcraft.mixins.json"
+	],
 	"entrypoints": {
 		"main": [
 			"com.foque.laborcraft.LaborCraft"

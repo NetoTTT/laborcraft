@@ -1,5 +1,6 @@
 package com.foque.laborcraft.entity;
 
+import com.foque.laborcraft.entity.ai.OpenFenceGateGoal;
 import com.foque.laborcraft.housing.HomeRegistry;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.worker.FarmerBrain;
@@ -107,7 +108,8 @@ public class LaborCraftWorker extends PathfinderMob {
 		goalSelector.addGoal(0, new FloatGoal(this));
 		goalSelector.addGoal(1, new LookAtPlayerGoal(this, Player.class, 8.0F));
 		goalSelector.addGoal(2, new OpenDoorGoal(this, true));
-		goalSelector.addGoal(3, new RandomLookAroundGoal(this));
+		goalSelector.addGoal(3, new OpenFenceGateGoal(this, true));
+		goalSelector.addGoal(4, new RandomLookAroundGoal(this));
 	}
 
 	public void setWorkerName(Component displayName) {

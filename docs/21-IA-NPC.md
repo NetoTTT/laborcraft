@@ -46,7 +46,7 @@ valem para todos os empregos automaticamente.
 register(JobTypes.MINER.id(), MinerBrain::new);
 ```
 
-## Portas
+## Portas e portões
 
 O bug de porta era o pathfinding: `OpenDoorGoal` já existia, mas a navegação não podia atravessar
 portas fechadas. O shell agora chama:
@@ -57,3 +57,9 @@ getNavigation().setCanOpenDoors(true);
 
 Isso vale para trabalho, descanso e qualquer cérebro futuro. O `OpenDoorGoal` abre/fecha a porta
 quando o caminho passa por ela.
+
+Fence gates são um caso separado do vanilla: `WalkNodeEvaluator` trata portão fechado como
+`PathType.FENCE` e `OpenDoorGoal` só conhece `DoorBlock`. O LC adiciona:
+
+- `WalkNodeEvaluatorMixin`: portão fechado vira `DOOR_WOOD_CLOSED` para `LaborCraftWorker`;
+- `OpenFenceGateGoal`: abre o portão no caminho e fecha quando o trabalhador se afasta.

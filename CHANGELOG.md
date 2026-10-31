@@ -14,6 +14,7 @@ Núcleo de IA por emprego e correção das portas.
 
 ### Corrigido
 - O NPC agora consegue atravessar portas fechadas: o pathfinding foi habilitado com `setCanOpenDoors(true)`, então ele encontra, abre e fecha portas para entrar/sair da casa e chegar à cama.
+- Fence gates: mixin no `WalkNodeEvaluator` + `OpenFenceGateGoal` para o trabalhador abrir/fechar portões no caminho.
 
 ## [0.2.0-alpha.2] - 2026-10-31
 
