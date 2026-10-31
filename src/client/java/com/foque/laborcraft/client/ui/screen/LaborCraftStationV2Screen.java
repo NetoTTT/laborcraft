@@ -148,10 +148,8 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	}
 
 	@Override
-	protected void buildContent() {
-		QuillFlexBox root = QuillNodes.column(QuillSpacing.SPACE_2);
-		root.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
-		root.add(QuillNodes.tabs(
+	protected QuillLayoutNode navigator() {
+		return QuillNodes.tabs(
 				theme(),
 				6,
 				List.of(
@@ -161,7 +159,13 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 				),
 				tab.ordinal(),
 				index -> switchTab(Tab.values()[index])
-		));
+		);
+	}
+
+	@Override
+	protected void buildContent() {
+		QuillFlexBox root = QuillNodes.column(QuillSpacing.SPACE_2);
+		root.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
 
 		switch (tab) {
 			case WORK -> {
@@ -518,7 +522,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	}
 
 	private QuillCardBox configMapCard() {
-		int mapHeight = Math.max(120, contentBounds().height() - 104);
+		int mapHeight = Math.max(120, contentBounds().height() - 76);
 		map = createMap(mapHeight);
 		QuillFlexBox column = QuillNodes.column(0);
 		column.add(QuillNodes.fixedHeight(mapHeight, control(map)));
