@@ -12,19 +12,19 @@ import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.foque.laborcraft.client.ui.LaborCraftUiActions;
 import com.foque.laborcraft.client.ui.LcWorkerText;
 import com.foque.laborcraft.client.ui.WorkerListFilter;
-import com.foque.laborcraft.client.ui.widget.LcAreaMap;
 import com.foque.laborcraft.command.LaborCraftCommands;
 import com.foque.laborcraft.network.OpenStationPayload;
 import com.quillui.layout.QuillCrossAxisAlignment;
 import com.quillui.layout.QuillFlexBox;
 import com.quillui.layout.QuillLayoutNode;
+import com.quillui.map.QuillMap;
+import com.quillui.map.QuillMapZone;
 import com.quillui.render.QuillTooltips;
 import com.quillui.screen.QuillScreen;
 import com.quillui.theme.QuillSpacing;
 import com.quillui.theme.QuillThemeData;
 import com.quillui.widget.QuillButton;
 import com.quillui.widget.QuillCardBox;
-import com.quillui.widget.QuillLabel;
 import com.quillui.widget.QuillListView;
 import com.quillui.widget.QuillNodes;
 import java.util.List;
@@ -54,7 +54,6 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	private static final int PANEL_WIDTH = 480;
 	private static final int PANEL_HEIGHT = 400;
 	private static final int WORKER_LIST_WIDTH = 208;
-	private static final int MAP_HEIGHT = 170;
 	private static final ItemStack EYE_ICON = new ItemStack(Items.ENDER_EYE);
 
 	private static WorkerListFilter pendingFilter;
@@ -66,12 +65,12 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	private WorkerListFilter filter;
 	private UUID selectedWorkerId;
 	private BlockPos selectedStoragePos;
-	private boolean mapOpen;
-	private LcAreaMap areaMap;
+	private boolean drawing;
+	private QuillMap map;
 	private QuillListView<OpenStationPayload.Summary> workerList;
 	private QuillListView<OpenStationPayload.StorageView> storageList;
-	private LcAreaMap.Layer mapLayer = LcAreaMap.Layer.AUTO;
-	private QuillLabel selectionStatus;
+	private QuillMap.Layer mapLayer = QuillMap.Layer.AUTO;
+	private QuillButton layerButton;
 	private QuillButton confirmMapButton;
 	private QuillButton previewMapButton;
 	private int workerScroll;
@@ -92,7 +91,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		this.filter = pendingFilter == null ? WorkerListFilter.ALL : pendingFilter;
 		this.selectedWorkerId = pendingWorker;
 		this.selectedStoragePos = initialStorage == null ? pendingStorage : initialStorage;
-		this.mapOpen = StationPreviewManager.hasDraft(station.pos());
+		this.drawing = StationPreviewManager.hasDraft(station.pos());
 
 		pendingFilter = null;
 		pendingWorker = null;
@@ -144,15 +143,9 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 				root.add(workActions());
 			}
 			case CONFIG -> {
-				if (mapOpen) {
-					areaMap = createAreaMap(false);
-					root.add(configMapHeader());
-					root.add(configMap());
-				}
-				else {
-					root.add(configSummary());
-					root.add(QuillNodes.flexible(QuillNodes.spacer()));
-				}
+				QuillCardBox mapCard = configMapCard();
+				root.add(configHeader());
+				root.add(mapCard);
 				root.add(configActions());
 			}
 			case STORAGE -> {
@@ -452,36 +445,9 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 	// --- Config tab -------------------------------------------------------------------------
 
-	private QuillFlexBox configMapHeader() {
+	private QuillFlexBox configHeader() {
 		QuillFlexBox header = QuillNodes.row(QuillSpacing.SPACE_2);
 		header.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
-		header.add(control(label(Component.translatable(
-				"laborcraft.ui.station.map.title"
-		)).title()));
-		header.add(QuillNodes.flexible(QuillNodes.spacer()));
-		header.add(QuillNodes.widget(layerButton(), 110, 18));
-		return header;
-	}
-
-	private QuillCardBox configMap() {
-		QuillFlexBox column = QuillNodes.column(QuillSpacing.SPACE_1);
-		column.add(control(label(Component.translatable(
-				"laborcraft.ui.station.map.hint"
-		)).muted()));
-		column.add(QuillNodes.fixedHeight(MAP_HEIGHT, control(areaMap)));
-		selectionStatus = label(selectionLabel());
-		column.add(control(selectionStatus));
-		column.add(control(label(Component.translatable(
-				"laborcraft.ui.station.map.legend"
-		)).muted()));
-		return new QuillCardBox(null, column);
-	}
-
-	private QuillCardBox configSummary() {
-		QuillFlexBox column = QuillNodes.column(QuillSpacing.SPACE_1);
-		column.add(control(label(Component.translatable(
-				"laborcraft.ui.station.mode"
-		)).muted()));
 
 		int diameter = station.maxRadius() * 2 + 1;
 		Component mode = station.zone() == null
@@ -491,54 +457,43 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 						station.zone().width(),
 						station.zone().depth()
 				);
-		column.add(control(label(mode).color(station.zone() == null ? DANGER : TITLE)));
-		column.add(control(label(Component.translatable(
-				"laborcraft.ui.station.config.map_hint"
-		)).muted()));
-		column.add(control(label(Component.translatable(
-				"laborcraft.ui.station.config.vertical",
-				station.verticalRadius(),
-				station.verticalRadius()
-		)).muted()));
-		column.add(control(label(Component.translatable(
-				"laborcraft.ui.station.action",
-				station.verticalRadius(),
-				station.verticalRadius()
-		)).muted()));
-		column.add(control(label(Component.translatable(
-				"laborcraft.ui.station.map.legend"
-		)).muted()));
+		header.add(control(label(mode).color(station.zone() == null ? DANGER : TITLE)));
+		header.add(QuillNodes.flexible(QuillNodes.spacer()));
 
-		if (station.zone() != null) {
-			QuillButton preview = new QuillButton(
-					0, 0, 130, 20,
-					Component.translatable("laborcraft.ui.station.map.preview_saved"),
-					QuillButton.Variant.SECONDARY,
-					this::previewSavedZone
-			);
-			preview.enabled(!station.ownAreas().isEmpty());
-			preview.tip(QuillTooltips.of(
-					Component.translatable("laborcraft.ui.station.map.preview_saved"),
-					Component.translatable("laborcraft.ui.station.map.preview"),
-					null
-			));
-			column.add(QuillNodes.widget(preview, 130, 20));
-		}
+		layerButton = new QuillButton(
+				0, 0, 110, 18,
+				map == null ? Component.empty() : map.layerLabel(),
+				QuillButton.Variant.GHOST,
+				this::cycleLayer
+		);
+		layerButton.tip(QuillTooltips.of(
+				Component.translatable("laborcraft.ui.station.map.layer"),
+				Component.translatable("laborcraft.ui.station.map.layer.tip"),
+				null
+		));
+		header.add(QuillNodes.widget(layerButton, 110, 18));
+		return header;
+	}
 
-		return new QuillCardBox(Component.translatable("laborcraft.ui.station.mode"), column);
+	private QuillCardBox configMapCard() {
+		int mapHeight = Math.max(120, contentBounds().height() - 104);
+		map = createMap(mapHeight);
+		QuillFlexBox column = QuillNodes.column(0);
+		column.add(QuillNodes.fixedHeight(mapHeight, control(map)));
+		return new QuillCardBox(null, column);
 	}
 
 	private QuillFlexBox configActions() {
 		QuillFlexBox bar = QuillNodes.row(QuillSpacing.SPACE_2);
 
-		if (mapOpen) {
+		if (drawing) {
 			confirmMapButton = new QuillButton(
-					0, 0, 100, 24,
+					0, 0, 110, 24,
 					Component.translatable("laborcraft.ui.station.map.confirm"),
 					QuillButton.Variant.PRIMARY,
 					this::confirmZone
-			).enabled(areaMap != null && areaMap.selectionFitsLimit());
-			bar.add(QuillNodes.flexible(QuillNodes.widget(confirmMapButton, 100, 24), 1));
+			).enabled(canConfirm());
+			bar.add(QuillNodes.flexible(QuillNodes.widget(confirmMapButton, 110, 24), 1));
 
 			bar.add(QuillNodes.widget(new QuillButton(
 					0, 0, 90, 24,
@@ -552,116 +507,106 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 					Component.translatable("laborcraft.ui.station.map.preview"),
 					QuillButton.Variant.SECONDARY,
 					this::previewZone
-			).enabled(areaMap != null && areaMap.selectionFitsLimit());
+			).enabled(canConfirm());
 			bar.add(QuillNodes.widget(previewMapButton, 100, 24));
+			return bar;
+		}
+
+		QuillButton draw = new QuillButton(
+				0, 0, 132, 24,
+				Component.translatable("laborcraft.ui.station.map.draw"),
+				QuillButton.Variant.PRIMARY,
+				this::openMap
+		);
+		draw.tip(QuillTooltips.of(
+				Component.translatable("laborcraft.ui.station.map.draw"),
+				Component.translatable("laborcraft.ui.station.config.map_hint"),
+				null
+		));
+		bar.add(QuillNodes.flexible(QuillNodes.widget(draw, 132, 24), 1));
+
+		if (station.zone() != null) {
+			bar.add(QuillNodes.widget(new QuillButton(
+					0, 0, 128, 24,
+					Component.translatable("laborcraft.ui.station.map.clear"),
+					QuillButton.Variant.DANGER,
+					this::clearZone
+			), 128, 24));
+
+			QuillButton preview = new QuillButton(
+					0, 0, 130, 24,
+					Component.translatable("laborcraft.ui.station.map.preview_saved"),
+					QuillButton.Variant.SECONDARY,
+					this::previewSavedZone
+			).enabled(!station.ownAreas().isEmpty());
+			preview.tip(QuillTooltips.of(
+					Component.translatable("laborcraft.ui.station.map.preview_saved"),
+					Component.translatable("laborcraft.ui.station.map.preview"),
+					null
+			));
+			bar.add(QuillNodes.widget(preview, 130, 24));
 		}
 		else {
-			QuillButton draw = new QuillButton(
-					0, 0, 132, 24,
-					Component.translatable("laborcraft.ui.station.map.draw"),
-					QuillButton.Variant.PRIMARY,
-					this::openMap
+			QuillButton maxArea = new QuillButton(
+					0, 0, 168, 24,
+					Component.translatable("laborcraft.ui.station.map.max_area"),
+					QuillButton.Variant.SECONDARY,
+					this::useMaxArea
 			);
-			bar.add(QuillNodes.flexible(QuillNodes.widget(draw, 132, 24), 1));
-
-			if (station.zone() != null) {
-				bar.add(QuillNodes.widget(new QuillButton(
-						0, 0, 128, 24,
-						Component.translatable("laborcraft.ui.station.map.clear"),
-						QuillButton.Variant.DANGER,
-						this::clearZone
-				), 128, 24));
-			}
-			else {
-				QuillButton maxArea = new QuillButton(
-						0, 0, 168, 24,
-						Component.translatable("laborcraft.ui.station.map.max_area"),
-						QuillButton.Variant.SECONDARY,
-						this::useMaxArea
-				);
-				maxArea.tip(QuillTooltips.of(
-						Component.translatable("laborcraft.ui.station.map.max_area"),
-						Component.translatable("laborcraft.ui.station.map.max_area.tip"),
-						null
-				));
-				bar.add(QuillNodes.widget(maxArea, 168, 24));
-			}
+			maxArea.tip(QuillTooltips.of(
+					Component.translatable("laborcraft.ui.station.map.max_area"),
+					Component.translatable("laborcraft.ui.station.map.max_area.tip"),
+					null
+			));
+			bar.add(QuillNodes.widget(maxArea, 168, 24));
 		}
-
 		return bar;
 	}
 
-	private QuillButton layerButton() {
-		QuillButton layer = new QuillButton(
-				0, 0, 110, 18,
-				areaMap == null ? Component.empty() : areaMap.layerLabel(),
-				QuillButton.Variant.GHOST,
-				this::cycleLayer
-		);
-		layer.tip(QuillTooltips.of(
-				Component.translatable("laborcraft.ui.station.map.layer"),
-				Component.translatable("laborcraft.ui.station.map.layer.tip"),
-				null
-		));
-		return layer;
-	}
-
 	private void cycleLayer() {
-		if (areaMap == null) {
+		if (map == null) {
 			return;
 		}
 		mapLayer = mapLayer.next();
-		areaMap.setLayer(mapLayer);
-		refreshContent();
-	}
-
-	private Component selectionLabel() {
-		if (areaMap == null || !areaMap.hasSelection()) {
-			return Component.translatable("laborcraft.ui.station.map.no_selection");
+		map.setLayer(mapLayer);
+		if (layerButton != null) {
+			layerButton.setMessage(map.layerLabel());
 		}
-		int blocks = areaMap.selectionWidth() * areaMap.selectionDepth();
-		return Component.translatable(
-				"laborcraft.ui.station.map.size",
-				areaMap.selectionWidth(),
-				areaMap.selectionDepth(),
-				blocks,
-				station.pos().getY() - station.verticalRadius(),
-				station.pos().getY() + station.verticalRadius()
-		);
 	}
 
 	private void openMap() {
-		mapOpen = true;
+		drawing = true;
 		refreshContent();
 	}
 
 	private void cancelMap() {
 		StationPreviewManager.clear(station.pos());
-		mapOpen = false;
+		drawing = false;
 		refreshContent();
 	}
 
 	private void confirmZone() {
-		if (areaMap == null || !areaMap.selectionFitsLimit()) {
+		if (!canConfirm()) {
 			return;
 		}
-		BlockPos from = areaMap.from();
-		BlockPos to = areaMap.to();
+		BlockPos from = map.from();
+		BlockPos to = map.to();
 		LaborCraftUiActions.run(
 				LaborCraftCommands.STATION_ZONE_SET + " " + posString()
 						+ " " + coordinates(from) + " " + coordinates(to)
 		);
 		StationPreviewManager.clear(station.pos());
+		drawing = false;
 	}
 
 	private void previewZone() {
-		if (areaMap == null || !areaMap.selectionFitsLimit()) {
+		if (!canConfirm()) {
 			return;
 		}
 		StationPreviewManager.startPreview(
 				station.pos(),
-				areaMap.from(),
-				areaMap.to(),
+				map.from(),
+				map.to(),
 				station.verticalRadius(),
 				station.areas(),
 				station.otherPosts()
@@ -686,45 +631,88 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		LaborCraftUiActions.run(LaborCraftCommands.STATION_ZONE_MAX + " " + posString());
 	}
 
-	private LcAreaMap createAreaMap(boolean readOnly) {
-		BlockPos savedFrom = station.zone() == null ? null : station.zone().from();
-		BlockPos savedTo = station.zone() == null ? null : station.zone().to();
+	private QuillMap createMap(int height) {
+		int width = Math.max(64, contentBounds().width() - 16);
+		QuillMap created = new QuillMap(
+				0,
+				0,
+				width,
+				height,
+				station.pos(),
+				station.maxRadius(),
+				32,
+				theme()
+		);
+		created.setLayer(mapLayer);
+		created.setRadiusLimitVisible(true);
+		created.setReadOnly(!drawing);
+		created.setZones(mapZones());
 
-		BlockPos selectionFrom = null;
-		BlockPos selectionTo = null;
-		if (!readOnly) {
+		if (drawing) {
+			BlockPos savedFrom = station.zone() == null ? null : station.zone().from();
+			BlockPos savedTo = station.zone() == null ? null : station.zone().to();
 			StationPreviewManager.Draft draft = StationPreviewManager.getDraft(station.pos());
 			if (draft != null) {
-				selectionFrom = draft.from();
-				selectionTo = draft.to();
+				created.setSelection(draft.from(), draft.to());
 			}
 			else if (savedFrom != null) {
-				selectionFrom = atStationY(savedFrom);
-				selectionTo = atStationY(savedTo);
+				created.setSelection(atStationY(savedFrom), atStationY(savedTo));
 			}
 		}
 
-		int mapWidth = Math.max(64, contentBounds().width() - 16);
-		LcAreaMap map = new LcAreaMap(
-				0,
-				0,
-				mapWidth,
-				MAP_HEIGHT,
-				station.pos(),
-				station.maxRadius(),
-				selectionFrom,
-				selectionTo,
-				savedFrom,
-				savedTo,
-				station.zones(),
-				station.bound() != null ? station.bound().id() : null,
-				station.bound() != null ? station.bound().name() : null,
-				station.ownAreas(),
-				station.areas(),
-				readOnly
-		);
-		map.setLayer(mapLayer);
-		return map;
+		return created;
+	}
+
+	private List<QuillMapZone> mapZones() {
+		List<QuillMapZone> zones = new java.util.ArrayList<>();
+		for (OpenStationPayload.AreaView area : station.ownAreas()) {
+			zones.add(new QuillMapZone(
+					area.from(),
+					area.to(),
+					0x28FFC65A,
+					0xFFFFC65A,
+					false
+			));
+		}
+		for (OpenStationPayload.AreaView area : station.areas()) {
+			zones.add(new QuillMapZone(
+					area.from(),
+					area.to(),
+					0x284C8BF5,
+					0xFF4C8BF5,
+					false
+			));
+		}
+		return zones;
+	}
+
+	private boolean canConfirm() {
+		return map != null && map.selectionFitsLimit() && !selectionOverlapsOther();
+	}
+
+	private boolean selectionOverlapsOther() {
+		if (map == null || !map.hasSelection()) {
+			return false;
+		}
+
+		int minX = Math.min(map.from().getX(), map.to().getX());
+		int maxX = Math.max(map.from().getX(), map.to().getX());
+		int minZ = Math.min(map.from().getZ(), map.to().getZ());
+		int maxZ = Math.max(map.from().getZ(), map.to().getZ());
+		for (OpenStationPayload.AreaView area : station.areas()) {
+			if (area == null || !area.blocksDraft()) {
+				continue;
+			}
+
+			int areaMinX = Math.min(area.from().getX(), area.to().getX());
+			int areaMaxX = Math.max(area.from().getX(), area.to().getX());
+			int areaMinZ = Math.min(area.from().getZ(), area.to().getZ());
+			int areaMaxZ = Math.max(area.from().getZ(), area.to().getZ());
+			if (areaMinX <= maxX && areaMaxX >= minX && areaMinZ <= maxZ && areaMaxZ >= minZ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private BlockPos atStationY(BlockPos pos) {
@@ -913,46 +901,44 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	@Override
 	public void tick() {
 		super.tick();
-		if (!mapOpen || areaMap == null) {
+		if (map != null && layerButton != null) {
+			layerButton.setMessage(map.layerLabel());
+		}
+		if (!drawing || map == null) {
 			return;
 		}
-		boolean fits = areaMap.selectionFitsLimit();
+		boolean fits = canConfirm();
 		if (confirmMapButton != null) {
 			confirmMapButton.enabled(fits);
 		}
 		if (previewMapButton != null) {
 			previewMapButton.enabled(fits);
 		}
-		if (selectionStatus != null) {
-			selectionStatus.setMessage(selectionLabel());
-		}
 	}
 
 	@Override
 	protected void clearWidgets() {
-		if (areaMap != null) {
-			areaMap.close();
-			areaMap = null;
-		}
+		closeMap();
 		super.clearWidgets();
 	}
 
 	@Override
 	public void removed() {
-		if (areaMap != null) {
-			areaMap.close();
-			areaMap = null;
-		}
+		closeMap();
 		super.removed();
 	}
 
 	@Override
 	public void onClose() {
-		if (areaMap != null) {
-			areaMap.close();
-			areaMap = null;
-		}
+		closeMap();
 		super.onClose();
+	}
+
+	private void closeMap() {
+		if (map != null) {
+			map.close();
+			map = null;
+		}
 	}
 
 	private String posString() {

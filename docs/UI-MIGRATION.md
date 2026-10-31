@@ -33,11 +33,14 @@ These use `setContent` and respond to the available content area:
 - `QuillNodes.tabs` for Work / Config / Storage;
 - Work: `QuillListView<Summary>` with Pay and highlight row actions, slot card and the
   bind/recall bar;
-- Config: summary card or the `LcAreaMap` widget with live selection, layer cycling and
-  confirm/cancel/preview;
+- Config: the `QuillMap` widget from `quill-ui-extras` is always embedded (read-only summary or
+  draw mode) with saved/other zones, live selection, layer cycling and confirm/cancel/preview;
 - Storage: `QuillListView<StorageView>` with role cycling, unlink, detect and highlight;
 - the panel clamps and the content scrolls when the window is smaller than the panel;
 - reopen keeps tab, filter, selected worker and selected container.
+
+The station consumes `quill-ui-extras` for `QuillMap`; the legacy `LcAreaMap` widget is no longer
+used by the V2 screen.
 
 ## Worker Inventory rewrite
 
