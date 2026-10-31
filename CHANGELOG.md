@@ -3,6 +3,20 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.2.0-alpha.2] - 2026-10-31
+
+Temas escolhidos pelo jogador e balões de fala no framework.
+
+### Adicionado
+- Seletor com **seis temas** no Perfil: Labor, Vidro, Chapado, Claro, Floresta e Ametista; a escolha fica em `config/laborcraft-ui.json`.
+- Tema **Vidro** com painéis translúcidos e o **Claro** com fundo de tela transparente e painel levemente translúcido.
+- Balões de fala do trabalhador migrados para o `quill-ui-extras` (`QuillBubbleHud`), com projeção, suavização, fade, oclusão e sombra suave.
+
+### Alterado
+- HUDs e o grid de itens seguem o tema selecionado.
+- Cores de UI declaradas com `QuillColors.rgb/argb`, sem literais hexadecimais.
+- Contraste dos botões primários e de perigo corrigido nos temas escuros.
+
 ## [0.2.0-alpha.1] - 2026-10-30
 
 Interface inteira reconstruída sobre o **Quill UI 0.3**. As três telas que ainda usavam layout

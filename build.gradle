@@ -32,8 +32,8 @@ dependencies {
 
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	implementation files("libs/quill-ui-0.3.0-alpha.4.jar")
-	implementation files("libs/quill-ui-extras-0.3.0-alpha.4.jar")
+	implementation files("libs/quill-ui-0.3.0-alpha.5.jar")
+	implementation files("libs/quill-ui-extras-0.3.0-alpha.5.jar")
 }
 
 processResources {

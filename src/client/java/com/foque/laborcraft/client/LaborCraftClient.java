@@ -3,7 +3,8 @@ package com.foque.laborcraft.client;
 import com.foque.laborcraft.LaborCraft;
 import com.foque.laborcraft.client.hud.BubbleSettings;
 import com.foque.laborcraft.client.hud.TargetIndicatorHud;
-import com.foque.laborcraft.client.hud.WorkerSpeechHud;
+import com.foque.laborcraft.client.hud.WorkerBubbleSource;
+import com.quillui.hud.QuillBubbleHud;
 import com.foque.laborcraft.client.render.LaborCraftWorkerRenderer;
 import com.foque.laborcraft.client.render.StationPreviewManager;
 import com.foque.laborcraft.client.render.WorldHighlightManager;
@@ -44,6 +45,11 @@ import net.minecraft.client.renderer.entity.EntityRenderers;
 import net.minecraft.core.BlockPos;
 
 public class LaborCraftClient implements ClientModInitializer {
+	private static final QuillBubbleHud WORKER_BUBBLES = new QuillBubbleHud(
+			new WorkerBubbleSource(),
+			LaborCraftTheme::currentData
+	);
+
 	@Override
 	public void onInitializeClient() {
 		LaborCraftTheme.load();
@@ -54,12 +60,12 @@ public class LaborCraftClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(StationPreviewManager::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(WorldHighlightManager::tick);
 		HudElementRegistry.addLast(LaborCraft.id("target_indicator"), new TargetIndicatorHud());
-		HudElementRegistry.addLast(LaborCraft.id("worker_speech"), new WorkerSpeechHud());
+		HudElementRegistry.addLast(LaborCraft.id("worker_speech"), WORKER_BUBBLES);
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			LcValuePrompt.cancelActive();
 			StationPreviewManager.resetAll();
 			WorldHighlightManager.reset();
-			WorkerSpeechHud.clear();
+			WORKER_BUBBLES.clear();
 			BubbleSettings.update(false);
 		});
 

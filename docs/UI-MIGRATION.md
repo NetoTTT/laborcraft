@@ -68,6 +68,8 @@ the in-game smoke test, together with the unused widgets:
 
 No screen overrides `constrainPanel()` and the legacy UI aliases no longer exist. Screens, HUDs and
 `LcItemGrid` read the player-selected `LaborCraftTheme` (six palettes, see `docs/20-TEMAS.md`).
+Worker speech bubbles are now the generic `QuillBubbleHud` from `quill-ui-extras`; LC only supplies
+the world positions, text and accent through `WorkerBubbleSource`.
 
 ## Next pass
 
