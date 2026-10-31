@@ -139,17 +139,19 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	}
 
 	@Override
-	protected QuillLayoutNode headerAccessory() {
-		return QuillNodes.widget(
-				QuillChip.of(Component.literal(station.balanceText()))
-						.icon(new ItemStack(Items.GOLD_INGOT))
-						.accent()
-		);
+	protected boolean showHeader() {
+		return false;
 	}
 
 	@Override
 	protected QuillLayoutNode navigator() {
-		return QuillNodes.tabs(
+		QuillChip balance = QuillChip.of(Component.literal(station.balanceText()))
+				.icon(new ItemStack(Items.GOLD_INGOT))
+				.accent();
+		QuillFlexBox row = QuillNodes.row(8);
+		row.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
+		row.add(control(balance));
+		row.add(QuillNodes.flexible(QuillNodes.tabs(
 				theme(),
 				6,
 				List.of(
@@ -159,7 +161,9 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 				),
 				tab.ordinal(),
 				index -> switchTab(Tab.values()[index])
-		);
+		)));
+		row.add(QuillNodes.widget(closeButton(this::onClose), 20, 20));
+		return row;
 	}
 
 	@Override
@@ -187,7 +191,6 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		}
 
 		setContent(root);
-		addRenderableWidget(closeButton(this::onClose));
 	}
 
 	private void switchTab(Tab next) {

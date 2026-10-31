@@ -18,7 +18,7 @@ Núcleo de IA por emprego e correção das portas.
 - `EnclosureDescriptor` no Posto (seed, bounds, spans e portões) com `/laborcraft station enclosure set/clear`, separado das zonas retangulares.
 - Mapa de Config do pastoreiro em modo clique: o seed vem do bloco clicado, com limite de scan configurável (`enclosure.maxScanRadius`/`maxArea`).
 - Resultados/erros do posto aparecem como toast na UI (`UiToastPayload`), além do chat.
-- Station usa `QuillScreen.navigator`: as tabs ficam fixas fora do conteúdo rolável.
+- Station usa `QuillScreen.navigator` sem header: tabs fixas, saldo e X no navigator; o corpo ganha a altura do header e só ele rola.
 - `/laborcraft station job set <pos> <job>` para especializar o Posto.
 
 ### Corrigido

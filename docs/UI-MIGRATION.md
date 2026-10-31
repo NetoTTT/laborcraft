@@ -30,7 +30,7 @@ All screens use `setContent` and respond to the available content area:
 
 `LaborCraftStationV2Screen`:
 
-- `QuillNodes.tabs` for Work / Config / Storage;
+- `QuillNodes.tabs` for Work / Config / Storage in the fixed `navigator` (no header on the Station);
 - Work: `QuillListView<Summary>` with Pay and highlight row actions, slot card and the
   bind/recall bar;
 - Config: the `QuillMap` widget from `quill-ui-extras` is always embedded (read-only summary or
