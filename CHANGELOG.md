@@ -34,6 +34,9 @@ Núcleo de IA por emprego e correção das portas.
 - Travessia do portão feita pelo `MoveControl` (2 blocos), sem depender do pathfinding atravessar cerca.
 - Aviso de portão inacessível com cooldown de 30 s e retry de 2 s, sem spam no chat.
 - Portão fechado agora é `WALKABLE_DOOR` no avaliador de nós: path atravessa cercado e volta pra casa.
+- Pastoreiro: coleta ovos de galinha no cercado e deposita no baú de saída (`herder.collectEggs`).
+- Config `herder`: limites de população por cercado e flags de produtos futuros.
+- Docs: estudo de pathing (`24-PATHING.md`) e design dos animais (`25-PASTOREIRO-ANIMAIS.md`).
 - Cérebros podem declarar área própria (cercado) e dispensar ferramenta.
 - `/laborcraft station job set <pos> <job>` para especializar o Posto.
 

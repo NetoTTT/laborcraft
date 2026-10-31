@@ -90,3 +90,20 @@ Repositório: <https://github.com/cabaletta/baritone>
 - `MinecoloniesAdvancedPathNavigate`: <https://github.com/ldtteam/minecolonies/blob/version/main/src/main/java/com/minecolonies/core/entity/pathfinding/navigation/MinecoloniesAdvancedPathNavigate.java>
 - `AbstractPathJob` (regra de portão): <https://github.com/ldtteam/minecolonies/blob/version/main/src/main/java/com/minecolonies/core/entity/pathfinding/pathjobs/AbstractPathJob.java>
 - Baritone: <https://github.com/cabaletta/baritone>
+
+## 7. Armadilhas confirmadas neste projeto
+
+- **Mixin devolvendo `DOOR_WOOD_CLOSED`**: malus `-1.0`, portanto bloqueado. O path nunca cruzava
+  o portão. O correto é `WALKABLE_DOOR` (malus `0`), que é o que o vanilla usa para porta de madeira
+  fechada em mob que abre portas.
+- **Mixin só intercepta `getPathTypeOfMob`**: é o caminho usado por `getCachedPathType`, ou seja,
+  o nó principal dos vizinhos. `getPathType`/`getPathTypeFromState` continuam vendo `FENCE`; não
+  usar esses métodos para julgar o portão.
+- **`WalkNodeEvaluator` considera a bounding box inteira do mob** (`getPathTypeWithinMobBB`) antes
+  do tipo do bloco. Um portão estreito com cerca nos lados ainda pode ser reprovado se o mob for
+  largo; trabalhadores têm 0,6 de largura.
+- **Só abrir o portão por proximidade** faz o mob abrir cerca sem atravessar. Abrir deve ser
+  decidido pelo nó do path, nunca pela distância pura.
+- **Pausar/retomar sem cooldown** gera spam de chat: use timeout com retry e aviso com cooldown.
+- **`getSmartGroundY`**: portão tem collision de 1,5 bloco; usar o topo da shape como Y-alvo faz o
+  mob tentar subir. Para portão/porta, mirar o Y da base.

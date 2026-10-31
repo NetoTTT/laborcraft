@@ -176,3 +176,7 @@ resultado aparece como toast; o chat continua recebendo a mesma mensagem como fa
 - `WALKABLE_DOOR` tem malus 0; `DOOR_WOOD_CLOSED` e `FENCE` têm malus -1, então o path nunca passava.
 - Com isso o trabalhador também consegue voltar para casa atravessando portão fechado.
 - O portão continua abrindo só quando o path pisa nele (`OpenFenceGateGoal`) e fecha 2 blocos depois.
+## Animais
+
+- Coleta de ovos de galinha já funciona dentro do cercado, com depósito no baú.
+- Design completo (ovelha, vaca, porco, população e reprodução): `25-PASTOREIRO-ANIMAIS.md`.

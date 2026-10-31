@@ -36,6 +36,7 @@ public final class LaborCraftConfig {
 	public CompatibilitySettings compatibility = new CompatibilitySettings();
 	public BillingSettings billing = new BillingSettings();
 	public EnclosureSettings enclosure = new EnclosureSettings();
+	public HerderSettings herder = new HerderSettings();
 	public JobSettings farmer = JobSettings.farmer();
 	public Map<String, JobSettings> jobs = new LinkedHashMap<>();
 
@@ -284,6 +285,23 @@ public final class LaborCraftConfig {
 		public EnclosureSettings() {
 		}
 	}
+	/** Animal rules for the herder; products are opt-in and population is capped per pen. */
+	public static final class HerderSettings {
+		public boolean collectEggs = true;
+		public boolean shearSheep = false;
+		public boolean milkCows = false;
+		public boolean breeding = false;
+		/** Upper bound for herded animals inside one pen. */
+		public int maxAnimalsPerPen = 12;
+		/** Never cull/breed below this; keeps the pen productive. */
+		public int minAnimalsPerPen = 4;
+		/** Eggs on the ground are looked up within this radius of the pen. */
+		public int eggScanRadius = 16;
+
+		public HerderSettings() {
+		}
+	}
+
 	public static final class JobSettings {
 		public boolean enabled = true;
 		public int baseWage = 24;

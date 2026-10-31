@@ -3,6 +3,7 @@ package com.foque.laborcraft.worker;
 import com.foque.laborcraft.LaborCraft;
 import com.foque.laborcraft.area.EnclosureDescriptor;
 import com.foque.laborcraft.area.EnclosureSpan;
+import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -10,7 +11,11 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.pathfinder.Path;
 
 /**
@@ -51,6 +56,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	private long retryAt;
 	private long nextNoticeAt;
 	private BlockPos target;
+	private boolean depositing;
 	private String debugInfo = "";
 
 	public HerderBrain(LaborCraftWorker worker) {
@@ -116,7 +122,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 				}
 			}
 			case ENTER -> tickEnter(level, pen, gate, inside);
-			case GRAZE -> tickGraze(level, pen, inside);
+			case GRAZE -> tickGraze(level, pen, station, inside);
 		}
 	}
 
@@ -168,7 +174,9 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 	}
 
-	private void tickGraze(ServerLevel level, EnclosureDescriptor pen, boolean inside) {
+	private void tickGraze(
+			ServerLevel level, EnclosureDescriptor pen, StationRegistry.Station station, boolean inside
+	) {
 		if (!inside) {
 			resetAttempt();
 			phase = Phase.ENTER;
@@ -180,6 +188,27 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			resetAttempt();
 			phase = Phase.EXIT;
 			return;
+		}
+
+		if (LaborCraftConfig.get().herder.collectEggs) {
+			if (depositing) {
+				if (depositProduce(level, station)) {
+					depositing = false;
+					target = null;
+				}
+				return;
+			}
+
+			ItemEntity egg = findEgg(level, pen);
+			if (egg != null) {
+				collectEgg(egg);
+				return;
+			}
+
+			if (HerderStorage.hasProduce(worker)) {
+				depositing = true;
+				return;
+			}
 		}
 
 		if (target == null || worker.getNavigation().isDone()) {
@@ -197,6 +226,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		nodeStuckTicks = 0;
 		lastNodeIndex = -1;
 		target = null;
+		depositing = false;
 	}
 
 	/** Retries after a cooldown and reports the problem at most once per 30 s, never per tick. */
@@ -277,6 +307,102 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		if (failedPaths >= 3) {
 			fail(level);
 		}
+	}
+
+	private ItemEntity findEgg(ServerLevel level, EnclosureDescriptor pen) {
+		int margin = Math.max(2, LaborCraftConfig.get().herder.eggScanRadius);
+		BlockPos min = pen.min();
+		BlockPos max = pen.max();
+		int y = pen.seed().getY();
+		AABB box = new AABB(
+				min.getX() - margin,
+				y - 8,
+				min.getZ() - margin,
+				max.getX() + 1 + margin,
+				y + 8,
+				max.getZ() + 1 + margin
+		);
+		ItemEntity best = null;
+		double bestDistance = Double.MAX_VALUE;
+		for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, box)) {
+			if (!item.isAlive() || !item.getItem().is(Items.EGG)) {
+				continue;
+			}
+			if (!pen.contains(item.blockPosition())) {
+				continue;
+			}
+			double distance = worker.position().distanceToSqr(item.position());
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				best = item;
+			}
+		}
+		return best;
+	}
+
+	private void collectEgg(ItemEntity egg) {
+		if (worker.position().distanceToSqr(egg.position()) > 2.25D) {
+			if (worker.getNavigation().isDone() || pathTicks <= 0) {
+				worker.getNavigation().moveTo(egg.getX(), egg.getY(), egg.getZ(), 1.0D);
+				pathTicks = PATH_TIMEOUT;
+			}
+			return;
+		}
+
+		var stack = egg.getItem();
+		var leftover = FarmerStorage.addToWorker(worker, stack.copy());
+		int moved = stack.getCount() - leftover.getCount();
+		if (moved <= 0) {
+			return;
+		}
+		stack.shrink(moved);
+		if (stack.isEmpty()) {
+			egg.discard();
+		}
+		else {
+			egg.setItem(stack);
+		}
+	}
+
+	private boolean depositProduce(ServerLevel level, StationRegistry.Station station) {
+		BlockPos chest = nearestChest(level, station);
+		if (chest == null) {
+			notifyOnce(level, "laborcraft.ui.worker.task.no_chest");
+			return true;
+		}
+
+		if (worker.position().distanceToSqr(Vec3.atCenterOf(chest)) > 2.25D) {
+			if (worker.getNavigation().isDone() || pathTicks <= 0) {
+				worker.getNavigation().moveTo(
+						chest.getX() + 0.5D,
+						chest.getY(),
+						chest.getZ() + 0.5D,
+						1.0D
+				);
+				pathTicks = PATH_TIMEOUT;
+			}
+			else {
+				pathTicks -= CHECK_INTERVAL;
+			}
+			return false;
+		}
+
+		HerderStorage.deposit(level, station, worker);
+		return true;
+	}
+
+	private static BlockPos nearestChest(ServerLevel level, StationRegistry.Station station) {
+		for (StationRegistry.StorageLink link : station.storage()) {
+			if (link.role() == StationRegistry.StorageRole.TOOLS
+					|| link.role() == StationRegistry.StorageRole.INPUT) {
+				continue;
+			}
+			if (!(level.getBlockEntity(link.pos()) instanceof net.minecraft.world.Container)) {
+				continue;
+			}
+			return link.pos();
+		}
+		return null;
 	}
 
 	private static Direction insideDirection(EnclosureDescriptor pen, BlockPos gate) {
