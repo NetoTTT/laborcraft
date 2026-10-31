@@ -3,7 +3,37 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
-## [0.1.0-alpha.14] — 2026-10-25
+## [0.2.0-alpha.1] - 2026-10-30
+
+Interface inteira reconstruída sobre o **Quill UI 0.3**. As três telas que ainda usavam layout
+absoluto foram refeitas do zero (Posto, Mochila e Admin) e todo o código visual legado foi removido.
+
+### Adicionado
+- **Posto** novo: abas Trabalho/Config/Baús medidas, lista de empregados com Pagar e destacar,
+  card da vaga, vínculo, recall/resume e chip com o saldo do jogador no header.
+- **Mapa embutido** na aba Config do Posto: terreno, zonas salvas, zonas de outros postos, limite do
+  posto, seleção ao vivo, camadas e união de áreas vizinhas sem linhas internas.
+- **Trocar** a função do baú direto na linha, além de Detectar, Desvincular e destacar.
+- **Mochila** nova: grid do jogador, hotbar, mochila 3x3 e slot de ferramenta em um board medido;
+  overlay de quantidade em Quill.
+- **Admin** novo com as seis abas medidas: Salário, Cobrança, Expediente, Área/Casa, Mercado e Sistema.
+- **Quill UI 0.3.0-alpha.4** (`quill-ui` + `quill-ui-extras`) no cliente: `QuillChip`,
+  `headerAccessory`, ícones de botão e mapa com zonas unidas.
+
+### Alterado
+- Todas as telas usam `QuillScreen`, `setContent`, `QuillNodes` e `QuillListView`.
+- Painéis encolhem para caber na janela e o conteúdo rola em vez de cortar.
+- O cliente precisa de `quill-ui-0.3.0-alpha.4.jar` e `quill-ui-extras-0.3.0-alpha.4.jar`; servidores
+  dedicados não precisam de nenhum dos dois.
+
+### Removido
+- Telas legadas `LaborCraftAdminScreen`, `LaborCraftStationScreen` e `LaborCraftWorkerInventoryScreen`.
+- Widgets antigos `LcButton`, `LcScrollList`, `LcAreaMap` e `LcJobOption`.
+
+### Corrigido
+- Abas, cards e grids não são mais esmagados ou cortados em janelas menores que o painel original.
+
+## [0.1.0-alpha.14] - 2026-10-25
 
 Primeiro adaptador de moeda externa: **MineLab `plims`**, com fallback para o Ledger. A base visual
 também foi extraída para o **Quill UI**, um mod cliente separado.

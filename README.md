@@ -49,8 +49,9 @@ Grab the latest jar from [**Releases**](https://github.com/NetoTTT/laborcraft/re
 
 Alpha builds target **Minecraft 26.3** with **Fabric Loader 0.19.5+** and **Fabric API 0.164.0+26.3**
 (Java 25). Drop the jar into `mods/` next to Fabric API. On the **client**, also install
-[**Quill UI**](https://github.com/NetoTTT/quill-ui) `0.2.0-alpha.2` (`quill-ui-0.2.0-alpha.2.jar`); dedicated
-servers do not need Quill UI.
+[**Quill UI**](https://github.com/NetoTTT/quill-ui) `0.3.0-alpha.4` (`quill-ui-0.3.0-alpha.4.jar`)
+and **Quill UI Extras** (`quill-ui-extras-0.3.0-alpha.4.jar`); dedicated servers do not need either
+of them.
 
 ## Requirements
 
