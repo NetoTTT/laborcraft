@@ -17,7 +17,7 @@ import com.foque.laborcraft.client.ui.screen.LaborCraftItemTestScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftPlayersScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftProfileScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftStationV2Screen;
-import com.foque.laborcraft.client.ui.screen.LaborCraftWorkerInventoryScreen;
+import com.foque.laborcraft.client.ui.screen.LaborCraftWorkerInventoryV2Screen;
 import com.foque.laborcraft.network.BubbleSettingsPayload;
 import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
@@ -163,12 +163,12 @@ public class LaborCraftClient implements ClientModInitializer {
 			Minecraft client = context.client();
 			client.execute(() -> {
 				LcValuePrompt.cancelActive();
-				if (client.gui.screen() instanceof LaborCraftWorkerInventoryScreen open
+				if (client.gui.screen() instanceof LaborCraftWorkerInventoryV2Screen open
 						&& open.workerId().equals(payload.workerId())) {
 					open.update(payload);
 					return;
 				}
-				client.setScreenAndShow(new LaborCraftWorkerInventoryScreen(payload));
+				client.setScreenAndShow(new LaborCraftWorkerInventoryV2Screen(payload));
 			});
 		});
 	}

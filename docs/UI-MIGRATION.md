@@ -23,6 +23,7 @@ These use `setContent` and respond to the available content area:
 - Item Test
 - Employee
 - Station (`LaborCraftStationV2Screen`, all three tabs)
+- Worker Inventory (`LaborCraftWorkerInventoryV2Screen`, measured slot board)
 
 ## Station rewrite
 
@@ -40,13 +41,21 @@ These use `setContent` and respond to the available content area:
 The legacy `LaborCraftStationScreen` still exists as a fallback, but the client opens the V2
 screen. It can be deleted once the in-game smoke test passes.
 
+## Worker Inventory rewrite
+
+`LaborCraftWorkerInventoryV2Screen` uses a measured board widget (`WorkerInventoryBoard`) for the
+player grid, the worker backpack and the tool slot. Transfers keep the same command flow, the
+quantity picker is a Quill overlay, and the screen keeps the worker id for live payload updates.
+
+The legacy `LaborCraftWorkerInventoryScreen` remains as a fallback until the in-game smoke test
+passes.
+
 ## Shell-only screens
 
 These extend `QuillScreen` but keep absolute internals. They opt out of panel clamping with
 `constrainPanel() == false` until the internal layout is measured:
 
 - Admin (`LaborCraftAdminScreen`) — System and Billing tabs already measured, the rest not
-- Worker Inventory (`LaborCraftWorkerInventoryScreen`)
 
 ## Next pass
 
@@ -58,12 +67,10 @@ These extend `QuillScreen` but keep absolute internals. They opt out of panel cl
    - system tab as a stack of measured buttons;
    - remove `constrainPanel` override.
 2. **Worker Inventory**
-   - slot grid as a measured widget;
-   - labels/back button in the content tree;
-   - quantity modal over the measured layout;
-   - remove `constrainPanel` override.
+   - in-game smoke test of the measured board;
+   - delete the legacy screen after the test.
 3. **Cleanup**
-   - delete the legacy station screen;
+   - delete the legacy station and inventory screens;
    - update `AGENTS.md` and this checklist.
 
 ## Release gate for LC 2
