@@ -45,7 +45,5 @@ and again with a window smaller than the panel.
 
 ## After the test
 
-- Delete `LaborCraftAdminScreen`, `LaborCraftStationScreen` and
-  `LaborCraftWorkerInventoryScreen` (the legacy fallbacks).
-- Confirm no screen overrides `constrainPanel()`.
-- Prepare the LC 2 changelogs.
+- Confirm no screen overrides `constrainPanel()` and no screen imports the legacy UI classes.
+- Prepare and publish the LC 2 changelog with the Quill core/extras dependencies.

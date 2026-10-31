@@ -42,8 +42,7 @@ import net.minecraft.world.item.Items;
  *
  * <p>Work: employee list with real Pay/highlight actions, the post slot card and the bind/recall
  * bar. Config: work area summary plus the interactive map. Storage: linked containers with role
- * and unlink actions. The legacy {@code LaborCraftStationScreen} stays available until this screen
- * has been smoke-tested in game.</p>
+ * and unlink actions. The config tab embeds the Quill map component.</p>
  */
 public final class LaborCraftStationV2Screen extends QuillScreen {
 	public enum Tab {

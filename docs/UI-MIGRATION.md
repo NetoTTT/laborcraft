@@ -7,12 +7,12 @@ Status of the screen-by-screen rewrite on `feat/quill-0.3-ui`.
 - New and migrated screens extend `com.quillui.screen.QuillScreen`.
 - Content is built with `setContent` and `QuillNodes`; lists use `QuillListView`.
 - New code does not use `LcTheme`, `LcButton`, `LcScrollList` or `LcRender`.
-- `LcTheme` remains only as a deprecated bridge for screens not yet rewritten.
-- Screen sizes should come from the panel/content bounds, not from fixed `x`/`y` math.
+- `LcTheme`/`LcRender` remain only for the HUDs and the `LcItemGrid` widget.
+- Screen sizes come from the panel/content bounds, not from fixed `x`/`y` math.
 
 ## Measured screens
 
-These use `setContent` and respond to the available content area:
+All screens use `setContent` and respond to the available content area:
 
 - Config
 - Jogadores online
@@ -26,31 +26,29 @@ These use `setContent` and respond to the available content area:
 - Worker Inventory (`LaborCraftWorkerInventoryV2Screen`, measured slot board)
 - Admin (`LaborCraftAdminV2Screen`, all six tabs)
 
-## Station rewrite
+## Station
 
-`LaborCraftStationV2Screen` replaces the absolute station internals:
+`LaborCraftStationV2Screen`:
 
 - `QuillNodes.tabs` for Work / Config / Storage;
 - Work: `QuillListView<Summary>` with Pay and highlight row actions, slot card and the
   bind/recall bar;
 - Config: the `QuillMap` widget from `quill-ui-extras` is always embedded (read-only summary or
   draw mode) with saved/other zones, live selection, layer cycling and confirm/cancel/preview;
-- Storage: `QuillListView<StorageView>` with role cycling, unlink, detect and highlight;
-- the panel clamps and the content scrolls when the window is smaller than the panel;
-- reopen keeps tab, filter, selected worker and selected container.
+- Storage: `QuillListView<StorageView>` with a per-row role swap, unlink, detect and highlight;
+- header balance through `QuillScreen.headerAccessory` and `QuillChip`;
+- `QuillMap.setMergeZones(true)` merges touching same-style zones;
+- the panel clamps and the content scrolls when the window is smaller than the panel.
 
-The station consumes `quill-ui-extras` for `QuillMap`; the legacy `LcAreaMap` widget is no longer
-used by the V2 screen.
-
-## Worker Inventory rewrite
+## Worker Inventory
 
 `LaborCraftWorkerInventoryV2Screen` uses a measured board widget (`WorkerInventoryBoard`) for the
 player grid, the worker backpack and the tool slot. Transfers keep the same command flow, the
 quantity picker is a Quill overlay, and the screen keeps the worker id for live payload updates.
 
-## Admin rewrite
+## Admin
 
-`LaborCraftAdminV2Screen` replaces the mixed absolute screen with six measured tabs:
+`LaborCraftAdminV2Screen` has six measured tabs:
 
 - Salary: contract controls in a card plus rank/rarity multipliers in a second card;
 - Billing: nine policy controls in a measured column;
@@ -60,22 +58,27 @@ quantity picker is a Quill overlay, and the screen keeps the worker id for live 
 - System: reload, status, items, players, provider, market, bubble and config;
 - Apply/Force/Market actions stay at the bottom of Salary and Billing.
 
-## Legacy screens
+## Removed legacy UI
 
-The client now opens the V2 station, inventory and admin screens. The legacy
-`LaborCraftStationScreen`, `LaborCraftWorkerInventoryScreen` and `LaborCraftAdminScreen` are kept
-only as a fallback for the in-game smoke test. They still override `constrainPanel()`, so they must
-be deleted before the LC 2 release.
+The legacy station, worker inventory and admin screens were deleted after the V2 screens passed
+the in-game smoke test, together with the unused widgets:
+
+- `LaborCraftAdminScreen`, `LaborCraftStationScreen`, `LaborCraftWorkerInventoryScreen`
+- `LcButton`, `LcScrollList`, `LcAreaMap`, `LcJobOption`
+
+No screen overrides `constrainPanel()` and no screen imports `LcTheme`, `LcButton`, `LcScrollList`
+or `LcRender`. The HUDs (`TargetIndicatorHud`, `WorkerSpeechHud`) and the `LcItemGrid` widget still
+use `LcTheme`/`LcRender`; they are outside the screen gate.
 
 ## Next pass
 
 1. In-game smoke test of Admin, Station and Worker Inventory at normal and small window sizes.
-2. Delete the three legacy screens.
-3. Re-run `./gradlew build` and prepare the LC 2 changelogs.
+2. Prepare the LC 2 changelog.
+3. Release LC 2 with `quill-ui` and `quill-ui-extras` as required dependencies.
 
 ## Release gate for LC 2
 
 - No screen overrides `constrainPanel()`.
-- No new screen code imports `LcTheme`, `LcButton`, `LcScrollList` or `LcRender`.
+- No screen code imports `LcTheme`, `LcButton`, `LcScrollList` or `LcRender`.
 - Every screen opens, resizes and closes without layout overlap.
 - `./gradlew build` and the in-game smoke test pass.
