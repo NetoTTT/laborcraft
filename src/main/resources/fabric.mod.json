@@ -33,7 +33,7 @@
 		"fabric-api": "*"
 	},
 	"suggests": {
-		"quillui": ">=0.3.0-alpha.8",
-		"quillui_extras": ">=0.3.0-alpha.8"
+		"quillui": ">=0.3.0-alpha.9",
+		"quillui_extras": ">=0.3.0-alpha.9"
 	}
 }

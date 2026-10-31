@@ -26,6 +26,7 @@ import com.quillui.layout.QuillLayoutNode;
 import com.quillui.map.QuillMap;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.quillui.map.QuillMapMarker;
+import com.quillui.map.QuillMapPath;
 import com.quillui.map.QuillMapZone;
 import com.quillui.render.QuillTooltips;
 import com.quillui.screen.QuillScreen;
@@ -45,6 +46,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.FenceBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
 
 /**
  * Workstation window rebuilt on the measured Quill tree.
@@ -766,6 +769,9 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		created.setMergeZones(true);
 		if (herder) {
 			created.setMarkers(enclosureGates());
+			if (station.enclosure() == null || rescan) {
+				created.setPaths(fencePaths(viewRadius));
+			}
 			return created;
 		}
 
@@ -822,6 +828,82 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 			));
 		}
 		return markers;
+	}
+
+	/**
+	 * Connector lines for every fence and gate around the post, so the player can see the pen
+	 * outline on the map while choosing where to scan.
+	 */
+	private List<QuillMapPath> fencePaths(int radius) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.level == null) {
+			return List.of();
+		}
+
+		int half = Math.max(8, Math.min(64, radius));
+		int size = half * 2 + 1;
+		boolean[] fences = new boolean[size * size];
+		boolean[] gates = new boolean[size * size];
+		int centerX = station.pos().getX();
+		int centerY = station.pos().getY();
+		int centerZ = station.pos().getZ();
+		BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+		for (int dx = -half; dx <= half; dx++) {
+			for (int dz = -half; dz <= half; dz++) {
+				for (int dy = -6; dy <= 8; dy++) {
+					cursor.set(centerX + dx, centerY + dy, centerZ + dz);
+					var state = client.level.getBlockState(cursor);
+					if (state.getBlock() instanceof FenceGateBlock) {
+						gates[fenceIndex(dx, dz, half)] = true;
+						break;
+					}
+					if (state.getBlock() instanceof FenceBlock) {
+						fences[fenceIndex(dx, dz, half)] = true;
+						break;
+					}
+				}
+			}
+		}
+
+		int fenceColor = QuillColors.rgb(226, 234, 240);
+		int gateColor = QuillColors.rgb(255, 198, 90);
+		List<QuillMapPath> paths = new java.util.ArrayList<>();
+		for (int dx = -half; dx <= half; dx++) {
+			for (int dz = -half; dz <= half; dz++) {
+				int index = fenceIndex(dx, dz, half);
+				if (!fences[index] && !gates[index]) {
+					continue;
+				}
+				BlockPos from = new BlockPos(centerX + dx, centerY, centerZ + dz);
+				int color = gates[index] ? gateColor : fenceColor;
+				if (dx < half) {
+					int east = fenceIndex(dx + 1, dz, half);
+					if (fences[east] || gates[east]) {
+						paths.add(new QuillMapPath(
+								from,
+								new BlockPos(from.getX() + 1, centerY, from.getZ()),
+								color
+						));
+					}
+				}
+				if (dz < half) {
+					int south = fenceIndex(dx, dz + 1, half);
+					if (fences[south] || gates[south]) {
+						paths.add(new QuillMapPath(
+								from,
+								new BlockPos(from.getX(), centerY, from.getZ() + 1),
+								color
+						));
+					}
+				}
+			}
+		}
+		return paths;
+	}
+
+	private static int fenceIndex(int dx, int dz, int half) {
+		int size = half * 2 + 1;
+		return (dx + half) * size + (dz + half);
 	}
 
 	private List<QuillMapZone> mapZones() {

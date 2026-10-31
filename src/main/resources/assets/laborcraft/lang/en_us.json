@@ -433,7 +433,7 @@
 	"laborcraft.ui.station.idle": "Idle",
 	"laborcraft.ui.station.bound_elsewhere": "elsewhere",
 	"laborcraft.ui.station.mode": "Work area",
-	"laborcraft.ui.station.enclosure.none": "No pen set - click inside a fenced area on the map.",
+	"laborcraft.ui.station.enclosure.none": "No pen set",
 	"laborcraft.ui.station.enclosure.current": "Pen: %s blocks (%sx%s) - %s gate(s)",
 	"laborcraft.ui.station.enclosure.invalid": "Invalid pen - the fence changed. Scan again.",
 	"laborcraft.ui.station.enclosure.click_hint": "Click inside the pen on the map to scan it.",
