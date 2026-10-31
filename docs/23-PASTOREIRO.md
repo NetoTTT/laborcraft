@@ -170,3 +170,9 @@ resultado aparece como toast; o chat continua recebendo a mesma mensagem como fa
 - A travessia em si (2 blocos) é feita pelo `MoveControl`, com o portão aberto pelo brain.
 - Ao terminar de cruzar, o portão fecha na hora.
 - Se não atravessar em 4 s, tenta de novo após 2 s; o aviso no chat aparece no máximo a cada 30 s.
+## Correção do avaliador de nós
+
+- `WalkNodeEvaluatorMixin` agora devolve `PathType.WALKABLE_DOOR` para portão fechado.
+- `WALKABLE_DOOR` tem malus 0; `DOOR_WOOD_CLOSED` e `FENCE` têm malus -1, então o path nunca passava.
+- Com isso o trabalhador também consegue voltar para casa atravessando portão fechado.
+- O portão continua abrindo só quando o path pisa nele (`OpenFenceGateGoal`) e fecha 2 blocos depois.

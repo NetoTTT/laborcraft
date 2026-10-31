@@ -14,9 +14,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Vanilla treats a closed fence gate as {@code PathType.FENCE}, even when the mob can open doors.
- * Workers treat it as a closed wooden door so the path can go through it; {@code OpenFenceGateGoal}
- * opens and closes the gate.
+ * Vanilla classifies a closed fence gate as {@code PathType.FENCE} (malus -1), so no path can ever
+ * cross it, even for mobs that can open doors. Workers treat a closed fence gate exactly like a
+ * closed wooden door: {@code WALKABLE_DOOR} (malus 0). {@code OpenFenceGateGoal} then opens the
+ * gate only while the path steps on it and closes it right after the worker crosses.
  */
 @Mixin(WalkNodeEvaluator.class)
 public abstract class WalkNodeEvaluatorMixin {
@@ -37,7 +38,7 @@ public abstract class WalkNodeEvaluatorMixin {
 		if (state.getBlock() instanceof FenceGateBlock
 				&& state.hasProperty(FenceGateBlock.OPEN)
 				&& !state.getValue(FenceGateBlock.OPEN)) {
-			callback.setReturnValue(PathType.DOOR_WOOD_CLOSED);
+			callback.setReturnValue(PathType.WALKABLE_DOOR);
 		}
 	}
 }

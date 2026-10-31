@@ -33,6 +33,7 @@ Núcleo de IA por emprego e correção das portas.
 - Pastoreiro mira um ponto fundo no cercado e detecta ficar preso na cerca, trocando de alvo.
 - Travessia do portão feita pelo `MoveControl` (2 blocos), sem depender do pathfinding atravessar cerca.
 - Aviso de portão inacessível com cooldown de 30 s e retry de 2 s, sem spam no chat.
+- Portão fechado agora é `WALKABLE_DOOR` no avaliador de nós: path atravessa cercado e volta pra casa.
 - Cérebros podem declarar área própria (cercado) e dispensar ferramenta.
 - `/laborcraft station job set <pos> <job>` para especializar o Posto.
 
