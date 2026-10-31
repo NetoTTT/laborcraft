@@ -144,8 +144,8 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 				root.add(workActions());
 			}
 			case CONFIG -> {
-				areaMap = createAreaMap(!mapOpen);
 				if (mapOpen) {
+					areaMap = createAreaMap(false);
 					root.add(configMapHeader());
 					root.add(configMap());
 				}
