@@ -104,7 +104,7 @@ O ciclo entrar → pastar → sair continua igual, com portão abrindo/fechando 
 
 ## Portões múltiplos
 
-- O pastoreiro fecha qualquer portão do cercado que esteja aberto e **sem trabalhador a menos de 2,5 blocos**.
+- O pastoreiro fecha qualquer portão do cercado que esteja aberto e **sem trabalhador cujo próximo nó do path seja aquele portão**.`r`n- Fora do expediente, `WorkerRest` também fecha portões ociosos do cercado.
 - Isso roda a cada tick do brain, então portão esquecido aberto por retry, troca de fase ou recarregamento de chunk é fechado.
 - O portão em uso (travessia) é preservado.
 - `OpenFenceGateGoal` também fecha ao parar e quando o trabalhador é removido.
