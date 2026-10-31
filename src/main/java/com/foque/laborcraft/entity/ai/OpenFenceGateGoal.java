@@ -56,6 +56,10 @@ public final class OpenFenceGateGoal extends Goal {
 
 	@Override
 	public boolean canContinueToUse() {
+		Path path = mob.getNavigation().getPath();
+		if (path == null || path.isDone()) {
+			return false;
+		}
 		return gate != null
 				&& mob.level().getBlockState(gate).getBlock() instanceof FenceGateBlock
 				&& mob.distanceToSqr(
