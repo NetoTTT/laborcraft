@@ -48,6 +48,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.FenceBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.WallBlock;
 
 /**
  * Workstation window rebuilt on the measured Quill tree.
@@ -857,7 +858,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 						gates[fenceIndex(dx, dz, half)] = true;
 						break;
 					}
-					if (state.getBlock() instanceof FenceBlock) {
+					if (state.getBlock() instanceof FenceBlock || state.getBlock() instanceof WallBlock) {
 						fences[fenceIndex(dx, dz, half)] = true;
 						break;
 					}
