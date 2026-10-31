@@ -422,10 +422,16 @@ final class StationCommands {
 
 		EnclosureScan scan = EnclosureScanner.scan(source.getLevel(), seed, LaborCraftConfig.get());
 		if (!scan.valid()) {
-			Component failure = Component.translatable(
-					"laborcraft.station.enclosure.invalid",
-					Component.translatable("laborcraft.pen.reason." + scan.failureReason())
-			);
+			Component failure = scan.area() > 0
+					? Component.translatable(
+							"laborcraft.station.enclosure.invalid.area",
+							scan.area(),
+							Component.translatable("laborcraft.pen.reason." + scan.failureReason())
+					)
+					: Component.translatable(
+							"laborcraft.station.enclosure.invalid",
+							Component.translatable("laborcraft.pen.reason." + scan.failureReason())
+					);
 			source.sendFailure(failure);
 			UiToastPayload.send(player, failure, true);
 			return 0;

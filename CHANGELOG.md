@@ -22,6 +22,9 @@ Núcleo de IA por emprego e correção das portas.
 - O posto valida o cercado ao abrir: cerca quebrada aparece em vermelho com "Cercado inválido" até escanear novamente.
 - No modo sem cercado / escanear novamente, o mapa desenha linhas conectando cercas e portões (`QuillMapPath`).
 - Texto de "sem cercado" não repete mais a instrução de clique.
+- Scan do cercado procura seed em 3x3: clicar na cerca/na borda não gera mais "área pequena demais".
+- Área mínima do cercado cai de 9 para 4 blocos (migração de config para v3).
+- Toasts empilhados no Quill em vez de se sobrepor.
 - `/laborcraft station job set <pos> <job>` para especializar o Posto.
 
 ### Corrigido

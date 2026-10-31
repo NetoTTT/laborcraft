@@ -33,15 +33,19 @@ public final class EnclosureScanner {
 	private static final int MIN_BOUNDARY = 4;
 	private static final int START_SCAN_UP = 2;
 	private static final int START_SCAN_DOWN = 4;
+	private static final int SEED_SEARCH = 2;
 
 	private EnclosureScanner() {
 	}
 
 	public static EnclosureScan scan(ServerLevel level, BlockPos origin, LaborCraftConfig config) {
-		int startFloor = findStartFloor(level, origin.getX(), origin.getZ(), origin.getY());
-		if (startFloor == Integer.MIN_VALUE) {
+		BlockPos seed = findSeed(level, origin);
+		if (seed == null) {
 			return EnclosureScan.invalid("blocked");
 		}
+		int startFloor = seed.getY();
+		int originX = seed.getX();
+		int originZ = seed.getZ();
 
 		int minArea = Math.max(4, config.enclosure.minArea);
 		int maxArea = Math.max(minArea, config.enclosure.maxArea);
@@ -49,16 +53,16 @@ public final class EnclosureScanner {
 
 		Map<Long, Integer> floors = new HashMap<>();
 		ArrayDeque<Column> queue = new ArrayDeque<>();
-		floors.put(pack(origin.getX(), origin.getZ()), startFloor);
-		queue.add(new Column(origin.getX(), origin.getZ(), startFloor));
+		floors.put(pack(originX, originZ), startFloor);
+		queue.add(new Column(originX, originZ, startFloor));
 
 		Set<BlockPos> gates = new HashSet<>();
 		Set<BlockPos> boundary = new HashSet<>();
 
 		while (!queue.isEmpty()) {
 			Column current = queue.poll();
-			if (Math.abs(current.x() - origin.getX()) > maxRadius
-					|| Math.abs(current.z() - origin.getZ()) > maxRadius) {
+			if (Math.abs(current.x() - originX) > maxRadius
+					|| Math.abs(current.z() - originZ) > maxRadius) {
 				return EnclosureScan.invalid("not_enclosed");
 			}
 
@@ -85,7 +89,7 @@ public final class EnclosureScanner {
 
 		int area = floors.size();
 		if (area < minArea) {
-			return EnclosureScan.invalid("too_small");
+			return EnclosureScan.invalid("too_small", area);
 		}
 		if (boundary.size() < MIN_BOUNDARY) {
 			return EnclosureScan.invalid("no_fence");
@@ -133,10 +137,44 @@ public final class EnclosureScanner {
 				"",
 				new BlockPos(minX, startFloor, minZ),
 				new BlockPos(maxX, startFloor, maxZ),
-				new BlockPos(origin.getX(), startFloor, origin.getZ()),
+				new BlockPos(originX, startFloor, originZ),
 				spans,
 				List.copyOf(gates)
 		);
+	}
+
+	/**
+	 * Finds a usable seed near the clicked column. Clicks often land on the fence itself or one
+	 * block off the interior, and a seed on top of a fence would flood a one-column "pen".
+	 */
+	private static BlockPos findSeed(ServerLevel level, BlockPos origin) {
+		for (int radius = 0; radius <= SEED_SEARCH; radius++) {
+			for (int dx = -radius; dx <= radius; dx++) {
+				for (int dz = -radius; dz <= radius; dz++) {
+					if (radius > 0 && Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
+						continue;
+					}
+					int x = origin.getX() + dx;
+					int z = origin.getZ() + dz;
+					int floor = findStartFloor(level, x, z, origin.getY());
+					if (floor == Integer.MIN_VALUE) {
+						continue;
+					}
+					BlockPos below = new BlockPos(x, floor - 1, z);
+					if (isBoundary(level.getBlockState(below))) {
+						continue;
+					}
+					return new BlockPos(x, floor, z);
+				}
+			}
+		}
+		return null;
+	}
+
+	private static boolean isBoundary(BlockState state) {
+		return state.getBlock() instanceof FenceGateBlock
+				|| state.is(BlockTags.FENCES)
+				|| state.is(BlockTags.WALLS);
 	}
 
 	private static int findStartFloor(ServerLevel level, int x, int z, int originY) {

@@ -539,6 +539,7 @@
 	"laborcraft.station.zone.none": "This post has no drawn zone.",
 	"laborcraft.station.enclosure.set": "Pen applied: %s blocks, %s gate(s).",
 	"laborcraft.station.enclosure.invalid": "Not a valid pen: %s",
+	"laborcraft.station.enclosure.invalid.area": "Not a valid pen (interior area %s blocks): %s",
 	"laborcraft.station.enclosure.cleared": "Pen removed from this post.",
 	"laborcraft.station.job.set": "Post job set to %s.",
 	"laborcraft.station.job.unknown": "Unknown job: %s.",

@@ -20,7 +20,7 @@ public final class LaborCraftConfig {
 
 	private static LaborCraftConfig instance = new LaborCraftConfig();
 
-	public int schemaVersion = 2;
+	public int schemaVersion = 3;
 	public String currencyProvider = "laborcraft:ledger";
 	public boolean allowOwnerOverrides = true;
 
@@ -54,6 +54,16 @@ public final class LaborCraftConfig {
 		jobs.putIfAbsent("laborcraft:farmer", farmer);
 		jobs.putIfAbsent("laborcraft:herder", JobSettings.herder());
 		farmer = jobs.get("laborcraft:farmer");
+	}
+
+	/** Applies schema migrations to configs written by older versions. */
+	private void migrate() {
+		if (schemaVersion < 3) {
+			if (enclosure != null && enclosure.minArea == 9) {
+				enclosure.minArea = 4;
+			}
+			schemaVersion = 3;
+		}
 	}
 
 	/** Settings for one job; unknown jobs fall back to the default/farmer table. */
@@ -269,7 +279,7 @@ public final class LaborCraftConfig {
 		public int maxScanRadius = 64;
 		/** Safety cap for the interior area; a huge field is not a pen. */
 		public int maxArea = 4096;
-		public int minArea = 9;
+		public int minArea = 4;
 
 		public EnclosureSettings() {
 		}

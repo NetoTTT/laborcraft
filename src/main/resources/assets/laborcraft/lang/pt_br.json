@@ -539,6 +539,7 @@
 	"laborcraft.station.zone.none": "Este posto não tem uma zona desenhada.",
 	"laborcraft.station.enclosure.set": "Cercado aplicado: %s blocos, %s portão(ões).",
 	"laborcraft.station.enclosure.invalid": "Não é um cercado válido: %s",
+	"laborcraft.station.enclosure.invalid.area": "Não é um cercado válido (área interna %s blocos): %s",
 	"laborcraft.station.enclosure.cleared": "Cercado removido do posto.",
 	"laborcraft.station.job.set": "Emprego do posto definido para %s.",
 	"laborcraft.station.job.unknown": "Emprego desconhecido: %s.",

@@ -24,9 +24,13 @@ public record EnclosureScan(
 	}
 
 	public static EnclosureScan invalid(String reason) {
+		return invalid(reason, 0);
+	}
+
+	public static EnclosureScan invalid(String reason, int area) {
 		return new EnclosureScan(
 				false,
-				0,
+				area,
 				0,
 				0,
 				0,
