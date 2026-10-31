@@ -1,0 +1,66 @@
+# Pastoreiro e cercados (protótipo)
+
+## Comandos de teste
+
+```text
+/laborcraft admin set max-workers 10
+/laborcraft admin pen scan
+/laborcraft worker assign <worker> laborcraft:herder
+```
+
+`pen scan` usa a posição do jogador como ponto interno. Fique dentro do cercado, em espaço livre.
+
+## O que já existe
+
+- `EnclosureScanner` / `EnclosureScan`: flood fill horizontal de 2D, delimitado por cerca, parede e
+  fence gate. Conta área, largura, profundidade, portões e blocos de borda. Exige pelo menos um
+  portão.
+- `JobType` `laborcraft:herder` registrado, com nome, descrição e tarefa ("Pastoreando").
+- Nenhum `WorkerBrain` para herder ainda: atribuir o emprego deixa o trabalhador sem produção.
+
+## Decisões em aberto
+
+### Quem define a profissão?
+
+Recomendação: **o trabalhador tem a profissão**; o Posto registra a especialização quando o primeiro
+trabalhador é vinculado.
+
+- Posto vazio aceita qualquer trabalhador.
+- Ao vincular, o Posto passa a exigir aquele `jobId`.
+- Trabalhador de outro emprego é recusado com mensagem clara.
+- Trocar a especialização exige desvincular todos.
+- O Posto adapta a UI e a ferramenta de área pelo `jobId`, mas não muda a profissão do trabalhador
+  silenciosamente.
+
+### Vários trabalhadores no mesmo Posto
+
+Todos devem ser do **mesmo emprego**. Funções diferentes no mesmo Posto exigiriam áreas, baús,
+expedientes e UIs separadas; não vale a complexidade agora.
+
+### Área do pastoreiro
+
+Não é um retângulo desenhado. O jogador clica dentro do cercado e o scan calcula o interior.
+
+Opções de armazenamento:
+
+1. **Row runs**: decompor o interior em retângulos de uma linha e guardar na lista `zones`
+   existente (limite atual de 32 retângulos).
+2. **Enclosure descriptor**: guardar o ponto-semente + bounds e revalidar o cercado
+   periodicamente; a área é recalculada.
+
+Recomendação: começar com **row runs** porque o mapa, `StationAreas` e a persistência já entendem
+retângulos. Se o cercado for maior/irregular, aumentar o limite ou migrar para descriptor.
+
+### UI por emprego
+
+O Posto deve ter um `PostKind` derivado do `jobId`:
+
+- ferramenta de área (retângulo, cercado, curral, mina…);
+- abas/indicadores específicos;
+- validações e notices específicos.
+
+## Limitações conhecidas do protótipo
+
+- Salário/cobrança ainda usam `config.farmer` para todos os empregos.
+- O scan de cercado ainda não é aplicado a um Posto.
+- Herder não tem produção, então não pausa por falta de cerca/portão; apenas o comando valida.

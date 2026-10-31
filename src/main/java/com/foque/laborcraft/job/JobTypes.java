@@ -7,6 +7,7 @@ import java.util.Map;
 
 public final class JobTypes {
 	public static final JobType FARMER = new JobType("laborcraft:farmer", "job.laborcraft.farmer");
+	public static final JobType HERDER = new JobType("laborcraft:herder", "job.laborcraft.herder");
 
 	private static final Map<String, JobType> JOBS = new LinkedHashMap<>();
 
@@ -30,5 +31,6 @@ public final class JobTypes {
 
 	public static void bootstrap() {
 		register(FARMER);
+		register(HERDER);
 	}
 }

@@ -1,6 +1,8 @@
 package com.foque.laborcraft.command;
 
 import com.foque.laborcraft.LaborCraft;
+import com.foque.laborcraft.area.EnclosureScan;
+import com.foque.laborcraft.area.EnclosureScanner;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.economy.CurrencyProvider;
 import com.foque.laborcraft.economy.CurrencyProviders;
@@ -64,7 +66,16 @@ final class AdminCommands {
 										.executes(context -> setBubbleWalls(
 												context.getSource(),
 												BoolArgumentType.getBool(context, "value")
+										))))
+						.then(Commands.literal("max-workers")
+								.then(Commands.argument("value", IntegerArgumentType.integer(0, 100))
+										.executes(context -> setMaxWorkers(
+												context.getSource(),
+												IntegerArgumentType.getInteger(context, "value")
 										)))))
+				.then(Commands.literal("pen")
+						.then(Commands.literal("scan")
+								.executes(context -> scanPen(context.getSource()))))
 				.then(Commands.literal("config")
 						.then(Commands.argument("field", StringArgumentType.word())
 								.suggests((context, builder) -> {
@@ -157,6 +168,50 @@ final class AdminCommands {
 		return 1;
 	}
 
+	private static int setMaxWorkers(CommandSourceStack source, int value) {
+		LaborCraftConfig config = LaborCraftConfig.get();
+		config.worker.maxWorkersPerPlayer = value;
+		config.save();
+		source.sendSuccess(
+				() -> Component.translatable("laborcraft.command.admin.set.max_workers", value),
+				true
+		);
+		return 1;
+	}
+
+	private static int scanPen(CommandSourceStack source) {
+		ServerPlayer player = source.getPlayer();
+		if (player == null) {
+			source.sendFailure(Component.translatable("laborcraft.command.player_only"));
+			return 0;
+		}
+
+		EnclosureScan scan = EnclosureScanner.scan(
+				source.getLevel(),
+				player.blockPosition(),
+				LaborCraftConfig.get()
+		);
+		if (scan.valid()) {
+			source.sendSuccess(
+					() -> Component.translatable(
+							"laborcraft.command.admin.pen.valid",
+							scan.area(),
+							scan.width(),
+							scan.depth(),
+							scan.gates(),
+							scan.boundaryBlocks()
+					),
+					false
+			);
+			return 1;
+		}
+
+		source.sendFailure(Component.translatable(
+				"laborcraft.command.admin.pen.invalid",
+				Component.translatable("laborcraft.pen.reason." + scan.failureReason())
+		));
+		return 0;
+	}
 	private static int setWage(CommandSourceStack source, int value) {
 		LaborCraftConfig config = LaborCraftConfig.get();
 		config.farmer.baseWage = value;
