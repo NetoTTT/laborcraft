@@ -35,7 +35,7 @@ import net.minecraft.world.phys.Vec3;
  * then walk to the linked chest and deposit. Pauses with a notice (including the worker name) when
  * a requirement is missing.
  */
-public final class FarmerBrain {
+public final class FarmerBrain extends AbstractWorkerBrain {
 	private static final int CHECK_INTERVAL = 10;
 	private static final double REACH_SQR = 20.25D;
 	private static final int PRODUCE_DEPOSIT_THRESHOLD = 32;
@@ -52,8 +52,6 @@ public final class FarmerBrain {
 	private record WorkTarget(BlockPos pos, Action action, BlockPos stand) {
 	}
 
-	private final LaborCraftWorker worker;
-	private int cooldown;
 	private WorkTarget target;
 	private BlockPos ignored;
 	private long ignoredUntil;
@@ -66,53 +64,11 @@ public final class FarmerBrain {
 	private long lastWaterWarning;
 
 	public FarmerBrain(LaborCraftWorker worker) {
-		this.worker = worker;
+		super(worker, CHECK_INTERVAL);
 	}
 
-	public void tick() {
-		if (worker.level().isClientSide()) {
-			return;
-		}
-		if (!JobTypes.FARMER.id().equals(worker.jobId()) || worker.isAttending()) {
-			return;
-		}
-		if (--cooldown > 0) {
-			return;
-		}
-		cooldown = CHECK_INTERVAL;
-
-		ServerLevel level = (ServerLevel) worker.level();
-		StationRegistry.Station station = StationRegistry.byWorker(level.getServer(), worker.getUUID());
-		if (station == null) {
-			return;
-		}
-
-		if (worker.workerState() == WorkerState.PAUSED) {
-			if (!canResume(level, station)) {
-				return;
-			}
-			worker.setWorkerState(WorkerState.ACTIVE);
-		}
-		if (worker.workerState() != WorkerState.ACTIVE) {
-			return;
-		}
-
-		if (!station.hasZone()) {
-			pause(level, "laborcraft.ui.worker.task.need_zone");
-			return;
-		}
-
-		ensureTool();
-		ItemStack tool = worker.toolItem();
-		if (tool.isEmpty() || !JobEquipment.validTool(worker.jobId(), tool)) {
-			pause(level, "laborcraft.ui.worker.task.need_tool");
-			return;
-		}
-		if (tool.isDamageableItem() && tool.getMaxDamage() - tool.getDamageValue() <= 2) {
-			pause(level, "laborcraft.ui.worker.task.tool_breaking");
-			return;
-		}
-
+	@Override
+	protected void tickJob(ServerLevel level, StationRegistry.Station station) {
 		if (FarmerStorage.count(worker, FarmerStorage::isSeed) <= 0) {
 			FarmerStorage.withdraw(level, station, worker, LaborCraftConfig.get().farmer.useBoneMeal);
 			if (FarmerStorage.count(worker, FarmerStorage::isSeed) <= 0) {
@@ -213,45 +169,10 @@ public final class FarmerBrain {
 		return free;
 	}
 
-	private void ensureTool() {
-		ItemStack tool = worker.toolItem();
-		boolean usable = !tool.isEmpty()
-				&& JobEquipment.validTool(worker.jobId(), tool)
-				&& (!tool.isDamageableItem() || tool.getMaxDamage() - tool.getDamageValue() > 2);
-		if (usable) {
-			return;
-		}
-
-		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {
-			ItemStack candidate = worker.inventoryItem(slot);
-			if (candidate.isEmpty() || !JobEquipment.validTool(worker.jobId(), candidate)) {
-				continue;
-			}
-			if (candidate.isDamageableItem() && candidate.getMaxDamage() - candidate.getDamageValue() <= 2) {
-				continue;
-			}
-
-			worker.setInventoryItem(slot, tool);
-			worker.setInventoryItem(LaborCraftWorker.TOOL_SLOT, candidate);
-			return;
-		}
-	}
-
-	private boolean canResume(ServerLevel level, StationRegistry.Station station) {
+	@Override
+	protected boolean canResumeJob(ServerLevel level, StationRegistry.Station station) {
 		String notice = worker.workNotice();
-		if (notice == null || notice.isBlank()) {
-			return false;
-		}
-
-		return switch (notice) {
-			case "laborcraft.ui.worker.task.need_zone" -> station.hasZone();
-			case "laborcraft.ui.worker.task.need_tool", "laborcraft.ui.worker.task.tool_breaking" -> {
-				ensureTool();
-				ItemStack tool = worker.toolItem();
-				yield !tool.isEmpty()
-						&& JobEquipment.validTool(worker.jobId(), tool)
-						&& (!tool.isDamageableItem() || tool.getMaxDamage() - tool.getDamageValue() > 2);
-			}
+		return switch (notice == null ? "" : notice) {
 			case "laborcraft.ui.worker.task.need_seeds" -> FarmerStorage.count(worker, FarmerStorage::isSeed) > 0
 					|| hasSeedInStorage(level, station);
 			case "laborcraft.ui.worker.task.no_chest" -> !WorkerStorage.linked(level, station, false).isEmpty();
@@ -259,7 +180,6 @@ public final class FarmerBrain {
 			default -> false;
 		};
 	}
-
 	private static boolean hasSeedInStorage(ServerLevel level, StationRegistry.Station station) {
 		for (Container container : WorkerStorage.linked(level, station, true)) {
 			for (int slot = 0; slot < container.getContainerSize(); slot++) {
@@ -917,19 +837,8 @@ public final class FarmerBrain {
 		}
 	}
 
-	private void pause(ServerLevel level, String notice) {
-		if (worker.workerState() != WorkerState.PAUSED) {
-			ServerPlayer owner = worker.owner() == null
-					? null
-					: level.getServer().getPlayerList().getPlayer(worker.owner());
-			if (owner != null) {
-				owner.sendSystemMessage(WorkerChat.say(worker, Component.translatable(notice)));
-			}
-		}
-
-		worker.setWorkNotice(notice);
-		worker.setWorkerState(WorkerState.PAUSED);
-		worker.getNavigation().stop();
+	@Override
+	protected void onPaused() {
 		target = null;
 		depositTicks = 0;
 	}

@@ -3,6 +3,17 @@
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 Versionamento semântico a partir da primeira release pública.
 
+## [0.2.0-alpha.3] - 2026-10-31
+
+Núcleo de IA por emprego e correção das portas.
+
+### Adicionado
+- `WorkerBrain`, `AbstractWorkerBrain` e `JobBrains`: fluxo comum (pausa, zona, ferramenta, durabilidade, cooldown) separado da lógica de produção.
+- `FarmerBrain` refatorado para o novo contrato, sem duplicar o fluxo comum.
+
+### Corrigido
+- O NPC agora consegue atravessar portas fechadas: o pathfinding foi habilitado com `setCanOpenDoors(true)`, então ele encontra, abre e fecha portas para entrar/sair da casa e chegar à cama.
+
 ## [0.2.0-alpha.2] - 2026-10-31
 
 Temas escolhidos pelo jogador e balões de fala no framework.

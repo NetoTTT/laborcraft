@@ -10,6 +10,7 @@ import com.foque.laborcraft.housing.HomeRegistry;
 import com.foque.laborcraft.housing.HousingInteractions;
 import com.foque.laborcraft.item.LaborCraftItems;
 import com.foque.laborcraft.job.JobTypes;
+import com.foque.laborcraft.worker.JobBrains;
 import com.foque.laborcraft.network.BubbleSettingsPayload;
 import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
@@ -46,6 +47,7 @@ public class LaborCraft implements ModInitializer {
 		LaborCraftEntities.bootstrap();
 		CurrencyProviders.bootstrap();
 		JobTypes.bootstrap();
+		JobBrains.bootstrap();
 		OpenAdminPayload.bootstrap();
 		OpenConfigPayload.bootstrap();
 		OpenHiringPayload.bootstrap();

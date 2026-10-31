@@ -10,7 +10,9 @@ import com.foque.laborcraft.worker.WorkerRank;
 import com.foque.laborcraft.worker.WorkerRarity;
 import com.foque.laborcraft.worker.WorkerRest;
 import com.foque.laborcraft.worker.WorkerState;
+import com.foque.laborcraft.worker.WorkerBrain;
 import com.foque.laborcraft.worker.WorkerThoughts;
+import com.foque.laborcraft.worker.JobBrains;
 import com.foque.laborcraft.worker.WorkerTraits;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +69,7 @@ public class LaborCraftWorker extends PathfinderMob {
 	private int mood = 100;
 	private WorkerState state = WorkerState.ACTIVE;
 	private final NonNullList<ItemStack> inventory = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
-	private final FarmerBrain farmerBrain = new FarmerBrain(this);
+	private WorkerBrain brain;
 	private final WorkerRest workerRest = new WorkerRest(this);
 	private String workNotice = "";
 	private long noticeUntil;
@@ -81,6 +83,7 @@ public class LaborCraftWorker extends PathfinderMob {
 	public LaborCraftWorker(EntityType<? extends LaborCraftWorker> type, Level level) {
 		super(type, level);
 		setPersistenceRequired();
+		getNavigation().setCanOpenDoors(true);
 	}
 
 	@Override
@@ -216,7 +219,7 @@ public class LaborCraftWorker extends PathfinderMob {
 		}
 
 		maybeThink();
-		farmerBrain.tick();
+		brain().tick();
 	}
 
 	public String jobId() {
@@ -247,6 +250,14 @@ public class LaborCraftWorker extends PathfinderMob {
 
 	public void setJobId(String jobId) {
 		this.jobId = jobId == null ? "" : jobId;
+		this.brain = null;
+	}
+
+	private WorkerBrain brain() {
+		if (brain == null) {
+			brain = JobBrains.create(jobId, this);
+		}
+		return brain;
 	}
 
 	public String offerId() {
@@ -548,6 +559,7 @@ public class LaborCraftWorker extends PathfinderMob {
 				.orElse(null);
 
 		jobId = input.getStringOr("JobId", "");
+		brain = null;
 		offerId = input.getStringOr("OfferId", "");
 		rank = WorkerRank.of(input.getStringOr("Rank", "comum"));
 		rarity = WorkerRarity.of(input.getStringOr("Rarity", "comum"));
