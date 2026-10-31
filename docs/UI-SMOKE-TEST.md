@@ -20,8 +20,9 @@ and again with a window smaller than the panel.
 - [ ] Work: slot card shows the bound worker, or the free-slot hint.
 - [ ] Config: Draw area opens the map, dragging selects, size text updates, layer cycles.
 - [ ] Config: Confirm, Cancel, Preview and Clear/Max area send commands.
-- [ ] Storage: Detect, select, role cycle, unlink and E highlight.
-- [ ] The header X closes the screen.
+- [ ] Adjacent same-style zones render as one area, without internal border lines.
+- [ ] Storage: Detect, select, row Swap, role cycle, unlink and E highlight.
+- [ ] The header shows the gold balance chip and the X closes the screen.
 
 ## Worker Inventory (employee screen → backpack)
 
