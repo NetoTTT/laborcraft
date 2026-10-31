@@ -8,7 +8,7 @@ import com.foque.laborcraft.client.render.LaborCraftWorkerRenderer;
 import com.foque.laborcraft.client.render.StationPreviewManager;
 import com.foque.laborcraft.client.render.WorldHighlightManager;
 import com.foque.laborcraft.client.ui.chat.LcValuePrompt;
-import com.foque.laborcraft.client.ui.screen.LaborCraftAdminScreen;
+import com.foque.laborcraft.client.ui.screen.LaborCraftAdminV2Screen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftConfigScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftEmployeeScreen;
 import com.foque.laborcraft.client.ui.screen.LaborCraftHiringScreen;
@@ -69,7 +69,7 @@ public class LaborCraftClient implements ClientModInitializer {
 			Minecraft client = context.client();
 			client.execute(() -> {
 				LcValuePrompt.cancelActive();
-				client.setScreenAndShow(new LaborCraftAdminScreen(payload));
+				client.setScreenAndShow(new LaborCraftAdminV2Screen(payload));
 			});
 		});
 
