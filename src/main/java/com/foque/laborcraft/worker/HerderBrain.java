@@ -3,26 +3,26 @@ package com.foque.laborcraft.worker;
 import com.foque.laborcraft.area.EnclosureDescriptor;
 import com.foque.laborcraft.area.EnclosureSpan;
 import com.foque.laborcraft.entity.LaborCraftWorker;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 /**
- * Herder test brain: while on duty, the worker walks into the pen through a gate, wanders the
- * interior, then leaves again and repeats. Gate opening/closing is handled by
- * {@link com.foque.laborcraft.entity.ai.OpenFenceGateGoal} as the navigation path crosses it;
- * this brain only picks gate-side stands and interior points.
+ * Herder test brain: while on duty, the worker walks into the pen through its gate, wanders the
+ * interior, then leaves again and repeats.
+ *
+ * <p>Gates are not opened by this brain. {@link com.foque.laborcraft.entity.ai.OpenFenceGateGoal}
+ * opens a gate only when the current path steps onto it and closes it right after the worker
+ * crosses, so a worker walking near the fence never opens anything.</p>
  */
 public final class HerderBrain extends AbstractWorkerBrain {
 	private static final int CHECK_INTERVAL = 10;
 	private static final int PATH_TIMEOUT = 200;
 	private static final int GRAZE_TICKS = 240;
 	private static final int OUTSIDE_TICKS = 100;
+	private static final int STUCK_TICKS = 60;
 	private static final Direction[] HORIZONTAL = {
 			Direction.NORTH,
 			Direction.SOUTH,
@@ -41,8 +41,9 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	private int phaseTicks;
 	private int pathTicks;
 	private int failedPaths;
+	private int stuckTicks;
+	private Vec3 lastPosition;
 	private BlockPos target;
-	private BlockPos openedGate;
 
 	public HerderBrain(LaborCraftWorker worker) {
 		super(worker, CHECK_INTERVAL);
@@ -81,6 +82,8 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return;
 		}
 
+		trackStuck();
+
 		boolean inside = pen.contains(worker.blockPosition());
 		BlockPos gate = nearestGate(pen, worker.blockPosition());
 
@@ -91,22 +94,21 @@ public final class HerderBrain extends AbstractWorkerBrain {
 					pause(level, "laborcraft.ui.worker.task.pen_unreachable");
 					return;
 				}
-				applyGate(level, gate, true);
-				follow(level, outside, () -> {
-				});
-				if (!pen.contains(worker.blockPosition())) {
-					applyGate(level, gate, false);
+				if (!inside && worker.blockPosition().distSqr(outside) <= 4.0D) {
 					phase = Phase.WAIT_OUTSIDE;
 					phaseTicks = OUTSIDE_TICKS;
 					target = null;
 					pathTicks = 0;
 					failedPaths = 0;
+					stuckTicks = 0;
+					return;
 				}
+				follow(level, outside, () -> {
+				});
 			}
 			case WAIT_OUTSIDE -> {
 				phaseTicks -= CHECK_INTERVAL;
 				worker.getNavigation().stop();
-				applyGate(level, gate, false);
 				if (phaseTicks <= 0) {
 					phase = Phase.ENTER;
 					target = null;
@@ -115,46 +117,38 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			}
 			case ENTER -> {
 				if (inside) {
-					applyGate(level, gate, false);
 					phase = Phase.GRAZE;
 					phaseTicks = GRAZE_TICKS;
 					target = null;
 					pathTicks = 0;
 					failedPaths = 0;
+					stuckTicks = 0;
 					return;
 				}
-
-				BlockPos gateInside = insideStand(level, pen, gate);
-				BlockPos gateOutside = outsideStand(level, pen, gate);
-				if (gateInside == null || gateOutside == null) {
+				// Aim deep inside the pen, so the path goes through the gate instead of stopping
+				// in the one-block gap next to it.
+				BlockPos entry = randomInteriorThread(level, pen);
+				if (entry == null) {
+					entry = insideStand(level, pen, gate);
+				}
+				if (entry == null) {
 					pause(level, "laborcraft.ui.worker.task.pen_unreachable");
 					return;
 				}
-
-				if (worker.blockPosition().distSqr(gateOutside) > 6.25D) {
-					// Approach the gate from the outside while it stays closed.
-					applyGate(level, gate, false);
-					follow(level, gateOutside, () -> {
-					});
-				}
-				else {
-					applyGate(level, gate, true);
-					follow(level, gateInside, () -> {
-					});
-				}
-
+				follow(level, entry, () -> {
+				});
 				if (pen.contains(worker.blockPosition())) {
-					applyGate(level, gate, false);
 					phase = Phase.GRAZE;
 					phaseTicks = GRAZE_TICKS;
 					target = null;
 					pathTicks = 0;
 					failedPaths = 0;
+					stuckTicks = 0;
 				}
 			}
 			case GRAZE -> {
 				if (!inside) {
-					// pushed out or gate left open: walk back in
+					// pushed out by an animal or a gate: walk back in
 					phase = Phase.ENTER;
 					target = null;
 					pathTicks = 0;
@@ -166,10 +160,8 @@ public final class HerderBrain extends AbstractWorkerBrain {
 					target = null;
 					pathTicks = 0;
 					failedPaths = 0;
+					stuckTicks = 0;
 					return;
-				}
-				if (worker.blockPosition().distSqr(gate) > 16.0D) {
-					applyGate(level, gate, false);
 				}
 				if (target == null || worker.getNavigation().isDone()) {
 					target = randomInteriorThread(level, pen);
@@ -178,11 +170,30 @@ public final class HerderBrain extends AbstractWorkerBrain {
 				if (target == null) {
 					return;
 				}
-				BlockPos walk = target;
-				follow(level, walk, () -> {
+				follow(level, target, () -> {
 				});
 			}
 		}
+	}
+
+	/** Stops and retries when the worker is pushing against a fence without moving. */
+	private void trackStuck() {
+		Vec3 current = worker.position();
+		if (lastPosition == null || current.distanceToSqr(lastPosition) >= 0.09D) {
+			lastPosition = current;
+			stuckTicks = 0;
+			return;
+		}
+		stuckTicks += CHECK_INTERVAL;
+		if (stuckTicks < STUCK_TICKS) {
+			return;
+		}
+		stuckTicks = 0;
+		lastPosition = null;
+		worker.getNavigation().stop();
+		pathTicks = 0;
+		failedPaths++;
+		target = null;
 	}
 
 	/**
@@ -190,7 +201,6 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	 * worker does not silently spin in front of a closed or unreachable pen.
 	 */
 	private void follow(ServerLevel level, BlockPos stand, Runnable onArrive) {
-		double speed = 1.0D;
 		if (worker.blockPosition().distSqr(stand) <= 2.25D) {
 			worker.getNavigation().stop();
 			pathTicks = 0;
@@ -203,7 +213,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 					stand.getX() + 0.5D,
 					stand.getY(),
 					stand.getZ() + 0.5D,
-					speed
+					1.0D
 			);
 			if (!moved) {
 				pathTicks = 0;
@@ -223,37 +233,9 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		if (failedPaths >= 3) {
 			failedPaths = 0;
 			target = null;
+			worker.getNavigation().stop();
 			pause(level, "laborcraft.ui.worker.task.pen_unreachable");
 		}
-	}
-
-	/** Opens/closes the gate directly, so entry and exit are visible even if pathing skips it. */
-	private void applyGate(ServerLevel level, BlockPos gate, boolean open) {
-		setGate(level, gate, open);
-		if (open) {
-			openedGate = gate;
-		}
-		else if (gate.equals(openedGate)) {
-			openedGate = null;
-		}
-	}
-
-	private static void setGate(ServerLevel level, BlockPos gate, boolean open) {
-		BlockState state = level.getBlockState(gate);
-		if (!(state.getBlock() instanceof FenceGateBlock)
-				|| !state.hasProperty(FenceGateBlock.OPEN)
-				|| state.getValue(FenceGateBlock.OPEN) == open) {
-			return;
-		}
-		level.setBlock(gate, state.setValue(FenceGateBlock.OPEN, open), 10);
-		level.playSound(
-				null,
-				gate,
-				open ? SoundEvents.FENCE_GATE_OPEN : SoundEvents.FENCE_GATE_CLOSE,
-				SoundSource.BLOCKS,
-				1.0F,
-				1.0F
-		);
 	}
 
 	private static BlockPos nearestGate(EnclosureDescriptor pen, BlockPos from) {
@@ -280,32 +262,35 @@ public final class HerderBrain extends AbstractWorkerBrain {
 				return stand;
 			}
 		}
-		return randomInteriorThread(level, pen);
+		return null;
 	}
 
+	/** Two blocks outside the gate, so the path keeps moving until the worker is fully through. */
 	private BlockPos outsideStand(ServerLevel level, EnclosureDescriptor pen, BlockPos gate) {
 		for (Direction direction : HORIZONTAL) {
 			BlockPos adjacent = gate.relative(direction);
-			if (pen.contains(adjacent)) {
-				BlockPos outside = gate.relative(direction.getOpposite());
-				BlockPos stand = standAt(level, outside);
+			if (!pen.contains(adjacent)) {
+				continue;
+			}
+			Direction outward = direction.getOpposite();
+			for (int distance = 2; distance >= 1; distance--) {
+				BlockPos stand = standAt(level, gate.relative(outward, distance));
 				if (stand != null) {
 					return stand;
 				}
 			}
 		}
-		return standAt(level, gate.relative(Direction.NORTH));
+		return standAt(level, gate.relative(Direction.NORTH, 2));
 	}
 
 	/** Picks a walkable column inside the pen. Spans are interior-only, so this never leaves it. */
 	private BlockPos randomInteriorThread(ServerLevel level, EnclosureDescriptor pen) {
-		List<EnclosureSpan> spans = pen.spans();
-		if (spans.isEmpty()) {
+		if (pen.spans().isEmpty()) {
 			return null;
 		}
 
 		for (int attempt = 0; attempt < 16; attempt++) {
-			EnclosureSpan span = spans.get(worker.getRandom().nextInt(spans.size()));
+			EnclosureSpan span = pen.spans().get(worker.getRandom().nextInt(pen.spans().size()));
 			int x = span.minX() + worker.getRandom().nextInt(Math.max(1, span.maxX() - span.minX() + 1));
 			BlockPos stand = standAt(level, new BlockPos(x, pen.seed().getY(), span.z()));
 			if (stand != null) {
@@ -336,12 +321,10 @@ public final class HerderBrain extends AbstractWorkerBrain {
 
 	@Override
 	protected void onPaused() {
-		if (openedGate != null && worker.level() instanceof ServerLevel level) {
-			setGate(level, openedGate, false);
-		}
-		openedGate = null;
 		target = null;
 		pathTicks = 0;
 		failedPaths = 0;
+		stuckTicks = 0;
+		lastPosition = null;
 	}
 }

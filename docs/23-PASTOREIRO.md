@@ -157,3 +157,9 @@ resultado aparece como toast; o chat continua recebendo a mesma mensagem como fa
 - O ponto de entrada é a coluna interna ao lado do portão; o de saída é a coluna externa oposta.
 - Se o path falhar 3 vezes seguidas, o trabalhador pausa com "Confira o portão".
 - Não exige ferramenta.
+## Portões (regra final)
+
+- `OpenFenceGateGoal` só abre quando o **próximo nó do path** é o próprio portão; proximidade sem atravessar não abre.
+- Fecha quando o trabalhador se afasta 2 blocos do portão ou quando o path termina.
+- O pastoreiro não abre portão por conta própria; ele mira um ponto fundo dentro do cercado para o path atravessar o portão.
+- Se ficar 3 s empurrando a cerca sem sair do lugar, cancela o path e tenta outro ponto; após 3 falhas, pausa com "Confira o portão".

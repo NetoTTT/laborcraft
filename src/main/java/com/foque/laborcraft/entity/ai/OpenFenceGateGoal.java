@@ -10,13 +10,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
 
 /**
- * Opens a closed fence gate that the current path goes through, then closes it after the worker
- * moves away. Complements vanilla {@code OpenDoorGoal}, which only handles {@code DoorBlock}.
+ * Opens a closed fence gate only when the current path actually steps onto that gate, then closes
+ * it as soon as the mob has crossed. Walking near a gate without a path through it never opens it,
+ * so animals cannot slip out because a worker happened to pass by.
  */
 public final class OpenFenceGateGoal extends Goal {
-	private static final double SEARCH_RADIUS = 1.0D;
 	private static final double USE_DISTANCE_SQR = 9.0D;
-	private static final double CLOSE_DISTANCE_SQR = 12.25D;
+	private static final double CLOSE_DISTANCE_SQR = 4.0D;
 
 	private final Mob mob;
 	private final boolean closeDoor;
@@ -39,19 +39,18 @@ public final class OpenFenceGateGoal extends Goal {
 		}
 
 		BlockPos next = path.getNextNodePos();
-		BlockPos min = next.offset(-(int) SEARCH_RADIUS, -1, -(int) SEARCH_RADIUS);
-		BlockPos max = next.offset((int) SEARCH_RADIUS, 1, (int) SEARCH_RADIUS);
-		for (BlockPos candidate : BlockPos.betweenClosed(min, max)) {
-			BlockState state = mob.level().getBlockState(candidate);
-			if (state.getBlock() instanceof FenceGateBlock
-					&& state.hasProperty(FenceGateBlock.OPEN)
-					&& !state.getValue(FenceGateBlock.OPEN)
-					&& mob.blockPosition().distSqr(candidate) <= 36.0D) {
-				gate = candidate.immutable();
-				return true;
-			}
+		BlockState state = mob.level().getBlockState(next);
+		if (!(state.getBlock() instanceof FenceGateBlock)
+				|| !state.hasProperty(FenceGateBlock.OPEN)
+				|| state.getValue(FenceGateBlock.OPEN)) {
+			return false;
 		}
-		return false;
+		if (mob.blockPosition().distSqr(next) > USE_DISTANCE_SQR) {
+			return false;
+		}
+
+		gate = next.immutable();
+		return true;
 	}
 
 	@Override
@@ -66,7 +65,7 @@ public final class OpenFenceGateGoal extends Goal {
 						gate.getX() + 0.5D,
 						gate.getY() + 0.5D,
 						gate.getZ() + 0.5D
-				) <= CLOSE_DISTANCE_SQR + 4.0D;
+				) <= CLOSE_DISTANCE_SQR;
 	}
 
 	@Override

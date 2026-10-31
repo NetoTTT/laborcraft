@@ -29,6 +29,8 @@ Núcleo de IA por emprego e correção das portas.
 - Portão aberto conta como abertura; feche os portões antes de escanear.
 - Scan do cercado virou flood 2D da cerca (igual ao overlay do mapa): não percorre mais o chão.
 - `HerderBrain`: o pastoreiro entra no cercado pelo portão, pasta, sai e fecha o portão (ciclo de teste).
+- Portão só abre quando é o próximo nó do path; fecha 2 blocos depois. Sem abrir por proximidade.
+- Pastoreiro mira um ponto fundo no cercado e detecta ficar preso na cerca, trocando de alvo.
 - Cérebros podem declarar área própria (cercado) e dispensar ferramenta.
 - `/laborcraft station job set <pos> <job>` para especializar o Posto.
 
