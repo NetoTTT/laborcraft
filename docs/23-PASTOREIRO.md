@@ -101,7 +101,7 @@ Stations antigas carregam com `jobId=""` e `enclosure=null`.
 Quando o Posto está em `laborcraft:herder`, a aba Config muda:
 
 - o mapa é somente leitura;
-- **clicar** num bloco dentro do cercado envia o seed para o servidor;
+- **clicar** num bloco dentro do cercado envia o seed para o servidor, usando o Y da camada visível (`QuillMap.layerY()`), inclusive no subsolo;
 - o servidor roda `EnclosureScanner` com limite (`enclosure.maxScanRadius`, `enclosure.maxArea`);
 - o descriptor volta no `OpenStationPayload` e é desenhado como spans âmbar;
 - portões aparecem como marcadores;

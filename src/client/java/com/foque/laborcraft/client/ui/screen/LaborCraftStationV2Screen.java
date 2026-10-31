@@ -1046,6 +1046,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 				&& map.isMouseOver(event.x(), event.y())) {
 			BlockPos clicked = map.blockAt(event.x(), event.y());
 			if (clicked != null) {
+				clicked = new BlockPos(clicked.getX(), map.layerY(), clicked.getZ());
 				LaborCraftUiActions.run(
 						LaborCraftCommands.STATION_ENCLOSURE_SET + " " + posString()
 								+ " " + coordinates(clicked)
