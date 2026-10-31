@@ -21,14 +21,13 @@ import net.minecraft.world.level.levelgen.Heightmap;
 /**
  * Valida uma casa a partir da cama.
  *
- * <p>A ideia: a cama e a ancora. O ar acima dela e semeado num flood fill de 6 direcoes que so
- * atravessa ar. Tudo que fecha o volume (parede, teto, porta fechada, vidro) vira fronteira. Se o
- * fill escapar para uma celula que ve o ceu, a casa esta aberta. O tamanho interno e medido no
- * <b>andar da cama</b> (nao no volume 3D), para andar de cima nao inflar a capacidade do de baixo.
+ * <p>A cama e a ancora. O ar acima dela e semeado num flood fill de 6 direcoes que so atravessa ar.
+ * Tudo que fecha o volume (parede, teto, porta fechada, vidro) vira fronteira. Se o fill escapar
+ * para uma celula que ve o ceu, a casa esta aberta. O tamanho interno e medido no andar da cama,
+ * para andar de cima nao inflar a capacidade do debaixo.</p>
  *
- * <p>Capacidade de camas = area interna / 12, entre 2 e {@code housing.maxBedsPerHouse}, exigindo
- * no minimo {@code housing.minInteriorSize} x {@code housing.minInteriorSize}. Assim 5x5 = 2 camas,
- * 6x6 = 3 e 7x7 = 4 — e decoracao interna nao muda a conta, porque ela usa a caixa do piso livre.
+ * <p>A medicao vive em {@link HousingScan}; as exigencias sao {@link HousingRule}s registradas em
+ * {@link HousingRules}. Adicionar uma regra nova nao muda o flood fill nem a UI.</p>
  */
 public final class HousingValidator {
 	private static final Direction[] DIRECTIONS = Direction.values();
@@ -38,7 +37,7 @@ public final class HousingValidator {
 	}
 
 	public static HousingReport validate(ServerLevel level, BlockPos bedPos, LaborCraftConfig config) {
-		return measure(level, bedPos, config, true);
+		return report(scan(level, bedPos, config, true), config);
 	}
 
 	/**
@@ -46,22 +45,66 @@ public final class HousingValidator {
 	 * Planta de Casa usa: o jogador aponta para o chao e recebe o relatorio do comodo.
 	 */
 	public static HousingReport measure(ServerLevel level, BlockPos bedPos, LaborCraftConfig config) {
-		return measure(level, bedPos, config, false);
+		return report(scan(level, bedPos, config, false), config);
 	}
 
-	private static HousingReport measure(ServerLevel level, BlockPos bedPos, LaborCraftConfig config, boolean requireBed) {
+	/** Raw measurements, without running the housing rules. */
+	public static HousingScan scan(ServerLevel level, BlockPos bedPos, LaborCraftConfig config) {
+		return scan(level, bedPos, config, true);
+	}
+
+	private static HousingReport report(HousingScan scan, LaborCraftConfig config) {
+		if (scan.failed()) {
+			return HousingReport.invalid(scan.failureReason(), scan.checkedAtTick());
+		}
+
+		List<HousingRuleResult> results = HousingRules.evaluate(scan, config);
+		String failure = HousingRules.firstFailure(results);
+		boolean valid = failure.isEmpty();
+		int maxBeds = Math.max(1, config.housing.maxBedsPerHouse);
+		int capacity = valid
+				? Math.min(maxBeds, Math.max(2, scan.area() / AREA_PER_BED))
+				: 0;
+		double comfortBonus = Math.min(
+				config.housing.comfortBonusMax,
+				scan.comfortBlocks() * config.housing.comfortBonusPerBlock
+		);
+
+		return new HousingReport(
+				valid,
+				scan.enclosed(),
+				scan.volume(),
+				scan.width(),
+				scan.depth(),
+				scan.doors(),
+				scan.beds().size(),
+				capacity,
+				scan.comfortBlocks(),
+				comfortBonus,
+				scan.checkedAtTick(),
+				failure,
+				scan.min(),
+				scan.max(),
+				scan.beds(),
+				results
+		);
+	}
+
+	private static HousingScan scan(
+			ServerLevel level, BlockPos bedPos, LaborCraftConfig config, boolean requireBed
+	) {
 		long tick = level.getGameTime();
 		if (requireBed) {
 			BlockState bedState = level.getBlockState(bedPos);
 			if (!bedState.is(BlockTags.BEDS)) {
-				return HousingReport.invalid("not_a_bed", tick);
+				return HousingScan.invalid("not_a_bed", tick);
 			}
 			bedPos = canonicalBed(level, bedPos);
 		}
 
 		BlockPos seed = bedPos.above();
 		if (!level.getBlockState(seed).isAir()) {
-			return HousingReport.invalid("no_space", tick);
+			return HousingScan.invalid("no_space", tick);
 		}
 
 		int maxVolume = Math.max(8, config.housing.maxVolume);
@@ -78,11 +121,11 @@ public final class HousingValidator {
 			if (Math.abs(current.getX() - bedPos.getX()) > maxRadius
 					|| Math.abs(current.getZ() - bedPos.getZ()) > maxRadius
 					|| Math.abs(current.getY() - bedPos.getY()) > maxRadius) {
-				return HousingReport.invalid("too_large", tick);
+				return HousingScan.invalid("too_large", tick);
 			}
 
 			if (seesSky(level, current)) {
-				return HousingReport.invalid("open_sky", tick);
+				return HousingScan.invalid("open_sky", tick);
 			}
 
 			for (Direction direction : DIRECTIONS) {
@@ -92,7 +135,7 @@ public final class HousingValidator {
 				}
 
 				if (visited.size() >= maxVolume) {
-					return HousingReport.invalid("too_large", tick);
+					return HousingScan.invalid("too_large", tick);
 				}
 
 				visited.add(next);
@@ -120,12 +163,11 @@ public final class HousingValidator {
 		}
 
 		if (minX > maxX) {
-			return HousingReport.invalid("no_space", tick);
+			return HousingScan.invalid("no_space", tick);
 		}
 
 		int width = maxX - minX + 1;
 		int depth = maxZ - minZ + 1;
-		int area = width * depth;
 
 		Set<BlockPos> doorPositions = new HashSet<>();
 		Set<BlockPos> bedPositions = new HashSet<>();
@@ -142,9 +184,11 @@ public final class HousingValidator {
 							&& state.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) {
 						doorPositions.add(neighbor);
 					}
-				} else if (state.is(BlockTags.BEDS)) {
+				}
+				else if (state.is(BlockTags.BEDS)) {
 					bedPositions.add(neighbor);
-				} else if (isComfort(state, config)) {
+				}
+				else if (isComfort(state, config)) {
 					comfortPositions.add(neighbor);
 				}
 				if (state.getLightEmission() > 0) {
@@ -153,7 +197,6 @@ public final class HousingValidator {
 			}
 		}
 
-		// A bed has two halves; the canonical (foot) position avoids counting one bed as two.
 		Set<BlockPos> bedKeys = new HashSet<>();
 		for (BlockPos bed : bedPositions) {
 			if (insideInterior(bed, minX, maxX, minZ, maxZ, bedPos.getY())) {
@@ -174,45 +217,21 @@ public final class HousingValidator {
 			return byZ != 0 ? byZ : Integer.compare(left.getY(), right.getY());
 		});
 
-		int doors = doorPositions.size();
-		int beds = bedList.size();
-		int comfort = comfortPositions.size();
-		int minSize = Math.max(3, config.housing.minInteriorSize);
-		int maxBeds = Math.max(1, config.housing.maxBedsPerHouse);
-
-		String failure = "";
-		if (width < minSize || depth < minSize) {
-			failure = "too_small";
-		} else if (config.housing.requireDoor && doors <= 0) {
-			failure = "no_door";
-		} else if (config.housing.requireLight && !lightSource) {
-			failure = "no_light";
-		}
-
-		int capacity = failure.isEmpty()
-				? Math.min(maxBeds, Math.max(2, area / AREA_PER_BED))
-				: 0;
-		double comfortBonus = Math.min(
-				config.housing.comfortBonusMax,
-				comfort * config.housing.comfortBonusPerBlock
-		);
-
-		return new HousingReport(
-				failure.isEmpty(),
+		return new HousingScan(
 				true,
 				visited.size(),
 				width,
 				depth,
-				doors,
-				beds,
-				capacity,
-				comfort,
-				comfortBonus,
+				doorPositions.size(),
+				bedList,
+				comfortPositions.size(),
+				lightSource,
 				tick,
-				failure,
+				"",
 				new BlockPos(minX, floorY, minZ),
 				new BlockPos(maxX, ceilingY, maxZ),
-				List.copyOf(bedList)
+				floorY,
+				ceilingY
 		);
 	}
 

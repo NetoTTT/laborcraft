@@ -10,6 +10,7 @@ Núcleo de IA por emprego e correção das portas.
 ### Adicionado
 - `WorkerBrain`, `AbstractWorkerBrain` e `JobBrains`: fluxo comum (pausa, zona, ferramenta, durabilidade, cooldown) separado da lógica de produção.
 - `FarmerBrain` refatorado para o novo contrato, sem duplicar o fluxo comum.
+- Validador de casa dividido em `HousingScan` (medição) e `HousingRule`/`HousingRules` (regras plugáveis). `HousingReport.rules()` expõe o resultado de cada regra.
 
 ### Corrigido
 - O NPC agora consegue atravessar portas fechadas: o pathfinding foi habilitado com `setCanOpenDoors(true)`, então ele encontra, abre e fecha portas para entrar/sair da casa e chegar à cama.
