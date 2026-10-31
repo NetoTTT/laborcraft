@@ -25,7 +25,7 @@ Aplicar/remover num Posto:
 
 ## O que já existe
 
-- `EnclosureScanner` / `EnclosureScan`: flood fill horizontal de 2D, delimitado por cerca, parede e
+- `EnclosureScanner` / `EnclosureScan`: flood 2.5D por coluna, com o piso de cada coluna. Vizinhos podem subir/descer 1 bloco, delimitados por cerca, parede e
   fence gate. Conta área, largura, profundidade, portões e blocos de borda. Exige pelo menos um
   portão.
 - `JobType` `laborcraft:herder` registrado, com nome, descrição e tarefa ("Pastoreando").
@@ -103,7 +103,7 @@ Quando o Posto está em `laborcraft:herder`, a aba Config muda:
 - o mapa é somente leitura;
 - **clicar** num bloco dentro do cercado envia o seed para o servidor, usando o Y da camada visível (`QuillMap.layerY()`), inclusive no subsolo;
 - o servidor roda `EnclosureScanner` com limite (`enclosure.maxScanRadius`, `enclosure.maxArea`);
-- o scan tenta o Y clicado e ±1/±2/±3 blocos, para plataformas e mapas com degraus;
+- o scan usa o piso da coluna clicada e permite degraus de 1 bloco entre colunas, então plataformas e terreno irregular não dependem de tentativa cega de Y;
 - se o flood escapar, o motivo é `not_enclosed` (aberto/fora), não `too_large`;
 - o descriptor volta no `OpenStationPayload` e é desenhado como spans âmbar;
 - portões aparecem como marcadores;

@@ -3,8 +3,10 @@ package com.foque.laborcraft.area;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -14,9 +16,12 @@ import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
- * Scans an open-air enclosure from a point inside it. Unlike the house scan, it floods one
- * horizontal layer: fences, walls and gates are boundaries, the sky/roof is irrelevant, and at
- * least one fence gate is required for a valid pen.
+ * Scans an open-air pen from a point inside it.
+ *
+ * <p>This is a 2.5D flood: each visited column carries its own floor Y. Neighbouring columns may
+ * step up or down by one block, so platforms, stairs and terraced terrain work without brute-force
+ * Y offsets. A column is a boundary when a fence, wall or gate occupies its feet/head space, or
+ * when it has no walkable floor within one step.</p>
  */
 public final class EnclosureScanner {
 	private static final Direction[] HORIZONTAL = {
@@ -26,85 +31,59 @@ public final class EnclosureScanner {
 			Direction.WEST
 	};
 	private static final int MIN_BOUNDARY = 4;
+	private static final int START_SCAN_UP = 2;
+	private static final int START_SCAN_DOWN = 4;
 
 	private EnclosureScanner() {
 	}
 
 	public static EnclosureScan scan(ServerLevel level, BlockPos origin, LaborCraftConfig config) {
-		EnclosureScan best = null;
-		for (int dy : new int[]{0, -1, 1, -2, 2, -3, 3}) {
-			BlockPos seed = origin.offset(0, dy, 0);
-			if (!level.getBlockState(seed).getCollisionShape(level, seed).isEmpty()) {
-				continue;
-			}
-
-			EnclosureScan candidate = scanLayer(level, seed, config);
-			if (candidate.valid()) {
-				return candidate;
-			}
-			if (best == null || priority(candidate.failureReason()) > priority(best.failureReason())) {
-				best = candidate;
-			}
+		int startFloor = findStartFloor(level, origin.getX(), origin.getZ(), origin.getY());
+		if (startFloor == Integer.MIN_VALUE) {
+			return EnclosureScan.invalid("blocked");
 		}
-		return best == null ? EnclosureScan.invalid("blocked") : best;
-	}
 
-	private static int priority(String reason) {
-		return switch (reason == null ? "" : reason) {
-			case "no_gate" -> 5;
-			case "no_fence" -> 4;
-			case "not_enclosed" -> 3;
-			case "too_small" -> 2;
-			default -> 1;
-		};
-	}
-
-	private static EnclosureScan scanLayer(ServerLevel level, BlockPos origin, LaborCraftConfig config) {
 		int minArea = Math.max(4, config.enclosure.minArea);
 		int maxArea = Math.max(minArea, config.enclosure.maxArea);
 		int maxRadius = Math.max(4, config.enclosure.maxScanRadius);
-		Set<BlockPos> visited = new HashSet<>();
-		ArrayDeque<BlockPos> queue = new ArrayDeque<>();
-		visited.add(origin);
-		queue.add(origin);
+
+		Map<Long, Integer> floors = new HashMap<>();
+		ArrayDeque<Column> queue = new ArrayDeque<>();
+		floors.put(pack(origin.getX(), origin.getZ()), startFloor);
+		queue.add(new Column(origin.getX(), origin.getZ(), startFloor));
 
 		Set<BlockPos> gates = new HashSet<>();
 		Set<BlockPos> boundary = new HashSet<>();
 
 		while (!queue.isEmpty()) {
-			BlockPos current = queue.poll();
-			if (Math.abs(current.getX() - origin.getX()) > maxRadius
-					|| Math.abs(current.getZ() - origin.getZ()) > maxRadius) {
+			Column current = queue.poll();
+			if (Math.abs(current.x() - origin.getX()) > maxRadius
+					|| Math.abs(current.z() - origin.getZ()) > maxRadius) {
 				return EnclosureScan.invalid("not_enclosed");
 			}
 
 			for (Direction direction : HORIZONTAL) {
-				BlockPos next = current.relative(direction);
-				BlockState state = level.getBlockState(next);
-				if (state.getBlock() instanceof FenceGateBlock) {
-					gates.add(next.immutable());
-					boundary.add(next.immutable());
-					continue;
-				}
-				if (state.is(BlockTags.FENCES) || state.is(BlockTags.WALLS)) {
-					boundary.add(next.immutable());
-					continue;
-				}
-				if (!state.getCollisionShape(level, next).isEmpty()) {
-					boundary.add(next.immutable());
+				int nextX = current.x() + direction.getStepX();
+				int nextZ = current.z() + direction.getStepZ();
+				Column next = findNeighbour(level, nextX, nextZ, current.floorY(), gates, boundary);
+				if (next == null) {
 					continue;
 				}
 
-				if (visited.add(next)) {
-					if (visited.size() > maxArea) {
-						return EnclosureScan.invalid("not_enclosed");
-					}
-					queue.add(next);
+				long key = pack(nextX, nextZ);
+				if (floors.containsKey(key)) {
+					continue;
 				}
+				if (floors.size() >= maxArea) {
+					return EnclosureScan.invalid("not_enclosed");
+				}
+
+				floors.put(key, next.floorY());
+				queue.add(next);
 			}
 		}
 
-		int area = visited.size();
+		int area = floors.size();
 		if (area < minArea) {
 			return EnclosureScan.invalid("too_small");
 		}
@@ -119,13 +98,14 @@ public final class EnclosureScanner {
 		int maxX = Integer.MIN_VALUE;
 		int minZ = Integer.MAX_VALUE;
 		int maxZ = Integer.MIN_VALUE;
-		Set<Long> columns = new HashSet<>();
-		for (BlockPos cell : visited) {
-			minX = Math.min(minX, cell.getX());
-			maxX = Math.max(maxX, cell.getX());
-			minZ = Math.min(minZ, cell.getZ());
-			maxZ = Math.max(maxZ, cell.getZ());
-			columns.add(pack(cell.getX(), cell.getZ()));
+		Set<Long> columns = new HashSet<>(floors.keySet());
+		for (long key : columns) {
+			int x = unpackX(key);
+			int z = unpackZ(key);
+			minX = Math.min(minX, x);
+			maxX = Math.max(maxX, x);
+			minZ = Math.min(minZ, z);
+			maxZ = Math.max(maxZ, z);
 		}
 
 		List<EnclosureSpan> spans = new ArrayList<>();
@@ -151,15 +131,107 @@ public final class EnclosureScanner {
 				gates.size(),
 				boundary.size(),
 				"",
-				new BlockPos(minX, origin.getY(), minZ),
-				new BlockPos(maxX, origin.getY(), maxZ),
-				origin.immutable(),
+				new BlockPos(minX, startFloor, minZ),
+				new BlockPos(maxX, startFloor, maxZ),
+				new BlockPos(origin.getX(), startFloor, origin.getZ()),
 				spans,
 				List.copyOf(gates)
 		);
 	}
 
+	private static int findStartFloor(ServerLevel level, int x, int z, int originY) {
+		for (int y = originY + START_SCAN_UP; y >= originY - START_SCAN_DOWN; y--) {
+			if (!level.getBlockState(new BlockPos(x, y, z)).getCollisionShape(level, new BlockPos(x, y, z)).isEmpty()) {
+				continue;
+			}
+			if (!level.getBlockState(new BlockPos(x, y + 1, z)).getCollisionShape(level, new BlockPos(x, y + 1, z)).isEmpty()) {
+				continue;
+			}
+			BlockPos below = new BlockPos(x, y - 1, z);
+			if (!level.getBlockState(below).getCollisionShape(level, below).isEmpty()) {
+				return y;
+			}
+		}
+		return Integer.MIN_VALUE;
+	}
+
+	/**
+	 * Finds a walkable neighbour at the same level or one block up/down. Fences, gates and walls in
+	 * the feet/head space are recorded as boundaries instead of being traversed.
+	 */
+	private static Column findNeighbour(
+			ServerLevel level,
+			int x,
+			int z,
+			int currentFloor,
+			Set<BlockPos> gates,
+			Set<BlockPos> boundary
+	) {
+		for (int y = currentFloor + 1; y >= currentFloor - 1; y--) {
+			BlockPos feet = new BlockPos(x, y, z);
+			BlockPos head = new BlockPos(x, y + 1, z);
+			if (recordBoundary(level, feet, gates, boundary)) {
+				return null;
+			}
+			if (recordBoundary(level, head, gates, boundary)) {
+				return null;
+			}
+
+			BlockPos below = new BlockPos(x, y - 1, z);
+			if (recordBoundary(level, below, gates, boundary)) {
+				return null;
+			}
+
+			BlockState feetState = level.getBlockState(feet);
+			BlockState headState = level.getBlockState(head);
+			if (!feetState.getCollisionShape(level, feet).isEmpty()
+					|| !headState.getCollisionShape(level, head).isEmpty()) {
+				if (!feetState.getCollisionShape(level, feet).isEmpty()) {
+					boundary.add(feet.immutable());
+				}
+				if (!headState.getCollisionShape(level, head).isEmpty()) {
+					boundary.add(head.immutable());
+				}
+				return null;
+			}
+
+			if (level.getBlockState(below).getCollisionShape(level, below).isEmpty()) {
+				continue;
+			}
+			return new Column(x, z, y);
+		}
+		return null;
+	}
+
+	private static boolean recordBoundary(
+			ServerLevel level, BlockPos pos, Set<BlockPos> gates, Set<BlockPos> boundary
+	) {
+		BlockState state = level.getBlockState(pos);
+		if (state.getBlock() instanceof FenceGateBlock) {
+			BlockPos immutable = pos.immutable();
+			gates.add(immutable);
+			boundary.add(immutable);
+			return true;
+		}
+		if (state.is(BlockTags.FENCES) || state.is(BlockTags.WALLS)) {
+			boundary.add(pos.immutable());
+			return true;
+		}
+		return false;
+	}
+
 	private static long pack(int x, int z) {
 		return ((long) x << 32) | (z & 0xFFFFFFFFL);
+	}
+
+	private static int unpackX(long key) {
+		return (int) (key >> 32);
+	}
+
+	private static int unpackZ(long key) {
+		return (int) key;
+	}
+
+	private record Column(int x, int z, int floorY) {
 	}
 }
