@@ -17,6 +17,7 @@ Núcleo de IA por emprego e correção das portas.
 - Configurações por emprego em `LaborCraftConfig.jobs`/`job(jobId)`; o campo `farmer` vira alias compatível.
 - `EnclosureDescriptor` no Posto (seed, bounds, spans e portões) com `/laborcraft station enclosure set/clear`, separado das zonas retangulares.
 - Mapa de Config do pastoreiro em modo clique: o seed vem do bloco clicado, com limite de scan configurável (`enclosure.maxScanRadius`/`maxArea`).
+- Resultados/erros do posto aparecem como toast na UI (`UiToastPayload`), além do chat.
 - `/laborcraft station job set <pos> <job>` para especializar o Posto.
 
 ### Corrigido

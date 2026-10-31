@@ -5,6 +5,7 @@ import com.foque.laborcraft.client.hud.BubbleSettings;
 import com.foque.laborcraft.client.hud.TargetIndicatorHud;
 import com.foque.laborcraft.client.hud.WorkerBubbleSource;
 import com.quillui.hud.QuillBubbleHud;
+import com.quillui.screen.QuillScreen;
 import com.foque.laborcraft.client.render.LaborCraftWorkerRenderer;
 import com.foque.laborcraft.client.render.StationPreviewManager;
 import com.foque.laborcraft.client.render.WorldHighlightManager;
@@ -31,6 +32,7 @@ import com.foque.laborcraft.entity.LaborCraftEntities;
 import com.foque.laborcraft.network.OpenPlayersPayload;
 import com.foque.laborcraft.network.OpenProfilePayload;
 import com.foque.laborcraft.network.OpenStationPayload;
+import com.foque.laborcraft.network.UiToastPayload;
 import com.foque.laborcraft.network.OpenWorkerInventoryPayload;
 import com.foque.laborcraft.network.OpenWorkerPayload;
 import com.foque.laborcraft.network.SetLanguagePayload;
@@ -73,6 +75,13 @@ public class LaborCraftClient implements ClientModInitializer {
 				context.client().execute(() -> BubbleSettings.update(payload.throughWalls()))
 		);
 
+		ClientPlayNetworking.registerGlobalReceiver(UiToastPayload.TYPE, (payload, context) ->
+				context.client().execute(() -> {
+					if (context.client().gui.screen() instanceof QuillScreen screen) {
+						screen.showToast(payload.message(), 3.0F);
+					}
+				})
+		);
 		ClientPlayNetworking.registerGlobalReceiver(OpenAdminPayload.TYPE, (payload, context) -> {
 			Minecraft client = context.client();
 			client.execute(() -> {

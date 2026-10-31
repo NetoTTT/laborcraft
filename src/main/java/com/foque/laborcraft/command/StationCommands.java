@@ -6,6 +6,7 @@ import com.foque.laborcraft.area.EnclosureScan;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import com.foque.laborcraft.network.OpenStationPayload;
+import com.foque.laborcraft.network.UiToastPayload;
 import com.foque.laborcraft.worker.StationRegistry;
 import com.foque.laborcraft.worker.WorkerOwnership;
 import com.foque.laborcraft.worker.WorkerState;
@@ -421,13 +422,20 @@ final class StationCommands {
 
 		EnclosureScan scan = EnclosureScanner.scan(source.getLevel(), seed, LaborCraftConfig.get());
 		if (!scan.valid()) {
-			source.sendFailure(Component.translatable(
+			Component failure = Component.translatable(
 					"laborcraft.station.enclosure.invalid",
 					Component.translatable("laborcraft.pen.reason." + scan.failureReason())
-			));
+			);
+			source.sendFailure(failure);
+			UiToastPayload.send(player, failure, true);
 			return 0;
 		}
 
+		Component success = Component.translatable(
+				"laborcraft.station.enclosure.set",
+				scan.area(),
+				scan.gatePositions().size()
+		);
 		StationRegistry.setEnclosure(
 				source.getServer(),
 				station,
@@ -437,14 +445,8 @@ final class StationCommands {
 		if (updated != null) {
 			OpenStationPayload.open(player, updated);
 		}
-		source.sendSuccess(
-				() -> Component.translatable(
-						"laborcraft.station.enclosure.set",
-						scan.area(),
-						scan.gatePositions().size()
-				),
-				true
-		);
+		UiToastPayload.send(player, success, false);
+		source.sendSuccess(() -> success, true);
 		return 1;
 	}
 

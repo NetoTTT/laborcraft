@@ -117,3 +117,7 @@ mesmo que o Posto tenha uma zona retangular antiga; a zona antiga fica oculta ne
 O bind agora grava o `jobId` do primeiro trabalhador no Posto e recusa trabalhadores de outro
 emprego. Para fixar a especialização sem depender do trabalhador, use
 `/laborcraft station job set <pos> laborcraft:herder`.
+## Feedback na UI
+
+Os resultados do scan/aplicação usam `UiToastPayload`: quando uma tela Quill está aberta, o
+resultado aparece como toast; o chat continua recebendo a mesma mensagem como fallback.

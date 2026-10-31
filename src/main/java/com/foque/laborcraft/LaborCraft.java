@@ -14,6 +14,7 @@ import com.foque.laborcraft.worker.JobBrains;
 import com.foque.laborcraft.network.BubbleSettingsPayload;
 import com.foque.laborcraft.network.CloseScreenPayload;
 import com.foque.laborcraft.network.OpenAdminPayload;
+import com.foque.laborcraft.network.UiToastPayload;
 import com.foque.laborcraft.network.OpenConfigPayload;
 import com.foque.laborcraft.network.OpenHiringPayload;
 import com.foque.laborcraft.network.OpenHomeRegisterPayload;
@@ -49,6 +50,7 @@ public class LaborCraft implements ModInitializer {
 		JobTypes.bootstrap();
 		JobBrains.bootstrap();
 		OpenAdminPayload.bootstrap();
+		UiToastPayload.bootstrap();
 		OpenConfigPayload.bootstrap();
 		OpenHiringPayload.bootstrap();
 		OpenHomeRegisterPayload.bootstrap();
