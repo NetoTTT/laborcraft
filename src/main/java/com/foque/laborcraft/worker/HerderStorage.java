@@ -21,6 +21,22 @@ public final class HerderStorage {
 	private HerderStorage() {
 	}
 
+	public static boolean isFood(ItemStack stack) {
+		return !stack.isEmpty()
+				&& (stack.is(ItemTags.CHICKEN_FOOD)
+						|| stack.is(ItemTags.COW_FOOD)
+						|| stack.is(ItemTags.SHEEP_FOOD));
+	}
+
+	public static boolean isTool(ItemStack stack) {
+		return !stack.isEmpty() && (stack.is(Items.SHEARS) || stack.is(Items.BUCKET));
+	}
+
+	/** Everything the herder picks up from the pen floor: produce, breeding food and tools. */
+	public static boolean isPickup(ItemStack stack) {
+		return isProduce(stack) || isFood(stack) || isTool(stack);
+	}
+
 	public static boolean isProduce(ItemStack stack) {
 		return !stack.isEmpty() && (PRODUCE.contains(stack.getItem()) || stack.is(ItemTags.WOOL));
 	}

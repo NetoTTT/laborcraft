@@ -287,7 +287,8 @@ public final class LaborCraftConfig {
 	}
 	/** Animal rules for the herder; products are opt-in and population is capped per pen. */
 	public static final class HerderSettings {
-		public boolean collectEggs = true;
+		public boolean collectDrops = true;
+		public boolean autoTools = true;
 		public boolean shearSheep = false;
 		public boolean milkCows = false;
 		public boolean breeding = true;

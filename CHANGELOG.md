@@ -34,7 +34,8 @@ Núcleo de IA por emprego e correção das portas.
 - Travessia do portão feita pelo `MoveControl` (2 blocos), sem depender do pathfinding atravessar cerca.
 - Aviso de portão inacessível com cooldown de 30 s e retry de 2 s, sem spam no chat.
 - Portão fechado agora é `WALKABLE_DOOR` no avaliador de nós: path atravessa cercado e volta pra casa.
-- Pastoreiro: coleta ovos de galinha no cercado e deposita no baú de saída (`herder.collectEggs`).
+- Pastoreiro: coleta ovos, sementes, lã, leite e ferramentas do chão do cercado (`herder.collectDrops`).
+- Pastoreiro troca de ferramenta sozinho (mochila → baú TOOLS), guardando a antiga em slot livre ou no baú.
 - Reprodução: conta animais por espécie no cercado, alimenta casais com a comida vanilla e respeita `maxPerSpecies`.
 - Reprodução: cooldown por animal evita alimentar a mesma galinha em loop; alimenta o segundo adulto.
 - UI da mochila: cliques no overlay de quantidade (Tudo/Confirmar/Cancelar) não são mais engolidos pela tela.

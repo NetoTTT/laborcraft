@@ -10,9 +10,24 @@ import net.minecraft.world.item.ItemStack;
 /**
  * Container protocol for worker storage: inserts only into empty/same-item slots and extracts only
  * the item types the job asks for. Roles decide the direction (MIXED for both, OUTPUT/INPUT one way).
+ * TOOLS containers are neither input nor output; they feed {@link #extractTool} / {@link #insertTool}.
  */
 public final class WorkerStorage {
 	private WorkerStorage() {
+	}
+
+	/** Containers with exactly the given role (used for tool chests). */
+	public static List<Container> role(ServerLevel level, StationRegistry.Station station, StationRegistry.StorageRole role) {
+		List<Container> containers = new ArrayList<>();
+		for (StationRegistry.StorageLink link : station.storage()) {
+			if (link.role() != role) {
+				continue;
+			}
+			if (level.getBlockEntity(link.pos()) instanceof Container container) {
+				containers.add(container);
+			}
+		}
+		return containers;
 	}
 
 	public static List<Container> linked(ServerLevel level, StationRegistry.Station station, boolean input) {
@@ -37,11 +52,43 @@ public final class WorkerStorage {
 
 	/** Inserts what fits and returns the leftover stack (mutates the given stack). */
 	public static ItemStack insert(ServerLevel level, StationRegistry.Station station, ItemStack stack) {
+		return insertInto(linked(level, station, false), stack);
+	}
+
+	/** Stores a tool in the TOOLS containers; returns the leftover. */
+	public static ItemStack insertTool(ServerLevel level, StationRegistry.Station station, ItemStack stack) {
+		return insertInto(role(level, station, StationRegistry.StorageRole.TOOLS), stack);
+	}
+
+	/**
+	 * Extracts a single item type (the first one that matches) up to {@code amount}. Mixing different
+	 * item types into one stack would be invalid, so later slots of another type are skipped.
+	 */
+	public static ItemStack extract(
+			ServerLevel level,
+			StationRegistry.Station station,
+			Predicate<ItemStack> filter,
+			int amount
+	) {
+		return extractFrom(linked(level, station, true), filter, amount);
+	}
+
+	/** Pulls a tool from the TOOLS containers. */
+	public static ItemStack extractTool(
+			ServerLevel level,
+			StationRegistry.Station station,
+			Predicate<ItemStack> filter,
+			int amount
+	) {
+		return extractFrom(role(level, station, StationRegistry.StorageRole.TOOLS), filter, amount);
+	}
+
+	private static ItemStack insertInto(List<Container> containers, ItemStack stack) {
 		if (stack.isEmpty()) {
 			return ItemStack.EMPTY;
 		}
 
-		for (Container container : linked(level, station, false)) {
+		for (Container container : containers) {
 			for (int slot = 0; slot < container.getContainerSize() && !stack.isEmpty(); slot++) {
 				ItemStack existing = container.getItem(slot);
 				if (existing.isEmpty() || !ItemStack.isSameItemSameComponents(existing, stack)) {
@@ -82,22 +129,13 @@ public final class WorkerStorage {
 		return stack;
 	}
 
-	/**
-	 * Extracts a single item type (the first one that matches) up to {@code amount}. Mixing different
-	 * item types into one stack would be invalid, so later slots of another type are skipped.
-	 */
-	public static ItemStack extract(
-			ServerLevel level,
-			StationRegistry.Station station,
-			Predicate<ItemStack> filter,
-			int amount
-	) {
+	private static ItemStack extractFrom(List<Container> containers, Predicate<ItemStack> filter, int amount) {
 		ItemStack result = ItemStack.EMPTY;
 		if (amount <= 0) {
 			return result;
 		}
 
-		for (Container container : linked(level, station, true)) {
+		for (Container container : containers) {
 			for (int slot = 0; slot < container.getContainerSize() && result.getCount() < amount; slot++) {
 				ItemStack existing = container.getItem(slot);
 				if (existing.isEmpty() || !filter.test(existing)) {

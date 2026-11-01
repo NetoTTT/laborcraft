@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -107,6 +108,8 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			worker.getNavigation().stop();
 			return;
 		}
+
+		ensureTool(level, pen, station);
 
 		boolean inside = pen.contains(worker.blockPosition());
 		BlockPos gate = nearestGate(pen, worker.blockPosition());
@@ -206,7 +209,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return;
 		}
 
-		if (LaborCraftConfig.get().herder.collectEggs) {
+		if (LaborCraftConfig.get().herder.collectDrops) {
 			if (depositing) {
 				if (depositProduce(level, station)) {
 					depositing = false;
@@ -215,9 +218,9 @@ public final class HerderBrain extends AbstractWorkerBrain {
 				return;
 			}
 
-			ItemEntity egg = findEgg(level, pen);
-			if (egg != null) {
-				collectEgg(egg);
+			ItemEntity drop = findPickup(level, pen);
+			if (drop != null) {
+				collectItem(drop);
 				return;
 			}
 
@@ -382,6 +385,85 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		return false;
 	}
 
+	/** Swaps the tool slot to what the pen needs, using the backpack first and TOOLS chests after. */
+	private void ensureTool(
+			ServerLevel level, EnclosureDescriptor pen, StationRegistry.Station station
+	) {
+		if (!LaborCraftConfig.get().herder.autoTools) {
+			return;
+		}
+		ItemStack required = HerderTools.requiredFor(level, pen);
+		if (required.isEmpty() || HerderTools.matches(worker.toolItem(), required)) {
+			return;
+		}
+
+		int slot = findToolSlot(required);
+		if (slot >= 0) {
+			ItemStack stored = worker.inventoryItem(slot);
+			ItemStack next = stored.copyWithCount(1);
+			if (equipTool(level, station, next)) {
+				stored.shrink(1);
+				if (stored.isEmpty()) {
+					worker.setInventoryItem(slot, ItemStack.EMPTY);
+				}
+			}
+			return;
+		}
+
+		ItemStack pulled = WorkerStorage.extractTool(
+				level, station, stack -> HerderTools.matches(stack, required), 1
+		);
+		if (pulled.isEmpty()) {
+			return;
+		}
+		if (!equipTool(level, station, pulled)) {
+			WorkerStorage.insertTool(level, station, pulled);
+		}
+	}
+
+	private int findToolSlot(ItemStack required) {
+		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {
+			if (HerderTools.matches(worker.inventoryItem(slot), required)) {
+				return slot;
+			}
+		}
+		return -1;
+	}
+
+	/** Puts {@code next} in the tool slot, stashing the old tool in the backpack or TOOLS chest. */
+	private boolean equipTool(
+			ServerLevel level, StationRegistry.Station station, ItemStack next
+	) {
+		ItemStack current = worker.toolItem();
+		if (current.isEmpty()) {
+			worker.setInventoryItem(LaborCraftWorker.TOOL_SLOT, next);
+			return true;
+		}
+
+		int empty = findEmptySlot();
+		if (empty >= 0) {
+			worker.setInventoryItem(empty, current.copy());
+			worker.setInventoryItem(LaborCraftWorker.TOOL_SLOT, next);
+			return true;
+		}
+
+		ItemStack leftover = WorkerStorage.insertTool(level, station, current.copy());
+		if (!leftover.isEmpty()) {
+			return false;
+		}
+		worker.setInventoryItem(LaborCraftWorker.TOOL_SLOT, next);
+		return true;
+	}
+
+	private int findEmptySlot() {
+		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {
+			if (worker.inventoryItem(slot).isEmpty()) {
+				return slot;
+			}
+		}
+		return -1;
+	}
+
 	private void pruneFed(long now) {
 		if (fedUntil.size() < 64) {
 			return;
@@ -437,7 +519,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 	}
 
-	private ItemEntity findEgg(ServerLevel level, EnclosureDescriptor pen) {
+	private ItemEntity findPickup(ServerLevel level, EnclosureDescriptor pen) {
 		int margin = Math.max(2, LaborCraftConfig.get().herder.eggScanRadius);
 		BlockPos min = pen.min();
 		BlockPos max = pen.max();
@@ -453,7 +535,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		ItemEntity best = null;
 		double bestDistance = Double.MAX_VALUE;
 		for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, box)) {
-			if (!item.isAlive() || !item.getItem().is(Items.EGG)) {
+			if (!item.isAlive() || !HerderStorage.isPickup(item.getItem())) {
 				continue;
 			}
 			if (!pen.contains(item.blockPosition())) {
@@ -468,16 +550,16 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		return best;
 	}
 
-	private void collectEgg(ItemEntity egg) {
-		if (worker.position().distanceToSqr(egg.position()) > 2.25D) {
+	private void collectItem(ItemEntity item) {
+		if (worker.position().distanceToSqr(item.position()) > 2.25D) {
 			if (worker.getNavigation().isDone() || pathTicks <= 0) {
-				worker.getNavigation().moveTo(egg.getX(), egg.getY(), egg.getZ(), 1.0D);
+				worker.getNavigation().moveTo(item.getX(), item.getY(), item.getZ(), 1.0D);
 				pathTicks = PATH_TIMEOUT;
 			}
 			return;
 		}
 
-		var stack = egg.getItem();
+		var stack = item.getItem();
 		var leftover = FarmerStorage.addToWorker(worker, stack.copy());
 		int moved = stack.getCount() - leftover.getCount();
 		if (moved <= 0) {
@@ -485,10 +567,10 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 		stack.shrink(moved);
 		if (stack.isEmpty()) {
-			egg.discard();
+			item.discard();
 		}
 		else {
-			egg.setItem(stack);
+			item.setItem(stack);
 		}
 	}
 

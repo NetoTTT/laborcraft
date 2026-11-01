@@ -19,7 +19,7 @@ cooldown por animal.
 
 ### Galinha (fase 1)
 
-- procura `ItemEntity` de ovo dentro dos spans do cercado;
+- procura qualquer item de pastoreiro no chão dentro dos spans: ovo, sementes/comida, lã, leite, tesoura, balde;
 - anda até o ovo, recolhe para o inventário (slots 0–8, nunca o slot de ferramenta);
 - quando não há mais ovos no cercado e há ovo no inventário, vai até o baú de saída e deposita;
 - nada de matar, nada de ferramenta, nada de cooldown por galinha.
@@ -51,7 +51,7 @@ Chaves em `config/laborcraft.json` → `herder`:
 
 ```json
 "herder": {
-  "collectEggs": true,
+  "collectDrops": true,
   "shearSheep": false,
   "milkCows": false,
   "breeding": false,
@@ -108,3 +108,14 @@ O ciclo entrar → pastar → sair continua igual, com portão abrindo/fechando 
 - Isso roda a cada tick do brain, então portão esquecido aberto por retry, troca de fase ou recarregamento de chunk é fechado.
 - O portão em uso (travessia) é preservado.
 - `OpenFenceGateGoal` também fecha ao parar e quando o trabalhador é removido.
+## Ferramentas automáticas
+
+- `herder.autoTools` liga a troca sozinha.
+- O brain decide a ferramenta pela fauna do cercado: hoje **tesoura** se houver ovelha.
+- Ordem de busca:
+  1. slot de ferramenta;
+  2. mochila (slots 0–8);
+  3. baú de **ferramentas** (role TOOLS).
+- Ao trocar, a ferramenta antiga vai para um slot vazio da mochila; se não houver, vai para o baú de ferramentas.
+- Ferramenta danificada conta como válida (mesmo item, dano ignorado).
+- Ferramenta quebrada é substituída na próxima checagem.
