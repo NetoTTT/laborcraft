@@ -426,8 +426,9 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		QuillFlexBox body = QuillNodes.row(QuillSpacing.SPACE_3);
 		body.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
 
+		int workerHeight = Math.max(180, visibleWorkers().size() * 40);
 		QuillListView<OpenStationPayload.Summary> list = new QuillListView<>(
-				0, 0, WORKER_LIST_WIDTH, 180, 40,
+				0, 0, WORKER_LIST_WIDTH, workerHeight, 40,
 				this::workerRow,
 				(summary, index) -> {
 					workerScroll = workerList == null ? 0 : workerList.scrollOffset();
@@ -1183,8 +1184,9 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 			return text(Component.translatable("laborcraft.ui.station.storage.empty"), MUTED);
 		}
 
+		int storageHeight = Math.max(180, station.storage().size() * 40);
 		QuillListView<OpenStationPayload.StorageView> list = new QuillListView<>(
-				0, 0, 400, 180, 40,
+				0, 0, 400, storageHeight, 40,
 				this::storageRow,
 				(view, index) -> {
 					storageScroll = storageList == null ? 0 : storageList.scrollOffset();

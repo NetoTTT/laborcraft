@@ -56,7 +56,7 @@ public final class LaborCraftHiringScreen extends QuillScreen {
 		}
 		else {
 			QuillListView<OpenHiringPayload.Offer> list = new QuillListView<>(
-					0, 0, 400, 146, 52,
+					0, 0, 400, Math.max(52, offer.offers().size() * 52), 52,
 					this::offerRow,
 					(offerRow, index) -> {
 						selected = offerRow;
@@ -65,7 +65,7 @@ public final class LaborCraftHiringScreen extends QuillScreen {
 			);
 			list.replaceItems(offer.offers());
 			list.setSelected(selected);
-			root.add(QuillNodes.flexible(control(list), 1));
+			root.add(control(list));
 		}
 
 		root.add(note());

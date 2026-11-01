@@ -482,6 +482,10 @@ final class StationCommands {
 		}
 
 		StationRegistry.setJob(source.getServer(), station, jobId);
+		StationRegistry.Station updated = StationRegistry.get(source.getServer(), station.dimension(), pos);
+		if (updated != null) {
+			OpenStationPayload.open(player, updated);
+		}
 		source.sendSuccess(
 				() -> Component.translatable("laborcraft.station.job.set", jobId),
 				true
