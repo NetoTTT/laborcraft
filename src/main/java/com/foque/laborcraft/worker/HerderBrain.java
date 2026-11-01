@@ -67,6 +67,9 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	private boolean depositing;
 	private String debugInfo = "";
 	private final Map<UUID, Long> fedUntil = new HashMap<>();
+	private long nextDebugLog;
+	private long nextShearLog;
+	private long nextToolLog;
 
 	public HerderBrain(LaborCraftWorker worker) {
 		super(worker, CHECK_INTERVAL);
@@ -121,6 +124,18 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 
 		Map<HerderAnimals.Species, List<Animal>> herd = HerderAnimals.snapshot(level, pen);
+		if (level.getGameTime() >= nextDebugLog) {
+			nextDebugLog = level.getGameTime() + 100L;
+			LaborCraft.LOGGER.info(
+					"[herder] phase={} inside={} pos={} spans={} sheep={} shearEnabled={}",
+					phase,
+					inside,
+					shortPos(worker.blockPosition()),
+					pen.spans().size(),
+					HerderAnimals.count(herd, HerderAnimals.Species.SHEEP),
+					shearEnabled()
+			);
+		}
 		ensureTool(level, station, herd);
 
 		switch (phase) {
@@ -201,6 +216,10 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		if (target != null) {
 			follow(level, target);
 		}
+	}
+
+	private boolean shearEnabled() {
+		return LaborCraftConfig.get().herder.shearSheep;
 	}
 
 	private boolean shouldDeliver() {
@@ -312,12 +331,39 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 		if (!tool.is(Items.SHEARS)) {
 			if (hasWoolly) {
+				if (level.getGameTime() >= nextShearLog) {
+					nextShearLog = level.getGameTime() + 100L;
+					LaborCraft.LOGGER.info(
+							"[herder][shear] blocked: tool={} woolly=true sheep={}",
+							tool.getItem(),
+							herd.getOrDefault(HerderAnimals.Species.SHEEP, List.of()).size()
+					);
+				}
 				notifyOnce(level, "laborcraft.ui.worker.task.need_shears");
 			}
 			return false;
 		}
 		if (!hasWoolly) {
+			if (!herd.getOrDefault(HerderAnimals.Species.SHEEP, List.of()).isEmpty()
+					&& level.getGameTime() >= nextShearLog) {
+				nextShearLog = level.getGameTime() + 100L;
+				LaborCraft.LOGGER.info(
+						"[herder][shear] sheep={} woolly=0 tool={}",
+						herd.getOrDefault(HerderAnimals.Species.SHEEP, List.of()).size(),
+						tool.getItem()
+				);
+			}
 			return false;
+		}
+
+		if (level.getGameTime() >= nextShearLog) {
+			nextShearLog = level.getGameTime() + 100L;
+			LaborCraft.LOGGER.info(
+					"[herder][shear] sheep={} tool={} pos={}",
+					herd.getOrDefault(HerderAnimals.Species.SHEEP, List.of()).size(),
+					tool.getItem(),
+					shortPos(worker.blockPosition())
+			);
 		}
 
 		Sheep target = null;
@@ -345,7 +391,13 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 
 		LaborCraft.LOGGER.info("[herder] sheared sheep at {} with {}", shortPos(target.blockPosition()), tool.getItem());
-		target.shear(level, SoundSource.PLAYERS, tool);
+		try {
+			target.shear(level, SoundSource.PLAYERS, tool);
+		}
+		catch (RuntimeException exception) {
+			LaborCraft.LOGGER.error("[herder] shear failed", exception);
+			return false;
+		}
 		if (tool.isDamageableItem()) {
 			tool.hurtAndBreak(1, worker, EquipmentSlot.MAINHAND);
 		}
@@ -477,6 +529,17 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		ItemStack required = HerderTools.requiredFor(herd);
 		if (required.isEmpty() || HerderTools.matches(worker.toolItem(), required)) {
 			return;
+		}
+
+		if (level.getGameTime() >= nextToolLog) {
+			nextToolLog = level.getGameTime() + 100L;
+			LaborCraft.LOGGER.info(
+					"[herder][tool] required={} current={} slot={} empty={}",
+					required.getItem(),
+					worker.toolItem().getItem(),
+					findToolSlot(required),
+					findEmptySlot()
+			);
 		}
 
 		int slot = findToolSlot(required);
