@@ -174,7 +174,8 @@ public final class LaborCraftWorkerInventoryV2Screen extends QuillScreen {
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		if (pending != null) {
-			return true;
+			// A quantity overlay owns the click; let QuillScreen dispatch it to the overlay first.
+			return super.mouseClicked(event, doubleClick);
 		}
 		if (board == null) {
 			return super.mouseClicked(event, doubleClick);

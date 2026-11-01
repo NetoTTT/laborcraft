@@ -5,7 +5,11 @@ import com.foque.laborcraft.area.EnclosureDescriptor;
 import com.foque.laborcraft.area.EnclosureSpan;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -63,6 +67,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	private BlockPos target;
 	private boolean depositing;
 	private String debugInfo = "";
+	private final Map<UUID, Long> fedUntil = new HashMap<>();
 
 	public HerderBrain(LaborCraftWorker worker) {
 		super(worker, CHECK_INTERVAL);
@@ -333,10 +338,21 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			if (population < 2 || population >= settings.maxPerSpecies) {
 				continue;
 			}
-			List<Animal> adults = HerderAnimals.breedableAdults(level, pen, species);
-			if (adults.size() < 2) {
+			if (HerderAnimals.adultCount(level, pen, species) < 2) {
 				continue;
 			}
+
+			long now = level.getGameTime();
+			List<Animal> candidates = new ArrayList<>();
+			for (Animal adult : HerderAnimals.breedableAdults(level, pen, species)) {
+				if (fedUntil.getOrDefault(adult.getUUID(), 0L) <= now) {
+					candidates.add(adult);
+				}
+			}
+			if (candidates.isEmpty()) {
+				continue;
+			}
+			pruneFed(now);
 
 			if (!hasFood(species)) {
 				withdrawFood(level, station, species);
@@ -345,7 +361,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 				}
 			}
 
-			Animal target = nearest(adults);
+			Animal target = nearest(candidates);
 			if (target == null) {
 				continue;
 			}
@@ -358,11 +374,19 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			}
 			if (consumeFood(species)) {
 				target.setInLove(null);
+				fedUntil.put(target.getUUID(), now + 6000L);
 				worker.getNavigation().stop();
 				return true;
 			}
 		}
 		return false;
+	}
+
+	private void pruneFed(long now) {
+		if (fedUntil.size() < 64) {
+			return;
+		}
+		fedUntil.entrySet().removeIf(entry -> entry.getValue() <= now);
 	}
 
 	private Animal nearest(List<Animal> animals) {

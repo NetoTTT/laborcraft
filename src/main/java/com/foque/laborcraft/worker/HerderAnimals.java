@@ -81,6 +81,17 @@ public final class HerderAnimals {
 		return count;
 	}
 
+	/** Adults of one species, in love or not; breeding needs at least two of them. */
+	public static int adultCount(ServerLevel level, EnclosureDescriptor pen, Species species) {
+		int count = 0;
+		for (Animal animal : penAnimals(level, pen)) {
+			if (speciesOf(animal) == species && !animal.isBaby()) {
+				count++;
+			}
+		}
+		return count;
+	}
+
 	/** Adults of one species that can still fall in love, nearest first. */
 	public static List<Animal> breedableAdults(
 			ServerLevel level, EnclosureDescriptor pen, Species species
