@@ -119,3 +119,11 @@ O ciclo entrar → pastar → sair continua igual, com portão abrindo/fechando 
 - Ao trocar, a ferramenta antiga vai para um slot vazio da mochila; se não houver, vai para o baú de ferramentas.
 - Ferramenta danificada conta como válida (mesmo item, dano ignorado).
 - Ferramenta quebrada é substituída na próxima checagem.
+## Tab Rebanho (por posto)
+
+- Aparece só em posto de pastoreiro.
+- Contagem viva: galinhas, ovelhas, vacas.
+- Toggles: coletar itens, tosquiar, ordenhar, reproduzir, auto-ferramenta.
+- Steppers: máximo/mínimo por espécie e threshold de entrega.
+- Cada controle envia `/laborcraft station herd set <pos> <chave> <valor>` e reabre o payload.
+- Dados ficam em `stations.json` por posto, com defaults copiados do global na criação.

@@ -61,7 +61,8 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	public enum Tab {
 		WORK,
 		CONFIG,
-		STORAGE
+		STORAGE,
+		HERD
 	}
 
 	private static final int PANEL_WIDTH = 480;
@@ -162,14 +163,18 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		QuillFlexBox column = QuillNodes.column(6);
 		column.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
 		column.add(top);
+		List<Component> tabs = new java.util.ArrayList<>(List.of(
+				Component.translatable("laborcraft.ui.station.tab.work"),
+				Component.translatable("laborcraft.ui.station.tab.config"),
+				Component.translatable("laborcraft.ui.station.tab.storage")
+		));
+		if (herder()) {
+			tabs.add(Component.translatable("laborcraft.ui.station.tab.herd"));
+		}
 		column.add(QuillNodes.tabs(
 				theme(),
 				6,
-				List.of(
-						Component.translatable("laborcraft.ui.station.tab.work"),
-						Component.translatable("laborcraft.ui.station.tab.config"),
-						Component.translatable("laborcraft.ui.station.tab.storage")
-				),
+				tabs,
 				tab.ordinal(),
 				index -> switchTab(Tab.values()[index])
 		));
@@ -198,6 +203,10 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 				root.add(QuillNodes.flexible(storageBody(), 1));
 				root.add(storageActions());
 			}
+			case HERD -> {
+				root.add(herdHeader());
+				root.add(QuillNodes.flexible(herdBody(), 1));
+			}
 		}
 
 		setContent(root);
@@ -209,6 +218,100 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		}
 		tab = next;
 		refreshContent();
+	}
+
+	// --- Herd tab ---------------------------------------------------------------------------
+
+	private QuillLayoutNode herdHeader() {
+		OpenStationPayload.HerdView herd = station.herd();
+		if (herd == null) {
+			return control(label(Component.translatable("laborcraft.ui.station.herd.need_pen")).muted());
+		}
+		return control(label(Component.translatable(
+				"laborcraft.ui.station.herd.counts",
+				herd.chickens(),
+				herd.sheep(),
+				herd.cows()
+		)).muted());
+	}
+
+	private QuillLayoutNode herdBody() {
+		OpenStationPayload.HerdView herd = station.herd();
+		QuillFlexBox column = QuillNodes.column(QuillSpacing.SPACE_2);
+		column.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
+		if (herd == null) {
+			column.add(control(label(Component.translatable("laborcraft.ui.station.herd.need_pen")).muted()));
+			return new QuillCardBox(null, column);
+		}
+
+		column.add(toggleRow("laborcraft.ui.station.herd.collect", "collectDrops", herd.collectDrops()));
+		column.add(toggleRow("laborcraft.ui.station.herd.shear", "shearSheep", herd.shearSheep()));
+		column.add(toggleRow("laborcraft.ui.station.herd.milk", "milkCows", herd.milkCows()));
+		column.add(toggleRow("laborcraft.ui.station.herd.breed", "breeding", herd.breeding()));
+		column.add(toggleRow("laborcraft.ui.station.herd.tools", "autoTools", herd.autoTools()));
+		column.add(stepperRow(
+				"laborcraft.ui.station.herd.max",
+				"maxPerSpecies",
+				herd.maxPerSpecies(),
+				1,
+				64
+		));
+		column.add(stepperRow(
+				"laborcraft.ui.station.herd.min",
+				"minPerSpecies",
+				herd.minPerSpecies(),
+				0,
+				herd.maxPerSpecies()
+		));
+		column.add(stepperRow(
+				"laborcraft.ui.station.herd.deliver",
+				"produceDeliverThreshold",
+				herd.produceDeliverThreshold(),
+				1,
+				256
+		));
+		return new QuillCardBox(null, column);
+	}
+
+	private QuillFlexBox toggleRow(String labelKey, String configKey, boolean value) {
+		QuillFlexBox row = QuillNodes.row(QuillSpacing.SPACE_2);
+		row.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
+		row.add(QuillNodes.flexible(control(label(Component.translatable(labelKey)))));
+		row.add(QuillNodes.widget(new QuillButton(
+				0, 0, 96, 20,
+				Component.translatable(value
+						? "laborcraft.ui.station.herd.on"
+						: "laborcraft.ui.station.herd.off"),
+				value ? QuillButton.Variant.PRIMARY : QuillButton.Variant.SECONDARY,
+				() -> setHerd(configKey, String.valueOf(!value))
+		), 96, 20));
+		return row;
+	}
+
+	private QuillFlexBox stepperRow(String labelKey, String configKey, int value, int min, int max) {
+		QuillFlexBox row = QuillNodes.row(QuillSpacing.SPACE_2);
+		row.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
+		row.add(QuillNodes.flexible(control(label(Component.translatable(labelKey)))));
+		row.add(QuillNodes.widget(new QuillButton(
+				0, 0, 24, 20,
+				Component.literal("-"),
+				QuillButton.Variant.GHOST,
+				() -> setHerd(configKey, String.valueOf(Math.max(min, value - 1)))
+		), 24, 20));
+		row.add(control(label(Component.literal(String.valueOf(value))).color(TITLE)));
+		row.add(QuillNodes.widget(new QuillButton(
+				0, 0, 24, 20,
+				Component.literal("+"),
+				QuillButton.Variant.GHOST,
+				() -> setHerd(configKey, String.valueOf(Math.min(max, value + 1)))
+		), 24, 20));
+		return row;
+	}
+
+	private void setHerd(String configKey, String value) {
+		LaborCraftUiActions.run(
+				LaborCraftCommands.STATION_HERD_SET + " " + posString() + " " + configKey + " " + value
+		);
 	}
 
 	// --- Work tab ---------------------------------------------------------------------------

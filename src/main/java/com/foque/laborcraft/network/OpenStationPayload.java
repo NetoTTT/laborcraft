@@ -8,6 +8,8 @@ import com.foque.laborcraft.area.EnclosureSpan;
 import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.economy.CurrencyProviders;
 import com.foque.laborcraft.entity.LaborCraftWorker;
+import com.foque.laborcraft.worker.HerderAnimals;
+import com.foque.laborcraft.worker.HerdSettings;
 import com.foque.laborcraft.worker.StationRegistry;
 import com.foque.laborcraft.worker.WorkerOwnership;
 import java.util.ArrayList;
@@ -44,8 +46,23 @@ public record OpenStationPayload(
 		List<AreaView> ownAreas,
 		List<AreaView> areas,
 		List<BlockPos> otherPosts,
-		List<StorageView> storage
+		List<StorageView> storage,
+		HerdView herd
 ) implements CustomPacketPayload {
+	public record HerdView(
+			int chickens,
+			int sheep,
+			int cows,
+			boolean collectDrops,
+			boolean shearSheep,
+			boolean milkCows,
+			boolean breeding,
+			boolean autoTools,
+			int maxPerSpecies,
+			int minPerSpecies,
+			int produceDeliverThreshold
+	) {
+	}
 	public static final Type<OpenStationPayload> TYPE = new Type<>(LaborCraft.id("open_station"));
 	public static final StreamCodec<RegistryFriendlyByteBuf, OpenStationPayload> CODEC = StreamCodec.of(
 			(buffer, payload) -> {
@@ -117,6 +134,21 @@ public record OpenStationPayload(
 					buffer.writeVarInt(view.distance());
 					buffer.writeBoolean(view.valid());
 					buffer.writeUtf(view.blockKey(), 256);
+				}
+				buffer.writeBoolean(payload.herd() != null);
+				if (payload.herd() != null) {
+					HerdView herd = payload.herd();
+					buffer.writeVarInt(herd.chickens());
+					buffer.writeVarInt(herd.sheep());
+					buffer.writeVarInt(herd.cows());
+					buffer.writeBoolean(herd.collectDrops());
+					buffer.writeBoolean(herd.shearSheep());
+					buffer.writeBoolean(herd.milkCows());
+					buffer.writeBoolean(herd.breeding());
+					buffer.writeBoolean(herd.autoTools());
+					buffer.writeVarInt(herd.maxPerSpecies());
+					buffer.writeVarInt(herd.minPerSpecies());
+					buffer.writeVarInt(herd.produceDeliverThreshold());
 				}
 			},
 			buffer -> {
@@ -200,10 +232,26 @@ public record OpenStationPayload(
 							buffer.readUtf(256)
 					));
 				}
+				HerdView herd = null;
+				if (buffer.readBoolean()) {
+					herd = new HerdView(
+							buffer.readVarInt(),
+							buffer.readVarInt(),
+							buffer.readVarInt(),
+							buffer.readBoolean(),
+							buffer.readBoolean(),
+							buffer.readBoolean(),
+							buffer.readBoolean(),
+							buffer.readBoolean(),
+							buffer.readVarInt(),
+							buffer.readVarInt(),
+							buffer.readVarInt()
+					);
+				}
 				return new OpenStationPayload(
 						pos, mode, balanceText, jobId, enclosure, enclosureValid, zone, List.copyOf(zones), maxRadius, verticalRadius, bound,
 						List.copyOf(workers), List.copyOf(ownAreas), List.copyOf(areas),
-						List.copyOf(otherPosts), List.copyOf(storage)
+						List.copyOf(otherPosts), List.copyOf(storage), herd
 				);
 			}
 	);
@@ -256,6 +304,37 @@ public record OpenStationPayload(
 					&& scan.gatePositions().size() == station.enclosure().gates().size();
 		}
 
+		HerdView herdView = null;
+		boolean herder = com.foque.laborcraft.job.JobTypes.HERDER.id().equals(station.jobId())
+				|| (station.jobId().isBlank()
+						&& bound != null
+						&& com.foque.laborcraft.job.JobTypes.HERDER.id().equals(bound.jobId()));
+		if (herder) {
+			HerdSettings settings = StationRegistry.herd(server, station);
+			int chickens = 0;
+			int sheep = 0;
+			int cows = 0;
+			if (station.enclosure() != null) {
+				var snapshot = HerderAnimals.snapshot((ServerLevel) player.level(), station.enclosure());
+				chickens = HerderAnimals.count(snapshot, HerderAnimals.Species.CHICKEN);
+				sheep = HerderAnimals.count(snapshot, HerderAnimals.Species.SHEEP);
+				cows = HerderAnimals.count(snapshot, HerderAnimals.Species.COW);
+			}
+			herdView = new HerdView(
+					chickens,
+					sheep,
+					cows,
+					settings.collectDrops,
+					settings.shearSheep,
+					settings.milkCows,
+					settings.breeding,
+					settings.autoTools,
+					settings.maxPerSpecies,
+					settings.minPerSpecies,
+					settings.produceDeliverThreshold
+			);
+		}
+
 		return new OpenStationPayload(
 				station.pos(),
 				station.mode().name(),
@@ -274,7 +353,8 @@ public record OpenStationPayload(
 				zoneAreaViews(station, false),
 				nearbyAreas(nearby),
 				nearby.stream().map(StationRegistry.Station::pos).toList(),
-				storageViews(player, station)
+				storageViews(player, station),
+				herdView
 		);
 	}
 
