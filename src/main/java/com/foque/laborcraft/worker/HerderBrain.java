@@ -67,6 +67,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	private boolean depositing;
 	private String debugInfo = "";
 	private final Map<UUID, Long> fedUntil = new HashMap<>();
+	private HerdSettings settings = HerdSettings.defaults();
 	private long nextDebugLog;
 	private long nextShearLog;
 	private long nextToolLog;
@@ -104,6 +105,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 
 		closeIdleGates(level, pen);
+		settings = StationRegistry.herd(level.getServer(), station);
 
 		if (level.getGameTime() < retryAt) {
 			worker.getNavigation().stop();
@@ -187,21 +189,21 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return;
 		}
 
-		if (LaborCraftConfig.get().herder.collectDrops && shouldDeliver()) {
+		if (settings.collectDrops && shouldDeliver()) {
 			depositing = true;
 			return;
 		}
 
 		// Shearing first: breeding can keep the worker chasing animals and starve the shears.
-		if (LaborCraftConfig.get().herder.shearSheep && tryShear(level, herd)) {
+		if (settings.shearSheep && tryShear(level, herd)) {
 			return;
 		}
 
-		if (LaborCraftConfig.get().herder.breeding && tryBreed(level, pen, station, herd)) {
+		if (settings.breeding && tryBreed(level, pen, station, herd)) {
 			return;
 		}
 
-		if (LaborCraftConfig.get().herder.collectDrops) {
+		if (settings.collectDrops) {
 			ItemEntity drop = findPickup(level, pen);
 			if (drop != null) {
 				collectItem(drop);
@@ -219,12 +221,12 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	}
 
 	private boolean shearEnabled() {
-		return LaborCraftConfig.get().herder.shearSheep;
+		return settings.shearSheep;
 	}
 
 	private boolean shouldDeliver() {
 		int produce = HerderStorage.countProduce(worker);
-		if (produce >= Math.max(1, LaborCraftConfig.get().herder.produceDeliverThreshold)) {
+		if (produce >= Math.max(1, settings.produceDeliverThreshold)) {
 			return true;
 		}
 		return produce > 0 && findEmptySlot() < 0;
@@ -412,7 +414,6 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			StationRegistry.Station station,
 			Map<HerderAnimals.Species, List<Animal>> herd
 	) {
-		LaborCraftConfig.HerderSettings settings = LaborCraftConfig.get().herder;
 		for (HerderAnimals.Species species : HerderAnimals.Species.values()) {
 			int population = HerderAnimals.count(herd, species);
 			if (population < 2 || population >= settings.maxPerSpecies) {
@@ -523,7 +524,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			StationRegistry.Station station,
 			Map<HerderAnimals.Species, List<Animal>> herd
 	) {
-		if (!LaborCraftConfig.get().herder.autoTools) {
+		if (!settings.autoTools) {
 			return;
 		}
 		ItemStack required = HerderTools.requiredFor(herd);

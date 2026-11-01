@@ -36,6 +36,7 @@ public final class StationRegistry {
 	private static StationRegistry instance;
 
 	private final List<Station> stations = new ArrayList<>();
+	private final java.util.Map<String, HerdSettings> herds = new java.util.HashMap<>();
 	private Path file;
 
 	private StationRegistry() {
@@ -296,6 +297,26 @@ public final class StationRegistry {
 		}
 	}
 
+	/** Per-station herder rules; absent means defaults copied from the server config. */
+	public static HerdSettings herd(MinecraftServer server, Station station) {
+		if (station == null) {
+			return HerdSettings.defaults();
+		}
+		return load(server).herdOf(station.id());
+	}
+
+	private HerdSettings herdOf(String stationId) {
+		return herds.getOrDefault(stationId, HerdSettings.defaults());
+	}
+
+	public static void setHerd(MinecraftServer server, Station station, HerdSettings settings) {
+		StationRegistry registry = load(server);
+		HerdSettings stored = settings == null ? HerdSettings.defaults() : settings.copy();
+		stored.clamp();
+		registry.herds.put(station.id(), stored);
+		registry.save();
+	}
+
 	public static void setEnclosure(MinecraftServer server, Station station, EnclosureDescriptor enclosure) {
 		StationRegistry registry = load(server);
 		if (registry.replace(station.withEnclosure(enclosure))) {
@@ -539,6 +560,9 @@ public final class StationRegistry {
 						entry.jobId == null ? "" : entry.jobId,
 						readEnclosure(entry.dimension, entry.enclosure)
 				));
+				if (entry.herd != null) {
+					herds.put(entry.id == null ? "laborcraft:station/?" : entry.id, readHerd(entry.herd));
+				}
 			}
 		} catch (IOException | RuntimeException exception) {
 			LaborCraft.LOGGER.error("Falha ao ler os postos {}", file, exception);
@@ -582,6 +606,7 @@ public final class StationRegistry {
 			entry.createdAt = station.createdAt();
 			entry.jobId = station.jobId();
 			entry.enclosure = writeEnclosure(station.enclosure());
+			entry.herd = writeHerd(herds.get(station.id()));
 			data.stations.add(entry);
 		}
 
@@ -595,8 +620,56 @@ public final class StationRegistry {
 		}
 	}
 
-	private static EnclosureDescriptor readEnclosure(String dimension, EnclosureData data) {
+	private static HerdSettings readHerd(HerdData data) {
+		HerdSettings settings = HerdSettings.defaults();
 		if (data == null) {
+			return settings;
+		}
+		if (data.collectDrops != null) {
+			settings.collectDrops = data.collectDrops;
+		}
+		if (data.shearSheep != null) {
+			settings.shearSheep = data.shearSheep;
+		}
+		if (data.milkCows != null) {
+			settings.milkCows = data.milkCows;
+		}
+		if (data.breeding != null) {
+			settings.breeding = data.breeding;
+		}
+		if (data.autoTools != null) {
+			settings.autoTools = data.autoTools;
+		}
+		if (data.maxPerSpecies != null) {
+			settings.maxPerSpecies = data.maxPerSpecies;
+		}
+		if (data.minPerSpecies != null) {
+			settings.minPerSpecies = data.minPerSpecies;
+		}
+		if (data.produceDeliverThreshold != null) {
+			settings.produceDeliverThreshold = data.produceDeliverThreshold;
+		}
+		settings.clamp();
+		return settings;
+	}
+
+	private static HerdData writeHerd(HerdSettings settings) {
+		if (settings == null) {
+			return null;
+		}
+		HerdData data = new HerdData();
+		data.collectDrops = settings.collectDrops;
+		data.shearSheep = settings.shearSheep;
+		data.milkCows = settings.milkCows;
+		data.breeding = settings.breeding;
+		data.autoTools = settings.autoTools;
+		data.maxPerSpecies = settings.maxPerSpecies;
+		data.minPerSpecies = settings.minPerSpecies;
+		data.produceDeliverThreshold = settings.produceDeliverThreshold;
+		return data;
+	}
+
+	private static EnclosureDescriptor readEnclosure(String dimension, EnclosureData data) {		if (data == null) {
 			return null;
 		}
 
@@ -894,6 +967,18 @@ public final class StationRegistry {
 		private long createdAt;
 		private String jobId;
 		private EnclosureData enclosure;
+		private HerdData herd;
+	}
+
+	private static final class HerdData {
+		private Boolean collectDrops;
+		private Boolean shearSheep;
+		private Boolean milkCows;
+		private Boolean breeding;
+		private Boolean autoTools;
+		private Integer maxPerSpecies;
+		private Integer minPerSpecies;
+		private Integer produceDeliverThreshold;
 	}
 
 	private static final class EnclosureData {

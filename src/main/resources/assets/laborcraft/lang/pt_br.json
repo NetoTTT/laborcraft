@@ -537,6 +537,8 @@
 	"laborcraft.station.zone.clip.blocked": "A seleção não tem área livre (toda coberta por zonas/blocos vizinhos).",
 	"laborcraft.station.zone.clip.too_complex": "O recorte gerou retângulos demais; desenhe uma área menor.",
 	"laborcraft.station.zone.none": "Este posto não tem uma zona desenhada.",
+	"laborcraft.station.herd.set": "Rebanho: %s = %s",
+	"laborcraft.station.herd.unknown": "Opção de rebanho desconhecida: %s",
 	"laborcraft.station.enclosure.set": "Cercado aplicado: %s blocos, %s portão(ões).",
 	"laborcraft.station.enclosure.invalid": "Não é um cercado válido: %s",
 	"laborcraft.station.enclosure.invalid.area": "Não é um cercado válido (área interna %s blocos): %s",
