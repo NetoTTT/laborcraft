@@ -60,6 +60,8 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 	private UUID dropId;
 	private boolean sawDryFarmland;
 	private boolean sawGrowingCrops;
+	private boolean sawMature;
+	private boolean missingSeeds;
 	private int dropTicks;
 	private FarmerSettings settings = FarmerSettings.defaults();
 	private long lastWaterWarning;
@@ -71,13 +73,12 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 	@Override
 	protected void tickJob(ServerLevel level, StationRegistry.Station station) {
 		settings = StationRegistry.farmer(level.getServer(), station);
-		if (FarmerStorage.count(worker, FarmerStorage::isSeed) <= 0) {
+		missingSeeds = FarmerStorage.count(worker, FarmerStorage::isSeed) <= 0;
+		if (missingSeeds) {
 			FarmerStorage.withdraw(level, station, worker, settings.useBoneMeal);
-			if (FarmerStorage.count(worker, FarmerStorage::isSeed) <= 0) {
-				pause(level, "laborcraft.ui.worker.task.need_seeds");
-				return;
-			}
+			missingSeeds = FarmerStorage.count(worker, FarmerStorage::isSeed) <= 0;
 		}
+		// No early pause: mature wheat can be harvested and replanted with its own seeds.
 
 		if (settings.useComposter) {
 			int seeds = FarmerStorage.count(worker, FarmerStorage::isSeed);
@@ -111,6 +112,10 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 		}
 
 		if (target == null) {
+			if (missingSeeds && !sawMature) {
+				pause(level, "laborcraft.ui.worker.task.need_seeds");
+				return;
+			}
 			if (waterPolicy().equals("require") && sawDryFarmland && !sawGrowingCrops) {
 				warnNeedWater(level);
 				idle(station);
@@ -176,12 +181,31 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 		String notice = worker.workNotice();
 		return switch (notice == null ? "" : notice) {
 			case "laborcraft.ui.worker.task.need_seeds" -> FarmerStorage.count(worker, FarmerStorage::isSeed) > 0
-					|| hasSeedInStorage(level, station);
+					|| hasSeedInStorage(level, station)
+					|| hasMatureCrop(level, station);
 			case "laborcraft.ui.worker.task.no_chest" -> !WorkerStorage.linked(level, station, false).isEmpty();
 			case "laborcraft.ui.worker.task.chest_full" -> hasContainerRoom(level, station);
 			default -> false;
 		};
 	}
+	private boolean hasMatureCrop(ServerLevel level, StationRegistry.Station station) {
+		int[] bounds = workBounds(station);
+		for (int x = bounds[0]; x <= bounds[1]; x++) {
+			for (int z = bounds[2]; z <= bounds[3]; z++) {
+				for (int y = bounds[4]; y <= bounds[5]; y++) {
+					BlockPos pos = new BlockPos(x, y, z);
+					if (!level.hasChunkAt(pos) || !StationAreas.zoneContains(station, pos)) {
+						continue;
+					}
+					if (isMatureCrop(level.getBlockState(pos))) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
 	private static boolean hasSeedInStorage(ServerLevel level, StationRegistry.Station station) {
 		for (Container container : WorkerStorage.linked(level, station, true)) {
 			for (int slot = 0; slot < container.getContainerSize(); slot++) {
@@ -358,6 +382,7 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 		boolean raining = level.isRaining();
 		sawDryFarmland = false;
 		sawGrowingCrops = false;
+		sawMature = false;
 		long now = level.getGameTime();
 
 		for (int x = bounds[0]; x <= bounds[1]; x++) {
@@ -382,6 +407,7 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 						continue;
 					}
 					if (isMatureCrop(state)) {
+						sawMature = true;
 						if (distance < bestCropDistance) {
 							bestCropDistance = distance;
 							bestCrop = new WorkTarget(pos, Action.HARVEST, findStand(level, pos));

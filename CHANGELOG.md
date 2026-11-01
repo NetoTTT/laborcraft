@@ -41,6 +41,7 @@ Núcleo de IA por emprego e correção das portas.
 - Trocar o emprego do posto atualiza a UI na hora.
 - Especialização do posto volta a ser definida pelo trabalhador: desvincular limpa o emprego; o próximo vínculo adota o emprego dele. Botão de alternância removido.
 - Mudar o emprego de um trabalhador vinculado atualiza o emprego do posto.
+- Fazendeiro não pausa por falta de sementes se há trigo maduro para colher; a colheita fornece as sementes.
 - Pastoreiro troca de ferramenta sozinho (mochila → baú TOOLS), guardando a antiga em slot livre ou no baú.
 - Pastoreiro fica dentro do cercado e só sai para entregar (`produceDeliverThreshold`) ou no fim do expediente.
 - Tosquia: o pastoreiro usa tesoura em ovelha adulta com lã, gasta durabilidade e coleta a lã.
