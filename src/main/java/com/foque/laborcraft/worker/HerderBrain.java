@@ -59,6 +59,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	private Phase phase = Phase.ENTER;
 	private int pathTicks;
 	private int failedPaths;
+	private int failedCycles;
 	private int nodeStuckTicks;
 	private int lastNodeIndex = -1;
 	private long retryAt;
@@ -149,6 +150,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	private void tickEnter(ServerLevel level, EnclosureDescriptor pen, BlockPos gate, boolean inside) {
 		if (inside) {
 			phase = Phase.GRAZE;
+			reachedGoal();
 			resetAttempt();
 			return;
 		}
@@ -164,6 +166,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		follow(level, entry);
 		if (pen.contains(worker.blockPosition())) {
 			phase = Phase.GRAZE;
+			reachedGoal();
 			resetAttempt();
 		}
 	}
@@ -246,7 +249,16 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		depositing = false;
 		resetAttempt();
 		retryAt = level.getGameTime() + RETRY_TICKS;
-		notifyOnce(level, "laborcraft.ui.worker.task.pen_unreachable");
+		failedCycles++;
+		// A single failed path is normal while a gate/path settles; warn only after several cycles.
+		if (failedCycles >= 3) {
+			notifyOnce(level, "laborcraft.ui.worker.task.pen_unreachable");
+		}
+	}
+
+	private void reachedGoal() {
+		failedCycles = 0;
+		failedPaths = 0;
 	}
 
 	private void notifyOnce(ServerLevel level, String key) {
