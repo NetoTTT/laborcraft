@@ -1,7 +1,8 @@
 package com.foque.laborcraft.worker;
 
-import com.foque.laborcraft.area.EnclosureDescriptor;
-import net.minecraft.server.level.ServerLevel;
+import java.util.List;
+import java.util.Map;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -14,8 +15,8 @@ public final class HerderTools {
 	private HerderTools() {
 	}
 
-	public static ItemStack requiredFor(ServerLevel level, EnclosureDescriptor pen) {
-		if (HerderAnimals.count(level, pen, HerderAnimals.Species.SHEEP) > 0) {
+	public static ItemStack requiredFor(Map<HerderAnimals.Species, List<Animal>> herd) {
+		if (HerderAnimals.has(herd, HerderAnimals.Species.SHEEP)) {
 			return new ItemStack(Items.SHEARS);
 		}
 		return ItemStack.EMPTY;

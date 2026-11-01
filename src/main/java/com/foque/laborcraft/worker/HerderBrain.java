@@ -16,31 +16,29 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.level.pathfinder.Path;
 
 /**
- * Herder test brain: while on duty, the worker walks into the pen through its gate, wanders the
- * interior, then leaves again and repeats.
+ * Herder brain: keeps the worker inside the pen while on duty, breeds the herd, collects drops and
+ * only leaves to deliver produce or when the shift ends. Entering and leaving use the gate through
+ * vanilla navigation (the mixin maps closed gates to {@code WALKABLE_DOOR}); the gate is opened by
+ * {@code OpenFenceGateGoal} only while the path steps on it.
  *
- * <p>Pathfinding crosses the closed gate because {@code WalkNodeEvaluatorMixin} maps it to
- * {@code WALKABLE_DOOR}. {@code OpenFenceGateGoal} opens the gate only while the path steps on it
- * and closes it two blocks after crossing, so a worker never opens a gate just by walking near.</p>
+ * <p>Gates are kept closed by a watchdog. The worker stays inside instead of looping in and out,
+ * because frequent gate openings let animals escape.</p>
  */
 public final class HerderBrain extends AbstractWorkerBrain {
 	private static final int CHECK_INTERVAL = 10;
 	private static final int PATH_TIMEOUT = 200;
-	private static final int GRAZE_TICKS = 240;
-	private static final int OUTSIDE_TICKS = 100;
 	private static final int RETRY_TICKS = 200;
 	private static final int NOTICE_COOLDOWN = 600;
 	private static final Direction[] HORIZONTAL = {
@@ -52,13 +50,10 @@ public final class HerderBrain extends AbstractWorkerBrain {
 
 	private enum Phase {
 		ENTER,
-		GRAZE,
-		EXIT,
-		WAIT_OUTSIDE
+		GRAZE
 	}
 
 	private Phase phase = Phase.ENTER;
-	private int phaseTicks;
 	private int pathTicks;
 	private int failedPaths;
 	private int nodeStuckTicks;
@@ -109,47 +104,35 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return;
 		}
 
-		ensureTool(level, pen, station);
-
 		boolean inside = pen.contains(worker.blockPosition());
 		BlockPos gate = nearestGate(pen, worker.blockPosition());
 		Direction inward = insideDirection(pen, gate);
 		debugInfo = "pos=" + shortPos(worker.blockPosition())
 				+ " inside=" + inside
 				+ " spans=" + pen.spans().size()
-				+ " bbox=" + shortPos(pen.min()) + ".." + shortPos(pen.max())
 				+ " gate=" + shortPos(gate)
 				+ " inward=" + (inward == null ? "none" : inward.getName());
-
 		if (inward == null) {
 			fail(level);
 			return;
 		}
 
+		Map<HerderAnimals.Species, List<Animal>> herd = HerderAnimals.snapshot(level, pen);
+		ensureTool(level, station, herd);
+
 		switch (phase) {
-			case EXIT -> tickExit(level, pen, gate, inward, inside);
-			case WAIT_OUTSIDE -> {
-				phaseTicks -= CHECK_INTERVAL;
-				worker.getNavigation().stop();
-				if (phaseTicks <= 0) {
-					resetAttempt();
-					phase = Phase.ENTER;
-				}
-			}
 			case ENTER -> tickEnter(level, pen, gate, inside);
-			case GRAZE -> tickGraze(level, pen, station, inside);
+			case GRAZE -> tickGraze(level, pen, station, inside, herd);
 		}
 	}
 
 	private void tickEnter(ServerLevel level, EnclosureDescriptor pen, BlockPos gate, boolean inside) {
 		if (inside) {
 			phase = Phase.GRAZE;
-			phaseTicks = GRAZE_TICKS;
 			resetAttempt();
 			return;
 		}
 
-		// Aim deep inside the pen, so the path goes through the gate instead of stopping next to it.
 		BlockPos entry = randomInteriorThread(level, pen);
 		if (entry == null) {
 			entry = insideStand(level, pen, gate);
@@ -161,71 +144,44 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		follow(level, entry);
 		if (pen.contains(worker.blockPosition())) {
 			phase = Phase.GRAZE;
-			phaseTicks = GRAZE_TICKS;
-			resetAttempt();
-		}
-	}
-
-	private void tickExit(
-			ServerLevel level, EnclosureDescriptor pen, BlockPos gate, Direction inward, boolean inside
-	) {
-		if (!inside) {
-			phase = Phase.WAIT_OUTSIDE;
-			phaseTicks = OUTSIDE_TICKS;
-			resetAttempt();
-			return;
-		}
-
-		BlockPos outside = outsideStand(level, pen, gate, inward);
-		if (outside == null) {
-			fail(level);
-			return;
-		}
-		follow(level, outside);
-		if (!pen.contains(worker.blockPosition())) {
-			phase = Phase.WAIT_OUTSIDE;
-			phaseTicks = OUTSIDE_TICKS;
 			resetAttempt();
 		}
 	}
 
 	private void tickGraze(
-			ServerLevel level, EnclosureDescriptor pen, StationRegistry.Station station, boolean inside
+			ServerLevel level,
+			EnclosureDescriptor pen,
+			StationRegistry.Station station,
+			boolean inside,
+			Map<HerderAnimals.Species, List<Animal>> herd
 	) {
-		if (!inside) {
-			resetAttempt();
+		if (!inside && !depositing) {
 			phase = Phase.ENTER;
-			return;
-		}
-
-		phaseTicks -= CHECK_INTERVAL;
-		if (phaseTicks <= 0) {
 			resetAttempt();
-			phase = Phase.EXIT;
 			return;
 		}
 
-		if (LaborCraftConfig.get().herder.breeding && tryBreed(level, pen, station)) {
+		if (depositing) {
+			if (depositProduce(level, station)) {
+				depositing = false;
+				target = null;
+			}
+			return;
+		}
+
+		if (LaborCraftConfig.get().herder.collectDrops && shouldDeliver()) {
+			depositing = true;
+			return;
+		}
+
+		if (LaborCraftConfig.get().herder.breeding && tryBreed(level, pen, station, herd)) {
 			return;
 		}
 
 		if (LaborCraftConfig.get().herder.collectDrops) {
-			if (depositing) {
-				if (depositProduce(level, station)) {
-					depositing = false;
-					target = null;
-				}
-				return;
-			}
-
 			ItemEntity drop = findPickup(level, pen);
 			if (drop != null) {
 				collectItem(drop);
-				return;
-			}
-
-			if (HerderStorage.hasProduce(worker)) {
-				depositing = true;
 				return;
 			}
 		}
@@ -239,18 +195,26 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 	}
 
+	private boolean shouldDeliver() {
+		int produce = HerderStorage.countProduce(worker);
+		if (produce >= Math.max(1, LaborCraftConfig.get().herder.produceDeliverThreshold)) {
+			return true;
+		}
+		return produce > 0 && findEmptySlot() < 0;
+	}
+
 	private void resetAttempt() {
 		failedPaths = 0;
 		pathTicks = 0;
 		nodeStuckTicks = 0;
 		lastNodeIndex = -1;
 		target = null;
-		depositing = false;
 	}
 
 	/** Retries after a cooldown and reports the problem at most once per 30 s, never per tick. */
 	private void fail(ServerLevel level) {
 		worker.getNavigation().stop();
+		depositing = false;
 		resetAttempt();
 		retryAt = level.getGameTime() + RETRY_TICKS;
 		notifyOnce(level, "laborcraft.ui.worker.task.pen_unreachable");
@@ -328,26 +292,26 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 	}
 
-	/**
-	 * Feeds one adult when its species is below the cap and at least two adults can breed. Two
-	 * consecutive calls put two animals in love; vanilla handles the baby and the cooldown.
-	 */
+	/** Feeds one adult when its species is below the cap and at least two adults can breed. */
 	private boolean tryBreed(
-			ServerLevel level, EnclosureDescriptor pen, StationRegistry.Station station
+			ServerLevel level,
+			EnclosureDescriptor pen,
+			StationRegistry.Station station,
+			Map<HerderAnimals.Species, List<Animal>> herd
 	) {
 		LaborCraftConfig.HerderSettings settings = LaborCraftConfig.get().herder;
 		for (HerderAnimals.Species species : HerderAnimals.Species.values()) {
-			int population = HerderAnimals.count(level, pen, species);
+			int population = HerderAnimals.count(herd, species);
 			if (population < 2 || population >= settings.maxPerSpecies) {
 				continue;
 			}
-			if (HerderAnimals.adultCount(level, pen, species) < 2) {
+			if (HerderAnimals.adultCount(herd, species) < 2) {
 				continue;
 			}
 
 			long now = level.getGameTime();
 			List<Animal> candidates = new ArrayList<>();
-			for (Animal adult : HerderAnimals.breedableAdults(level, pen, species)) {
+			for (Animal adult : HerderAnimals.breedableAdults(herd, species)) {
 				if (fedUntil.getOrDefault(adult.getUUID(), 0L) <= now) {
 					candidates.add(adult);
 				}
@@ -385,14 +349,71 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		return false;
 	}
 
+	private void pruneFed(long now) {
+		if (fedUntil.size() < 64) {
+			return;
+		}
+		fedUntil.entrySet().removeIf(entry -> entry.getValue() <= now);
+	}
+
+	private Animal nearest(List<Animal> animals) {
+		Animal best = null;
+		double bestDistance = Double.MAX_VALUE;
+		for (Animal animal : animals) {
+			double distance = worker.position().distanceToSqr(animal.position());
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				best = animal;
+			}
+		}
+		return best;
+	}
+
+	private boolean hasFood(HerderAnimals.Species species) {
+		return findFoodSlot(species) >= 0;
+	}
+
+	private int findFoodSlot(HerderAnimals.Species species) {
+		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {
+			if (species.isFood(worker.inventoryItem(slot))) {
+				return slot;
+			}
+		}
+		return -1;
+	}
+
+	private boolean consumeFood(HerderAnimals.Species species) {
+		int slot = findFoodSlot(species);
+		if (slot < 0) {
+			return false;
+		}
+		worker.inventoryItem(slot).shrink(1);
+		return true;
+	}
+
+	private void withdrawFood(
+			ServerLevel level, StationRegistry.Station station, HerderAnimals.Species species
+	) {
+		var got = WorkerStorage.extract(level, station, species::isFood, 16);
+		if (got.isEmpty()) {
+			return;
+		}
+		var leftover = FarmerStorage.addToWorker(worker, got);
+		if (!leftover.isEmpty()) {
+			WorkerStorage.insert(level, station, leftover);
+		}
+	}
+
 	/** Swaps the tool slot to what the pen needs, using the backpack first and TOOLS chests after. */
 	private void ensureTool(
-			ServerLevel level, EnclosureDescriptor pen, StationRegistry.Station station
+			ServerLevel level,
+			StationRegistry.Station station,
+			Map<HerderAnimals.Species, List<Animal>> herd
 	) {
 		if (!LaborCraftConfig.get().herder.autoTools) {
 			return;
 		}
-		ItemStack required = HerderTools.requiredFor(level, pen);
+		ItemStack required = HerderTools.requiredFor(herd);
 		if (required.isEmpty() || HerderTools.matches(worker.toolItem(), required)) {
 			return;
 		}
@@ -464,61 +485,6 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		return -1;
 	}
 
-	private void pruneFed(long now) {
-		if (fedUntil.size() < 64) {
-			return;
-		}
-		fedUntil.entrySet().removeIf(entry -> entry.getValue() <= now);
-	}
-
-	private Animal nearest(List<Animal> animals) {
-		Animal best = null;
-		double bestDistance = Double.MAX_VALUE;
-		for (Animal animal : animals) {
-			double distance = worker.position().distanceToSqr(animal.position());
-			if (distance < bestDistance) {
-				bestDistance = distance;
-				best = animal;
-			}
-		}
-		return best;
-	}
-
-	private boolean hasFood(HerderAnimals.Species species) {
-		return findFoodSlot(species) >= 0;
-	}
-
-	private int findFoodSlot(HerderAnimals.Species species) {
-		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {
-			if (species.isFood(worker.inventoryItem(slot))) {
-				return slot;
-			}
-		}
-		return -1;
-	}
-
-	private boolean consumeFood(HerderAnimals.Species species) {
-		int slot = findFoodSlot(species);
-		if (slot < 0) {
-			return false;
-		}
-		worker.inventoryItem(slot).shrink(1);
-		return true;
-	}
-
-	private void withdrawFood(
-			ServerLevel level, StationRegistry.Station station, HerderAnimals.Species species
-	) {
-		var got = WorkerStorage.extract(level, station, species::isFood, 16);
-		if (got.isEmpty()) {
-			return;
-		}
-		var leftover = FarmerStorage.addToWorker(worker, got);
-		if (!leftover.isEmpty()) {
-			WorkerStorage.insert(level, station, leftover);
-		}
-	}
-
 	private ItemEntity findPickup(ServerLevel level, EnclosureDescriptor pen) {
 		int margin = Math.max(2, LaborCraftConfig.get().herder.eggScanRadius);
 		BlockPos min = pen.min();
@@ -559,8 +525,8 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return;
 		}
 
-		var stack = item.getItem();
-		var leftover = FarmerStorage.addToWorker(worker, stack.copy());
+		ItemStack stack = item.getItem();
+		ItemStack leftover = FarmerStorage.addToWorker(worker, stack.copy());
 		int moved = stack.getCount() - leftover.getCount();
 		if (moved <= 0) {
 			return;
@@ -615,10 +581,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		return null;
 	}
 
-	/**
-	 * Closes pen gates nobody is using. With several gates, a path can cross one and leave another
-	 * open after a retry, phase change or chunk reload; this watchdog closes them all.
-	 */
+	/** Closes pen gates nobody is using. A gate is in use only while a worker's next node is it. */
 	static void closeIdleGates(ServerLevel level, EnclosureDescriptor pen) {
 		if (pen == null) {
 			return;
@@ -645,7 +608,6 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 	}
 
-	/** A gate is in use only while some worker's next path node is exactly that gate. */
 	private static boolean gateInUse(ServerLevel level, BlockPos gate) {
 		AABB box = new AABB(gate).inflate(3.0D);
 		for (LaborCraftWorker other : level.getEntitiesOfClass(LaborCraftWorker.class, box)) {
@@ -693,23 +655,6 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		return null;
 	}
 
-	/** Two blocks outside the gate, so the path keeps moving until the worker is fully through. */
-	private static BlockPos outsideStand(
-			ServerLevel level, EnclosureDescriptor pen, BlockPos gate, Direction inward
-	) {
-		if (!pen.contains(gate.relative(inward))) {
-			return null;
-		}
-		for (int distance = 2; distance >= 1; distance--) {
-			BlockPos stand = standAt(level, gate.relative(inward.getOpposite(), distance));
-			if (stand != null) {
-				return stand;
-			}
-		}
-		return null;
-	}
-
-	/** Picks a walkable column inside the pen. Spans are interior-only, so this never leaves it. */
 	private BlockPos randomInteriorThread(ServerLevel level, EnclosureDescriptor pen) {
 		if (pen.spans().isEmpty()) {
 			return null;
@@ -755,5 +700,6 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		failedPaths = 0;
 		nodeStuckTicks = 0;
 		lastNodeIndex = -1;
+		depositing = false;
 	}
 }

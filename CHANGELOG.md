@@ -36,6 +36,8 @@ Núcleo de IA por emprego e correção das portas.
 - Portão fechado agora é `WALKABLE_DOOR` no avaliador de nós: path atravessa cercado e volta pra casa.
 - Pastoreiro: coleta ovos, sementes, lã, leite e ferramentas do chão do cercado (`herder.collectDrops`).
 - Pastoreiro troca de ferramenta sozinho (mochila → baú TOOLS), guardando a antiga em slot livre ou no baú.
+- Pastoreiro fica dentro do cercado e só sai para entregar (`produceDeliverThreshold`) ou no fim do expediente.
+- Uma varredura de animais por checagem, reutilizada para ferramenta, população e criação.
 - Reprodução: conta animais por espécie no cercado, alimenta casais com a comida vanilla e respeita `maxPerSpecies`.
 - Reprodução: cooldown por animal evita alimentar a mesma galinha em loop; alimenta o segundo adulto.
 - UI da mochila: cliques no overlay de quantidade (Tudo/Confirmar/Cancelar) não são mais engolidos pela tela.

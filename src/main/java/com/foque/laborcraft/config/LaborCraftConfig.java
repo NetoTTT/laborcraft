@@ -298,6 +298,8 @@ public final class LaborCraftConfig {
 		public int minPerSpecies = 3;
 		/** Eggs on the ground are looked up within this radius of the pen. */
 		public int eggScanRadius = 16;
+		/** Leave the pen to deliver once this many produce items are carried. */
+		public int produceDeliverThreshold = 16;
 
 		public HerderSettings() {
 		}
