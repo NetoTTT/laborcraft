@@ -52,7 +52,7 @@ Chaves em `config/laborcraft.json` → `herder`:
 ```json
 "herder": {
   "collectDrops": true,
-  "shearSheep": false,
+  "shearSheep": true,
   "milkCows": false,
   "breeding": false,
   "maxAnimalsPerPen": 12,

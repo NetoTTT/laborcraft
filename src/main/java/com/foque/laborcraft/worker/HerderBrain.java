@@ -18,9 +18,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
@@ -178,6 +181,10 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return;
 		}
 
+		if (LaborCraftConfig.get().herder.shearSheep && tryShear(level, herd)) {
+			return;
+		}
+
 		if (LaborCraftConfig.get().herder.collectDrops) {
 			ItemEntity drop = findPickup(level, pen);
 			if (drop != null) {
@@ -290,6 +297,45 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		if (failedPaths >= 3) {
 			fail(level);
 		}
+	}
+
+	/** Shears the nearest woolly adult if the tool slot already holds shears. */
+	private boolean tryShear(ServerLevel level, Map<HerderAnimals.Species, List<Animal>> herd) {
+		ItemStack tool = worker.toolItem();
+		if (!tool.is(Items.SHEARS)) {
+			return false;
+		}
+
+		Sheep target = null;
+		double bestDistance = Double.MAX_VALUE;
+		for (Animal animal : herd.getOrDefault(HerderAnimals.Species.SHEEP, List.of())) {
+			if (!(animal instanceof Sheep sheep) || !sheep.readyForShearing()) {
+				continue;
+			}
+			double distance = worker.position().distanceToSqr(sheep.position());
+			if (distance < bestDistance) {
+				bestDistance = distance;
+				target = sheep;
+			}
+		}
+		if (target == null) {
+			return false;
+		}
+
+		if (worker.position().distanceToSqr(target.position()) > 2.25D) {
+			if (worker.getNavigation().isDone() || pathTicks <= 0) {
+				worker.getNavigation().moveTo(target.getX(), target.getY(), target.getZ(), 1.0D);
+				pathTicks = PATH_TIMEOUT;
+			}
+			return true;
+		}
+
+		target.shear(level, SoundSource.PLAYERS, tool);
+		if (tool.isDamageableItem()) {
+			tool.hurtAndBreak(1, worker, EquipmentSlot.MAINHAND);
+		}
+		worker.getNavigation().stop();
+		return true;
 	}
 
 	/** Feeds one adult when its species is below the cap and at least two adults can breed. */
@@ -434,6 +480,12 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		ItemStack pulled = WorkerStorage.extractTool(
 				level, station, stack -> HerderTools.matches(stack, required), 1
 		);
+		if (pulled.isEmpty()) {
+			// Fall back to INPUT/MIXED chests, which are common for tools too.
+			pulled = WorkerStorage.extract(
+					level, station, stack -> HerderTools.matches(stack, required), 1
+			);
+		}
 		if (pulled.isEmpty()) {
 			return;
 		}

@@ -289,7 +289,7 @@ public final class LaborCraftConfig {
 	public static final class HerderSettings {
 		public boolean collectDrops = true;
 		public boolean autoTools = true;
-		public boolean shearSheep = false;
+		public boolean shearSheep = true;
 		public boolean milkCows = false;
 		public boolean breeding = true;
 		/** Upper bound per species inside one pen; breeding stops when the count reaches it. */

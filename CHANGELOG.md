@@ -37,6 +37,8 @@ Núcleo de IA por emprego e correção das portas.
 - Pastoreiro: coleta ovos, sementes, lã, leite e ferramentas do chão do cercado (`herder.collectDrops`).
 - Pastoreiro troca de ferramenta sozinho (mochila → baú TOOLS), guardando a antiga em slot livre ou no baú.
 - Pastoreiro fica dentro do cercado e só sai para entregar (`produceDeliverThreshold`) ou no fim do expediente.
+- Tosquia: o pastoreiro usa tesoura em ovelha adulta com lã, gasta durabilidade e coleta a lã.
+- Tesoura é buscada também em baús INPUT/MIXED, não só TOOLS.
 - Uma varredura de animais por checagem, reutilizada para ferramenta, população e criação.
 - Reprodução: conta animais por espécie no cercado, alimenta casais com a comida vanilla e respeita `maxPerSpecies`.
 - Reprodução: cooldown por animal evita alimentar a mesma galinha em loop; alimenta o segundo adulto.
