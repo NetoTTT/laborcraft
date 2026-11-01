@@ -39,7 +39,8 @@ Núcleo de IA por emprego e correção das portas.
 - Tab Lavoura no Posto (fazendeiro): farinha de osso, composteira, excedente de sementes e política de água por posto.
 - Listas de contratação e do posto crescem com o conteúdo (antes só as 3-4 primeiras linhas eram clicáveis).
 - Trocar o emprego do posto atualiza a UI na hora.
-- Botão de emprego no cabeçalho do Trabalho (alterna fazendeiro/pastoreiro); erro de vínculo agora diz que o posto é de outro emprego.
+- Especialização do posto volta a ser definida pelo trabalhador: desvincular limpa o emprego; o próximo vínculo adota o emprego dele. Botão de alternância removido.
+- Mudar o emprego de um trabalhador vinculado atualiza o emprego do posto.
 - Pastoreiro troca de ferramenta sozinho (mochila → baú TOOLS), guardando a antiga em slot livre ou no baú.
 - Pastoreiro fica dentro do cercado e só sai para entregar (`produceDeliverThreshold`) ou no fim do expediente.
 - Tosquia: o pastoreiro usa tesoura em ovelha adulta com lã, gasta durabilidade e coleta a lã.

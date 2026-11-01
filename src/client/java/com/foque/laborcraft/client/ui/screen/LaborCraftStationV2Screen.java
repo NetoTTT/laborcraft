@@ -416,36 +416,7 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		header.add(QuillNodes.widget(filterButton, 104, 18));
 		header.add(QuillNodes.flexible(QuillNodes.spacer()));
 
-		QuillButton jobButton = new QuillButton(
-				0, 0, 128, 18,
-				jobLabel(),
-				QuillButton.Variant.GHOST,
-				this::cycleJob
-		);
-		jobButton.tip(QuillTooltips.of(
-				Component.translatable("laborcraft.ui.station.job"),
-				Component.translatable("laborcraft.ui.station.job.tip"),
-				null
-		));
-		header.add(QuillNodes.widget(jobButton, 128, 18));
 		return header;
-	}
-
-	private Component jobLabel() {
-		if (JobTypes.FARMER.id().equals(station.jobId())) {
-			return Component.translatable("job.laborcraft.farmer");
-		}
-		if (JobTypes.HERDER.id().equals(station.jobId())) {
-			return Component.translatable("job.laborcraft.herder");
-		}
-		return Component.translatable("laborcraft.ui.station.job.none");
-	}
-
-	private void cycleJob() {
-		String next = JobTypes.FARMER.id().equals(station.jobId())
-				? JobTypes.FARMER.id()
-				: JobTypes.HERDER.id();
-		LaborCraftUiActions.run(LaborCraftCommands.STATION_JOB_SET + " " + posString() + " " + next);
 	}
 
 	private QuillLayoutNode workBody() {

@@ -369,6 +369,10 @@ final class WorkerCommands {
 		}
 
 		worker.setJobId(job.id());
+		StationRegistry.Station station = StationRegistry.byWorker(source.getServer(), worker.getUUID());
+		if (station != null) {
+			StationRegistry.setJob(source.getServer(), station, job.id());
+		}
 		OpenWorkerPayload.open(player, worker);
 		source.sendSuccess(
 				() -> Component.translatable("laborcraft.command.worker.assign.success", job.id(), worker.getName()),
