@@ -59,12 +59,17 @@ public final class FarmerStorage {
 	}
 
 	/** Deposits harvest/surplus into the linked output containers; returns how many items moved. */
-	public static int deposit(ServerLevel level, StationRegistry.Station station, LaborCraftWorker worker) {
+	public static int deposit(
+			ServerLevel level,
+			StationRegistry.Station station,
+			LaborCraftWorker worker,
+			FarmerSettings settings
+	) {
 		int keptSeeds = 0;
 		int keptMeal = 0;
 		int moved = 0;
-		int seedKeep = LaborCraftConfig.get().job(worker.jobId()).useComposter
-				? Math.max(SEED_RESERVE, LaborCraftConfig.get().job(worker.jobId()).seedSurplusForCompost)
+		int seedKeep = settings.useComposter
+				? Math.max(SEED_RESERVE, settings.seedSurplusForCompost)
 				: SEED_RESERVE;
 
 		for (int slot = 0; slot < LaborCraftWorker.STORAGE_SLOTS; slot++) {

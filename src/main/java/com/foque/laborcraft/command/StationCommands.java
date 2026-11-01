@@ -7,6 +7,7 @@ import com.foque.laborcraft.config.LaborCraftConfig;
 import com.foque.laborcraft.entity.LaborCraftWorker;
 import com.foque.laborcraft.network.OpenStationPayload;
 import com.foque.laborcraft.network.UiToastPayload;
+import com.foque.laborcraft.worker.FarmerSettings;
 import com.foque.laborcraft.worker.HerdSettings;
 import com.foque.laborcraft.worker.StationRegistry;
 import com.foque.laborcraft.worker.WorkerOwnership;
@@ -128,6 +129,7 @@ final class StationCommands {
 												context.getSource(),
 												BlockPosArgument.getLoadedBlockPos(context, "pos")
 										)))))				.then(herdNode())
+				.then(farmerNode())
 				.then(Commands.literal("maxarea")
 						.then(Commands.argument("pos", BlockPosArgument.blockPos())
 								.executes(context -> stationZoneMax(
@@ -217,6 +219,60 @@ final class StationCommands {
 														StringArgumentType.getString(context, "key"),
 														StringArgumentType.getString(context, "value")
 												))))));
+	}
+
+	private static LiteralArgumentBuilder<CommandSourceStack> farmerNode() {
+		return Commands.literal("farmer")
+				.then(Commands.literal("set")
+						.then(Commands.argument("pos", BlockPosArgument.blockPos())
+								.then(Commands.argument("key", StringArgumentType.word())
+										.suggests((context, builder) -> {
+											for (String key : List.of("useBoneMeal", "useComposter", "seedSurplusForCompost", "waterPolicy")) {
+												builder.suggest(key);
+											}
+											return builder.buildFuture();
+										})
+										.then(Commands.argument("value", StringArgumentType.word())
+												.executes(context -> stationFarmerSet(
+														context.getSource(),
+														BlockPosArgument.getLoadedBlockPos(context, "pos"),
+														StringArgumentType.getString(context, "key"),
+														StringArgumentType.getString(context, "value")
+												))))));
+	}
+
+	private static int stationFarmerSet(
+			CommandSourceStack source, BlockPos pos, String key, String value
+	) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		StationRegistry.Station station = CommandSupport.stationAt(source, pos);
+		if (station == null) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_found"));
+			return 0;
+		}
+		if (!station.isOwner(player.getUUID())) {
+			source.sendFailure(Component.translatable("laborcraft.station.not_owner"));
+			return 0;
+		}
+
+		FarmerSettings settings = StationRegistry.farmer(source.getServer(), station).copy();
+		if (!settings.set(key, value)) {
+			Component failure = Component.translatable("laborcraft.station.herd.unknown", key);
+			source.sendFailure(failure);
+			UiToastPayload.send(player, failure, true);
+			return 0;
+		}
+		settings.clamp();
+		StationRegistry.setFarmer(source.getServer(), station, settings);
+
+		StationRegistry.Station updated = StationRegistry.get(source.getServer(), station.dimension(), pos);
+		if (updated != null) {
+			OpenStationPayload.open(player, updated);
+		}
+		Component success = Component.translatable("laborcraft.station.farmer.set", key, value);
+		UiToastPayload.send(player, success, false);
+			source.sendSuccess(() -> success, true);
+		return 1;
 	}
 
 	private static int stationBind(CommandSourceStack source, BlockPos pos, String rawWorker)

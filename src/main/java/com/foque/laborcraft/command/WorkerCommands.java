@@ -749,7 +749,12 @@ final class WorkerCommands {
 			return 0;
 		}
 
-		int moved = FarmerStorage.deposit(level, station, worker);
+		int moved = FarmerStorage.deposit(
+				level,
+				station,
+				worker,
+				StationRegistry.farmer(source.getServer(), station)
+		);
 		OpenWorkerInventoryPayload.open(player, worker);
 		if (moved <= 0) {
 			source.sendSuccess(

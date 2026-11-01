@@ -36,6 +36,7 @@ Núcleo de IA por emprego e correção das portas.
 - Portão fechado agora é `WALKABLE_DOOR` no avaliador de nós: path atravessa cercado e volta pra casa.
 - Pastoreiro: coleta ovos, sementes, lã, leite e ferramentas do chão do cercado (`herder.collectDrops`).
 - Tab Rebanho no Posto (pastoreiro): contagem por espécie, toggles e limites por posto.
+- Tab Lavoura no Posto (fazendeiro): farinha de osso, composteira, excedente de sementes e política de água por posto.
 - Pastoreiro troca de ferramenta sozinho (mochila → baú TOOLS), guardando a antiga em slot livre ou no baú.
 - Pastoreiro fica dentro do cercado e só sai para entregar (`produceDeliverThreshold`) ou no fim do expediente.
 - Tosquia: o pastoreiro usa tesoura em ovelha adulta com lã, gasta durabilidade e coleta a lã.

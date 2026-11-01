@@ -47,8 +47,16 @@ public record OpenStationPayload(
 		List<AreaView> areas,
 		List<BlockPos> otherPosts,
 		List<StorageView> storage,
-		HerdView herd
+		HerdView herd,
+		FarmerView farmer
 ) implements CustomPacketPayload {
+	public record FarmerView(
+			boolean useBoneMeal,
+			boolean useComposter,
+			int seedSurplusForCompost,
+			String waterPolicy
+	) {
+	}
 	public record HerdView(
 			int chickens,
 			int sheep,
@@ -150,6 +158,14 @@ public record OpenStationPayload(
 					buffer.writeVarInt(herd.minPerSpecies());
 					buffer.writeVarInt(herd.produceDeliverThreshold());
 				}
+				buffer.writeBoolean(payload.farmer() != null);
+				if (payload.farmer() != null) {
+					FarmerView farmer = payload.farmer();
+					buffer.writeBoolean(farmer.useBoneMeal());
+					buffer.writeBoolean(farmer.useComposter());
+					buffer.writeVarInt(farmer.seedSurplusForCompost());
+					buffer.writeUtf(farmer.waterPolicy(), 16);
+				}
 			},
 			buffer -> {
 				BlockPos pos = buffer.readBlockPos();
@@ -248,10 +264,19 @@ public record OpenStationPayload(
 							buffer.readVarInt()
 					);
 				}
+				FarmerView farmer = null;
+				if (buffer.readBoolean()) {
+					farmer = new FarmerView(
+							buffer.readBoolean(),
+							buffer.readBoolean(),
+							buffer.readVarInt(),
+							buffer.readUtf(16)
+					);
+				}
 				return new OpenStationPayload(
 						pos, mode, balanceText, jobId, enclosure, enclosureValid, zone, List.copyOf(zones), maxRadius, verticalRadius, bound,
 						List.copyOf(workers), List.copyOf(ownAreas), List.copyOf(areas),
-						List.copyOf(otherPosts), List.copyOf(storage), herd
+						List.copyOf(otherPosts), List.copyOf(storage), herd, farmer
 				);
 			}
 	);
@@ -335,6 +360,21 @@ public record OpenStationPayload(
 			);
 		}
 
+		FarmerView farmerView = null;
+		boolean farmer = com.foque.laborcraft.job.JobTypes.FARMER.id().equals(station.jobId())
+				|| (station.jobId().isBlank()
+						&& bound != null
+						&& com.foque.laborcraft.job.JobTypes.FARMER.id().equals(bound.jobId()));
+		if (farmer) {
+			var settings = StationRegistry.farmer(server, station);
+			farmerView = new FarmerView(
+					settings.useBoneMeal,
+					settings.useComposter,
+					settings.seedSurplusForCompost,
+					settings.waterPolicy
+			);
+		}
+
 		return new OpenStationPayload(
 				station.pos(),
 				station.mode().name(),
@@ -354,7 +394,8 @@ public record OpenStationPayload(
 				nearbyAreas(nearby),
 				nearby.stream().map(StationRegistry.Station::pos).toList(),
 				storageViews(player, station),
-				herdView
+				herdView,
+				farmerView
 		);
 	}
 

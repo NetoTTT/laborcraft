@@ -61,6 +61,7 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 	private boolean sawDryFarmland;
 	private boolean sawGrowingCrops;
 	private int dropTicks;
+	private FarmerSettings settings = FarmerSettings.defaults();
 	private long lastWaterWarning;
 
 	public FarmerBrain(LaborCraftWorker worker) {
@@ -69,22 +70,23 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 
 	@Override
 	protected void tickJob(ServerLevel level, StationRegistry.Station station) {
+		settings = StationRegistry.farmer(level.getServer(), station);
 		if (FarmerStorage.count(worker, FarmerStorage::isSeed) <= 0) {
-			FarmerStorage.withdraw(level, station, worker, LaborCraftConfig.get().job(worker.jobId()).useBoneMeal);
+			FarmerStorage.withdraw(level, station, worker, settings.useBoneMeal);
 			if (FarmerStorage.count(worker, FarmerStorage::isSeed) <= 0) {
 				pause(level, "laborcraft.ui.worker.task.need_seeds");
 				return;
 			}
 		}
 
-		if (LaborCraftConfig.get().job(worker.jobId()).useComposter) {
+		if (settings.useComposter) {
 			int seeds = FarmerStorage.count(worker, FarmerStorage::isSeed);
 			BlockPos composter = findComposter(level, station);
 			if (composter != null) {
 				BlockState state = level.getBlockState(composter);
 				boolean ready = state.is(Blocks.COMPOSTER)
 						&& state.getValue(ComposterBlock.LEVEL) >= ComposterBlock.READY;
-				if (ready || seeds > LaborCraftConfig.get().job(worker.jobId()).seedSurplusForCompost) {
+				if (ready || seeds > settings.seedSurplusForCompost) {
 					compost(level, composter);
 					return;
 				}
@@ -232,8 +234,8 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 			}
 		}
 
-		int moved = FarmerStorage.deposit(level, station, worker);
-		FarmerStorage.withdraw(level, station, worker, LaborCraftConfig.get().job(worker.jobId()).useBoneMeal);
+		int moved = FarmerStorage.deposit(level, station, worker, settings);
+		FarmerStorage.withdraw(level, station, worker, settings.useBoneMeal);
 		depositTicks = 0;
 		target = null;
 
@@ -347,7 +349,7 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 		double bestHydratedTillDistance = Double.MAX_VALUE;
 		double bestDryTillDistance = Double.MAX_VALUE;
 		boolean canPlant = canPlant();
-		boolean useBoneMeal = LaborCraftConfig.get().job(worker.jobId()).useBoneMeal
+		boolean useBoneMeal = settings.useBoneMeal
 				&& findItem(Items.BONE_MEAL) >= 0;
 		String policy = waterPolicy();
 		boolean require = policy.equals("require");
@@ -443,15 +445,7 @@ public final class FarmerBrain extends AbstractWorkerBrain {
 	}
 
 	private String waterPolicy() {
-		String raw = LaborCraftConfig.get().job(worker.jobId()).waterPolicy;
-		if (raw == null) {
-			return "prefer";
-		}
-		String normalized = raw.toLowerCase(java.util.Locale.ROOT);
-		return switch (normalized) {
-			case "require", "ignore" -> normalized;
-			default -> "prefer";
-		};
+		return FarmerSettings.normalizePolicy(settings.waterPolicy);
 	}
 
 	private void warnDry(ServerLevel level) {

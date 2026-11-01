@@ -37,6 +37,7 @@ public final class StationRegistry {
 
 	private final List<Station> stations = new ArrayList<>();
 	private final java.util.Map<String, HerdSettings> herds = new java.util.HashMap<>();
+	private final java.util.Map<String, FarmerSettings> farmers = new java.util.HashMap<>();
 	private Path file;
 
 	private StationRegistry() {
@@ -309,6 +310,26 @@ public final class StationRegistry {
 		return herds.getOrDefault(stationId, HerdSettings.defaults());
 	}
 
+	/** Per-station farmer rules; absent means defaults copied from the server config. */
+	public static FarmerSettings farmer(MinecraftServer server, Station station) {
+		if (station == null) {
+			return FarmerSettings.defaults();
+		}
+		return load(server).farmerOf(station.id());
+	}
+
+	private FarmerSettings farmerOf(String stationId) {
+		return farmers.getOrDefault(stationId, FarmerSettings.defaults());
+	}
+
+	public static void setFarmer(MinecraftServer server, Station station, FarmerSettings settings) {
+		StationRegistry registry = load(server);
+		FarmerSettings stored = settings == null ? FarmerSettings.defaults() : settings.copy();
+		stored.clamp();
+		registry.farmers.put(station.id(), stored);
+		registry.save();
+	}
+
 	public static void setHerd(MinecraftServer server, Station station, HerdSettings settings) {
 		StationRegistry registry = load(server);
 		HerdSettings stored = settings == null ? HerdSettings.defaults() : settings.copy();
@@ -563,6 +584,9 @@ public final class StationRegistry {
 				if (entry.herd != null) {
 					herds.put(entry.id == null ? "laborcraft:station/?" : entry.id, readHerd(entry.herd));
 				}
+				if (entry.farmer != null) {
+					farmers.put(entry.id == null ? "laborcraft:station/?" : entry.id, readFarmer(entry.farmer));
+				}
 			}
 		} catch (IOException | RuntimeException exception) {
 			LaborCraft.LOGGER.error("Falha ao ler os postos {}", file, exception);
@@ -607,6 +631,7 @@ public final class StationRegistry {
 			entry.jobId = station.jobId();
 			entry.enclosure = writeEnclosure(station.enclosure());
 			entry.herd = writeHerd(herds.get(station.id()));
+			entry.farmer = writeFarmer(farmers.get(station.id()));
 			data.stations.add(entry);
 		}
 
@@ -618,6 +643,39 @@ public final class StationRegistry {
 		} catch (IOException exception) {
 			LaborCraft.LOGGER.error("Falha ao salvar os postos {}", file, exception);
 		}
+	}
+
+	private static FarmerSettings readFarmer(FarmerData data) {
+		FarmerSettings settings = FarmerSettings.defaults();
+		if (data == null) {
+			return settings;
+		}
+		if (data.useBoneMeal != null) {
+			settings.useBoneMeal = data.useBoneMeal;
+		}
+		if (data.useComposter != null) {
+			settings.useComposter = data.useComposter;
+		}
+		if (data.seedSurplusForCompost != null) {
+			settings.seedSurplusForCompost = data.seedSurplusForCompost;
+		}
+		if (data.waterPolicy != null) {
+			settings.waterPolicy = data.waterPolicy;
+		}
+		settings.clamp();
+		return settings;
+	}
+
+	private static FarmerData writeFarmer(FarmerSettings settings) {
+		if (settings == null) {
+			return null;
+		}
+		FarmerData data = new FarmerData();
+		data.useBoneMeal = settings.useBoneMeal;
+		data.useComposter = settings.useComposter;
+		data.seedSurplusForCompost = settings.seedSurplusForCompost;
+		data.waterPolicy = settings.waterPolicy;
+		return data;
 	}
 
 	private static HerdSettings readHerd(HerdData data) {
@@ -968,6 +1026,14 @@ public final class StationRegistry {
 		private String jobId;
 		private EnclosureData enclosure;
 		private HerdData herd;
+		private FarmerData farmer;
+	}
+
+	private static final class FarmerData {
+		private Boolean useBoneMeal;
+		private Boolean useComposter;
+		private Integer seedSurplusForCompost;
+		private String waterPolicy;
 	}
 
 	private static final class HerdData {

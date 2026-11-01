@@ -62,7 +62,8 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		WORK,
 		CONFIG,
 		STORAGE,
-		HERD
+		HERD,
+		FARM
 	}
 
 	private static final int PANEL_WIDTH = 480;
@@ -115,6 +116,26 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 
 	public BlockPos stationPos() {
 		return station.pos();
+	}
+
+	private boolean farmer() {
+		if (JobTypes.FARMER.id().equals(station.jobId())) {
+			return true;
+		}
+		return station.jobId().isBlank()
+				&& station.bound() != null
+				&& JobTypes.FARMER.id().equals(station.bound().jobId());
+	}
+
+	private Tab extraTab() {
+		if (herder()) {
+			return Tab.HERD;
+		}
+		return Tab.FARM;
+	}
+
+	private int tabIndex() {
+		return tab.ordinal() < 3 ? tab.ordinal() : 3;
 	}
 
 	private boolean herder() {
@@ -171,12 +192,15 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 		if (herder()) {
 			tabs.add(Component.translatable("laborcraft.ui.station.tab.herd"));
 		}
+		else if (farmer()) {
+			tabs.add(Component.translatable("laborcraft.ui.station.tab.farm"));
+		}
 		column.add(QuillNodes.tabs(
 				theme(),
 				6,
 				tabs,
-				tab.ordinal(),
-				index -> switchTab(Tab.values()[index])
+				tabIndex(),
+				index -> switchTab(index < 3 ? Tab.values()[index] : extraTab())
 		));
 		return column;
 	}
@@ -206,6 +230,9 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 			case HERD -> {
 				root.add(herdHeader());
 				root.add(QuillNodes.flexible(herdBody(), 1));
+			}
+			case FARM -> {
+				root.add(QuillNodes.flexible(farmBody(), 1));
 			}
 		}
 
@@ -311,6 +338,57 @@ public final class LaborCraftStationV2Screen extends QuillScreen {
 	private void setHerd(String configKey, String value) {
 		LaborCraftUiActions.run(
 				LaborCraftCommands.STATION_HERD_SET + " " + posString() + " " + configKey + " " + value
+		);
+	}
+
+	// --- Farm tab ---------------------------------------------------------------------------
+
+	private QuillLayoutNode farmBody() {
+		OpenStationPayload.FarmerView farm = station.farmer();
+		QuillFlexBox column = QuillNodes.column(QuillSpacing.SPACE_2);
+		column.crossAxisAlignment(QuillCrossAxisAlignment.STRETCH);
+		if (farm == null) {
+			column.add(control(label(Component.translatable("laborcraft.ui.station.farm.need_data")).muted()));
+			return new QuillCardBox(null, column);
+		}
+
+		column.add(toggleRow("laborcraft.ui.station.farm.bone_meal", "useBoneMeal", farm.useBoneMeal()));
+		column.add(toggleRow("laborcraft.ui.station.farm.composter", "useComposter", farm.useComposter()));
+		column.add(stepperRow(
+				"laborcraft.ui.station.farm.surplus",
+				"seedSurplusForCompost",
+				farm.seedSurplusForCompost(),
+				0,
+				512
+		));
+		column.add(farmWaterRow(farm.waterPolicy()));
+		return new QuillCardBox(null, column);
+	}
+
+	private QuillFlexBox farmWaterRow(String policy) {
+		QuillFlexBox row = QuillNodes.row(QuillSpacing.SPACE_2);
+		row.crossAxisAlignment(QuillCrossAxisAlignment.CENTER);
+		row.add(QuillNodes.flexible(control(label(Component.translatable("laborcraft.ui.station.farm.water")))));
+		row.add(QuillNodes.widget(new QuillButton(
+				0, 0, 96, 20,
+				Component.translatable("laborcraft.ui.station.farm.water." + policy),
+				QuillButton.Variant.SECONDARY,
+				() -> setFarmer("waterPolicy", nextPolicy(policy))
+		), 96, 20));
+		return row;
+	}
+
+	private static String nextPolicy(String policy) {
+		return switch (policy == null ? "prefer" : policy) {
+			case "require" -> "ignore";
+			case "ignore" -> "prefer";
+			default -> "require";
+		};
+	}
+
+	private void setFarmer(String configKey, String value) {
+		LaborCraftUiActions.run(
+				LaborCraftCommands.STATION_FARMER_SET + " " + posString() + " " + configKey + " " + value
 		);
 	}
 
