@@ -307,7 +307,11 @@ final class StationCommands {
 		}
 
 		if (!StationRegistry.bind(source.getServer(), station, workerId)) {
-			source.sendFailure(Component.translatable("laborcraft.station.bind_failed"));
+			Component failure = !station.jobId().isBlank()
+					&& !station.jobId().equals(worker.jobId())
+					? Component.translatable("laborcraft.station.bind_job", Component.translatable("job." + station.jobId()))
+					: Component.translatable("laborcraft.station.bind_failed");
+			source.sendFailure(failure);
 			return 0;
 		}
 
@@ -479,6 +483,14 @@ final class StationCommands {
 		if (com.foque.laborcraft.job.JobTypes.get(jobId) == null) {
 			source.sendFailure(Component.translatable("laborcraft.station.job.unknown", jobId));
 			return 0;
+		}
+
+		if (station.worker() != null) {
+			LaborCraftWorker bound = LaborCraftWorker.find(source.getServer(), station.worker());
+			if (bound != null && !jobId.equals(bound.jobId())) {
+				source.sendFailure(Component.translatable("laborcraft.station.job.bound", bound.getName()));
+				return 0;
+			}
 		}
 
 		StationRegistry.setJob(source.getServer(), station, jobId);
