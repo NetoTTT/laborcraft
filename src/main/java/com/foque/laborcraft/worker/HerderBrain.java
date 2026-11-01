@@ -635,7 +635,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			if (!item.isAlive() || !HerderStorage.isPickup(item.getItem())) {
 				continue;
 			}
-			if (!pen.contains(item.blockPosition())) {
+			if (!insidePickupArea(pen, item.blockPosition(), margin)) {
 				continue;
 			}
 			double distance = worker.position().distanceToSqr(item.position());
@@ -645,6 +645,17 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			}
 		}
 		return best;
+	}
+
+	/** Drops can land on the fence or one block outside it; accept a small margin around the pen. */
+	private static boolean insidePickupArea(EnclosureDescriptor pen, BlockPos pos, int margin) {
+		if (pen.contains(pos)) {
+			return true;
+		}
+		return pos.getX() >= pen.min().getX() - margin
+				&& pos.getX() <= pen.max().getX() + margin
+				&& pos.getZ() >= pen.min().getZ() - margin
+				&& pos.getZ() <= pen.max().getZ() + margin;
 	}
 
 	private void collectItem(ItemEntity item) {
