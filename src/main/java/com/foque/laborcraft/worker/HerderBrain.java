@@ -302,7 +302,20 @@ public final class HerderBrain extends AbstractWorkerBrain {
 	/** Shears the nearest woolly adult if the tool slot already holds shears. */
 	private boolean tryShear(ServerLevel level, Map<HerderAnimals.Species, List<Animal>> herd) {
 		ItemStack tool = worker.toolItem();
+		boolean hasWoolly = false;
+		for (Animal animal : herd.getOrDefault(HerderAnimals.Species.SHEEP, List.of())) {
+			if (animal instanceof Sheep sheep && sheep.readyForShearing()) {
+				hasWoolly = true;
+				break;
+			}
+		}
 		if (!tool.is(Items.SHEARS)) {
+			if (hasWoolly) {
+				notifyOnce(level, "laborcraft.ui.worker.task.need_shears");
+			}
+			return false;
+		}
+		if (!hasWoolly) {
 			return false;
 		}
 
@@ -491,6 +504,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 		}
 		if (!equipTool(level, station, pulled)) {
 			WorkerStorage.insertTool(level, station, pulled);
+			notifyOnce(level, "laborcraft.ui.worker.task.need_tool_space");
 		}
 	}
 

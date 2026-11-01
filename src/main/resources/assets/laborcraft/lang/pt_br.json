@@ -591,6 +591,8 @@
 	"laborcraft.ui.worker.task.need_zone": "Desenhe a área de trabalho no Posto para eu começar.",
 	"laborcraft.ui.worker.task.need_pen": "Configure um cercado no Posto para eu trabalhar.",
 	"laborcraft.ui.worker.task.pen_unreachable": "Não achei caminho para dentro do cercado. Confira o portão.",
+	"laborcraft.ui.worker.task.need_shears": "Preciso de uma tesoura no slot de ferramenta para tosquiar as ovelhas.",
+	"laborcraft.ui.worker.task.need_tool_space": "Não tenho espaço para guardar a ferramenta que estou usando.",
 	"laborcraft.ui.worker.task.need_water": "Preciso de água na zona para plantar.",
 	"laborcraft.ui.worker.task.dry_soil": "Terra seca — irrigue para as plantas crescerem mais rápido.",
 	"laborcraft.housing.reason.invalid": "casa inválida",
