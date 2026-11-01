@@ -20,7 +20,7 @@ public final class LaborCraftConfig {
 
 	private static LaborCraftConfig instance = new LaborCraftConfig();
 
-	public int schemaVersion = 3;
+	public int schemaVersion = 4;
 	public String currencyProvider = "laborcraft:ledger";
 	public boolean allowOwnerOverrides = true;
 
@@ -63,7 +63,13 @@ public final class LaborCraftConfig {
 			if (enclosure != null && enclosure.minArea == 9) {
 				enclosure.minArea = 4;
 			}
-			schemaVersion = 3;
+		}
+		if (schemaVersion < 4) {
+			// Configs generated before shearing existed have shearSheep=false.
+			if (herder != null) {
+				herder.shearSheep = true;
+			}
+			schemaVersion = 4;
 		}
 	}
 
@@ -91,6 +97,7 @@ public final class LaborCraftConfig {
 				if (loaded != null) {
 					instance = loaded;
 					instance.normalize();
+					instance.migrate();
 				}
 			} catch (IOException | RuntimeException exception) {
 				LaborCraft.LOGGER.error("Falha ao ler {}, usando padroes", FILE, exception);
