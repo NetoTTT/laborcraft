@@ -177,11 +177,12 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return;
 		}
 
-		if (LaborCraftConfig.get().herder.breeding && tryBreed(level, pen, station, herd)) {
+		// Shearing first: breeding can keep the worker chasing animals and starve the shears.
+		if (LaborCraftConfig.get().herder.shearSheep && tryShear(level, herd)) {
 			return;
 		}
 
-		if (LaborCraftConfig.get().herder.shearSheep && tryShear(level, herd)) {
+		if (LaborCraftConfig.get().herder.breeding && tryBreed(level, pen, station, herd)) {
 			return;
 		}
 
@@ -343,6 +344,7 @@ public final class HerderBrain extends AbstractWorkerBrain {
 			return true;
 		}
 
+		LaborCraft.LOGGER.info("[herder] sheared sheep at {} with {}", shortPos(target.blockPosition()), tool.getItem());
 		target.shear(level, SoundSource.PLAYERS, tool);
 		if (tool.isDamageableItem()) {
 			tool.hurtAndBreak(1, worker, EquipmentSlot.MAINHAND);
